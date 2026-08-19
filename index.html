@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiaDeCosplay</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--primary:#E4405F;--secondary:#7F77DD;--accent:#1D9E75;
+--bg:#0F0F12;--s1:#1a1a1e;--s2:#24242b;
+--text:#fff;--text2:#B0B0B5;--border:#3a3a42;
+--error:#FF6B6B;--success:#51CF66;--warn:#FFB84D;
+}
+@media(prefers-color-scheme:light){
+:root{--bg:#F8F7F5;--s1:#fff;--s2:#F2F1ED;--text:#1a1a1e;--text2:#696967;--border:#E5E5E5}
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* HEADER */
+.header{background:var(--s1);border-bottom:1px solid var(--border);padding:.9rem 1.5rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:.8rem}
+.header-left{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+.logo{font-size:23px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px;letter-spacing:-.5px}
+.logo i{-webkit-text-fill-color:var(--primary)}
+.wa-link{display:inline-flex;align-items:center;gap:7px;padding:.5rem 1rem;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;transition:.25s}
+.wa-link:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(37,211,102,.35)}
+.header-right{display:flex;align-items:center;gap:1rem}
+.user-chip{display:flex;align-items:center;gap:.5rem;background:var(--s2);border:1px solid var(--border);padding:.4rem .8rem;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:.25s}
+.user-chip:hover{border-color:var(--primary)}
+.user-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--success)}
+.admin-star{font-size:20px;cursor:pointer;opacity:.35;transition:.3s;color:var(--warn)}
+.admin-star:hover{opacity:1;transform:scale(1.2) rotate(15deg)}
+.sync-badge{display:none;font-size:15px;cursor:pointer;transition:.3s;width:30px;height:30px;align-items:center;justify-content:center;border-radius:8px}
+html.admin .sync-badge{display:flex}
+.sync-badge.on{color:var(--success)}
+.sync-badge.up{color:var(--secondary)}
+.sync-badge.off{color:var(--error)}
+.sync-badge:hover{background:var(--s2)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--s1);padding:0 1.5rem;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab:hover{color:var(--text)}
+
+/* LAYOUT */
+.content{padding:1.5rem;display:none}
+.content.active{display:block;animation:fade .3s}
+.wrapper{max-width:1400px;margin:0 auto;width:100%}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* CONTROLS */
+.controls{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin-bottom:.8rem}
+.search{flex:1;min-width:200px;padding:.75rem 1rem;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px}
+.search::placeholder{color:var(--text2)}
+
+/* FILTROS — linha única, compacta, rola de lado */
+.filters{display:flex;gap:.35rem;overflow-x:auto;padding:.25rem 0 .5rem;scrollbar-width:none;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:.3rem;margin-bottom:1rem}
+.filters::-webkit-scrollbar{display:none}
+.fbtn{padding:.5rem .85rem;background:transparent;border:none;color:var(--text2);border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;transition:.2s;white-space:nowrap;flex:0 0 auto;display:flex;align-items:center;gap:.35rem}
+.fbtn.active{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(228,64,95,.3)}
+.fbtn:hover:not(.active){background:var(--s1);color:var(--text)}
+.fsep{width:1px;background:var(--border);margin:.3rem .25rem;flex:0 0 auto}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:1rem;flex-wrap:wrap}
+.count{font-size:13px;color:var(--text2);font-weight:700}
+.views{display:flex;gap:.4rem}
+.vbtn{padding:.45rem .85rem;background:var(--s2);border:1px solid var(--border);color:var(--text2);border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;transition:.25s}
+.vbtn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1.4rem;animation:up .4s}
+.grid.carousel{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding-bottom:1rem}
+.grid.carousel .card{flex:0 0 250px;scroll-snap-align:start}
+.grid.carousel::-webkit-scrollbar{height:8px}
+.grid.carousel::-webkit-scrollbar-track{background:var(--s1);border-radius:4px}
+.grid.carousel::-webkit-scrollbar-thumb{background:var(--primary);border-radius:4px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}.grid.carousel .card{flex:0 0 180px}}
+@media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:.8rem}.grid.carousel .card{flex:0 0 calc(50% - .4rem)}}
+
+/* CARD ESTILO FIFA */
+.card{background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:.35s cubic-bezier(.4,0,.2,1);position:relative;display:flex;flex-direction:column}
+.card:hover{transform:translateY(-8px) scale(1.02);box-shadow:0 16px 34px rgba(228,64,95,.28);border-color:var(--primary)}
+
+/* borda animada tipo carta rara */
+.card.tier-gold{border-color:#D4AF37;background:linear-gradient(160deg,rgba(212,175,55,.1),var(--s2) 45%)}
+.card.tier-gold:hover{box-shadow:0 16px 34px rgba(212,175,55,.35)}
+.card.tier-silver{border-color:#9BA4B4}
+.card.tier-icon{border-color:#E4405F;background:linear-gradient(160deg,rgba(228,64,95,.16),var(--s2) 45%)}
+
+/* brilho que varre a carta no hover */
+.card::after{content:'';position:absolute;top:0;left:-120%;width:60%;height:100%;background:linear-gradient(105deg,transparent,rgba(255,255,255,.16),transparent);transform:skewX(-18deg);transition:left .7s;pointer-events:none;z-index:5}
+.card:hover::after{left:130%}
+
+.card-img{width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,var(--primary),var(--secondary));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ph{font-size:40px;opacity:.35;color:#fff}
+
+/* GALERIA — até 3 fotos que se alternam */
+.card-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s,filter .4s,opacity .7s}
+.card-img img.slide{position:absolute;inset:0;opacity:0}
+.card-img img.slide.on{opacity:1}
+.card:hover .card-img img{transform:scale(1.06);filter:saturate(1.15) contrast(1.05) brightness(1.05)}
+.dots{position:absolute;top:8px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:5}
+.dot-i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.45);transition:.3s}
+.dot-i.on{background:#fff;width:14px;border-radius:3px}
+
+/* GERENCIADOR DE FOTOS (modal) */
+.fotos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
+.foto-slot{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--s2);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.foto-slot:hover{border-color:var(--primary)}
+.foto-slot.cheio{border-style:solid;cursor:default}
+.foto-slot img{width:100%;height:100%;object-fit:cover}
+.foto-slot .add{color:var(--text2);font-size:20px;display:flex;flex-direction:column;align-items:center;gap:.2rem}
+.foto-slot .add small{font-size:9px;font-weight:700}
+.foto-x{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.foto-x:hover{background:var(--error);transform:scale(1.12)}
+.foto-cap{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.7);color:#fff;font-size:8.5px;font-weight:800;text-align:center;padding:.15rem}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:.7rem .9rem;margin-top:.7rem}
+.switch-row label{font-size:13px;font-weight:600;cursor:pointer}
+.switch{position:relative;width:44px;height:24px;flex:0 0 auto}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:var(--border);border-radius:24px;cursor:pointer;transition:.25s}
+.switch span::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s}
+.switch input:checked+span{background:var(--primary)}
+.switch input:checked+span::before{transform:translateX(20px)}
+
+/* NOME + @ */
+.card-name{font-size:14.5px;font-weight:800;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-user{font-size:12.5px;font-weight:700;text-decoration:none;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.2s;display:block}
+.card-user:hover{color:var(--primary)}
+.card-user.solo{font-size:15px;color:var(--text)}
+.card-img::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55) 0%,transparent 45%);opacity:.75;transition:opacity .4s;pointer-events:none;z-index:1}
+.card:hover .card-img::after{opacity:1}
+
+/* PRÉVIA DA POSTAGEM — painel que sobe de baixo, o rosto continua visível */
+.preview{position:absolute;left:0;right:0;bottom:0;height:58%;overflow:hidden;background:#000;opacity:0;transform:translateY(100%);transition:opacity .38s cubic-bezier(.4,0,.2,1),transform .38s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:6;border-top:2px solid rgba(255,255,255,.9)}
+.preview img,.preview video{width:100%;height:100%;object-fit:cover}
+.card:hover .preview,.card-img.show-preview .preview{opacity:1;transform:translateY(0)}
+.preview::before{content:'';position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(to bottom,rgba(0,0,0,.6),transparent);z-index:1}
+.preview-tag{position:absolute;top:7px;left:7px;background:linear-gradient(135deg,#833AB4,#E4405F,#FCAF45);padding:.25rem .55rem;border-radius:6px;font-size:9px;font-weight:900;color:#fff;display:flex;align-items:center;gap:.25rem;letter-spacing:.5px;z-index:2;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.peek-hint{position:absolute;bottom:8px;right:8px;background:linear-gradient(135deg,#833AB4,#E4405F);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;z-index:5;animation:pulse 2s infinite;border:1.5px solid rgba(255,255,255,.55);transition:opacity .3s}
+.card:hover .peek-hint{opacity:0}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.13);opacity:1}}
+
+/* faixa de identidade — some suavemente quando a prévia sobe */
+.id-bar{position:absolute;bottom:8px;left:8px;right:8px;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;z-index:5;transition:opacity .3s,transform .3s}
+.card.has-preview:hover .id-bar,.card-img.show-preview .id-bar{opacity:0;transform:translateY(10px)}
+.id-chip{display:flex;align-items:center;gap:.3rem;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.22);padding:.28rem .55rem;border-radius:8px;font-size:10px;font-weight:800;color:#fff;letter-spacing:.2px;transition:.3s}
+.id-emoji{font-size:15px;padding:.2rem .35rem;line-height:1}
+.card:hover .id-emoji{transform:scale(1.2) rotate(-8deg)}
+
+.badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.72);padding:.3rem .7rem;border-radius:20px;font-size:10px;font-weight:800;color:#fff;letter-spacing:.3px;z-index:3}
+.badge-stack{position:absolute;top:8px;right:8px;display:flex;flex-direction:column;gap:.25rem;align-items:flex-end;z-index:3}
+.badge-stack .badge{position:static}
+.badge-timer{background:rgba(255,184,77,.92);color:#1a1a1e}
+
+/* SELETOR DE EMOJI */
+.emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:.4rem;max-height:180px;overflow-y:auto;padding:.6rem;background:var(--s2);border:1px solid var(--border);border-radius:10px}
+.emoji-pick{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:21px;background:var(--s1);border:2px solid transparent;border-radius:9px;cursor:pointer;transition:.15s}
+.emoji-pick:hover{transform:scale(1.15);background:var(--bg)}
+.emoji-pick.sel{border-color:var(--primary);background:rgba(228,64,95,.15)}
+.badge-me{position:absolute;top:8px;left:8px;background:var(--success);padding:.3rem .6rem;border-radius:20px;font-size:10px;font-weight:800;color:#fff;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.card-body{padding:.9rem;display:flex;flex-direction:column;gap:.5rem;flex:1}
+.card-mail{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-mail.private{color:var(--success);font-weight:700}
+.card-mail .lock{opacity:.7}
+
+/* CHIPS DE CATEGORIA (multi-seleção) */
+.chips{display:flex;gap:.5rem;flex-wrap:wrap}
+.chip{position:relative;flex:1;min-width:110px}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip label{display:flex;flex-direction:column;align-items:center;gap:.2rem;padding:.7rem .5rem;background:var(--s2);border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:.2s;font-size:12px;font-weight:700;text-align:center}
+.chip label .ci{font-size:18px}
+.chip input:checked+label{border-color:var(--primary);background:rgba(228,64,95,.1);color:var(--primary)}
+.chip input:disabled+label{opacity:.45;cursor:not-allowed}
+.card-nomail{font-size:11px;color:var(--warn);font-style:italic}
+.card-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:auto}
+.bs{padding:.55rem .5rem;background:var(--s1);border:1px solid var(--border);color:var(--text);border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;transition:.25s;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.35rem;white-space:nowrap}
+.bs:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+.bs.full{grid-column:1/-1}
+.bs-row{grid-column:1/-1;display:flex;gap:.4rem}
+.bs-row .bs.post{flex:1}
+.bs-icon{flex:0 0 36px;padding:.55rem 0}
+.bs.msg{background:rgba(127,119,221,.12);border-color:var(--secondary);color:var(--secondary)}
+.bs.msg:hover{background:var(--secondary);color:#fff;border-color:var(--secondary)}
+.bs.share{background:transparent;border-style:dashed;color:var(--text2)}
+.bs.share:hover{border-style:solid;border-color:var(--primary);color:var(--primary);background:transparent}
+.bs.vou{background:rgba(29,158,117,.12);border-color:var(--accent);color:var(--accent)}
+.bs.vou:hover{background:var(--accent);color:#fff}
+.bs.indo{background:var(--accent);border-color:var(--accent);color:#fff}
+.pres-bar{display:flex;gap:.5rem;padding:0 1.1rem .8rem}
+.pres-bar .bs:first-child{flex:1}
+.card.destaque{animation:pisca 1.6s ease-out 2}
+@keyframes pisca{0%,100%{box-shadow:0 0 0 0 rgba(228,64,95,0)}50%{box-shadow:0 0 0 5px rgba(228,64,95,.45)}}
+.bs.post{background:linear-gradient(135deg,#833AB4,#E4405F,#FCAF45);border:none;color:#fff}
+.bs.post:hover{filter:brightness(1.15)}
+.bs.addpost{background:transparent;border:1px dashed var(--border);color:var(--text2)}
+.bs.addpost:hover{border-color:var(--primary);color:var(--primary);background:transparent}
+.bs.del{background:rgba(255,107,107,.1);border-color:var(--error);color:var(--error)}
+.bs.del:hover{background:var(--error);color:#fff}
+.socials{display:flex;gap:.5rem;font-size:13px}
+.socials a{color:var(--text2);transition:.2s}
+.socials a:hover{color:var(--primary)}
+.admin-only{display:none!important}
+html.admin .admin-only{display:flex!important}
+
+/* LISTS (eventos/ideias/cenas) */
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem}
+@media(max-width:640px){.list{grid-template-columns:1fr}}
+.item{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:.25s}
+.item:hover{border-color:var(--primary)}
+.item h3{font-size:17px;font-weight:800;margin-bottom:.4rem}
+.item p{font-size:14px;color:var(--text2);margin-bottom:.6rem}
+.item-meta{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:.4rem;padding-top:.6rem;border-top:1px solid var(--border);margin-top:.6rem}
+.tag{display:inline-block;background:var(--s1);border:1px solid var(--border);padding:.2rem .6rem;border-radius:20px;font-size:11px;font-weight:600;margin-right:.3rem}
+
+/* EVENTOS */
+.ev-item{padding:0;overflow:hidden;display:flex;flex-direction:column}
+.ev-img{width:100%;height:150px;overflow:hidden}
+.ev-img img{width:100%;height:100%;object-fit:cover}
+.ev-top{display:flex;gap:.9rem;padding:1.1rem 1.1rem .6rem}
+.ev-date{flex:0 0 52px;height:56px;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;line-height:1}
+.ev-d{font-size:20px;font-weight:900}
+.ev-m{font-size:10px;font-weight:800;letter-spacing:.5px;opacity:.9}
+.ev-item h3{font-size:16px;margin-bottom:.3rem}
+.ev-meta{display:flex;flex-direction:column;gap:.15rem;font-size:12px;color:var(--text2)}
+.ev-tags{padding:0 1.1rem .5rem;display:flex;flex-wrap:wrap;gap:.3rem}
+.ev-item p{padding:0 1.1rem;font-size:13px;margin-bottom:.6rem}
+.ev-actions{display:flex;gap:.5rem;padding:.8rem 1.1rem;border-top:1px solid var(--border);margin-top:auto;background:var(--s1)}
+.ev-actions .bs{flex:1}
+.ev-actions .bs.del{flex:0 0 42px}
+.tag-hot{background:var(--primary);border-color:var(--primary);color:#fff}
+.tag-free{background:rgba(81,207,102,.15);border-color:var(--success);color:var(--success)}
+.tag-price{background:rgba(255,184,77,.15);border-color:var(--warn);color:var(--warn)}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:1rem;animation:fade .25s}
+.modal.active{display:flex}
+.mbox{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:1.8rem;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:up .3s}
+.mclose{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:26px;cursor:pointer;color:var(--text2);line-height:1}
+.mclose:hover{color:var(--text)}
+.mtitle{font-size:21px;font-weight:800;margin-bottom:1.3rem;padding-right:2rem}
+.fg{margin-bottom:1.1rem}
+.fl{display:block;font-size:13px;font-weight:700;margin-bottom:.45rem}
+.fi,.ft,.fs{width:100%;padding:.75rem 1rem;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:14px;font-family:inherit;transition:.25s}
+.fi:focus,.ft:focus,.fs:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(228,64,95,.12)}
+.fi:disabled,.ft:disabled,.fs:disabled{opacity:.45;cursor:not-allowed}
+.ft{resize:vertical;min-height:90px}
+.hint{font-size:12px;color:var(--text2);margin-top:.35rem;display:block}
+.btn{padding:.75rem 1.4rem;background:var(--primary);border:none;border-radius:9px;color:#fff;font-weight:700;cursor:pointer;font-size:14px;transition:.25s;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;text-decoration:none;width:100%}
+.btn:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(228,64,95,.35)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.btn:disabled:hover{transform:none;box-shadow:none}
+.btn.sec{background:var(--s2);border:1px solid var(--border);color:var(--text)}
+.btn.sec:hover{border-color:var(--primary);box-shadow:none}
+.bgrp{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:1.5rem}
+@media(max-width:480px){.bgrp{grid-template-columns:1fr}}
+
+/* ALERTS */
+.alert{padding:.9rem 1rem;border-radius:9px;margin-bottom:1.2rem;font-size:13px;display:flex;gap:.7rem;align-items:flex-start;line-height:1.5}
+.alert i{margin-top:2px}
+.a-info{background:rgba(127,119,221,.12);border:1px solid var(--secondary);color:var(--secondary)}
+.a-warn{background:rgba(255,184,77,.12);border:1px solid var(--warn);color:var(--warn)}
+.a-ok{background:rgba(81,207,102,.12);border:1px solid var(--success);color:var(--success)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--s1);border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;padding:1rem 1.2rem;max-width:340px;z-index:3000;font-size:14px;font-weight:600;animation:slidein .3s;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.ok{border-left-color:var(--success)}
+.toast.err{border-left-color:var(--error)}
+@keyframes slidein{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:480px){.toast{left:12px;right:12px;max-width:none;bottom:12px}}
+
+/* EMPTY */
+.empty{text-align:center;padding:3rem 1.5rem;color:var(--text2);grid-column:1/-1}
+.empty i{font-size:44px;opacity:.25;display:block;margin-bottom:.8rem}
+.empty b{display:block;font-size:16px;color:var(--text);margin-bottom:.3rem}
+
+/* HELP */
+.help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem}
+.help-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1.4rem}
+.help-card i{font-size:26px;color:var(--primary);margin-bottom:.7rem;display:block}
+.help-card h4{font-size:15px;font-weight:800;margin-bottom:.4rem}
+.help-card p{font-size:13px;color:var(--text2)}
+
+.section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;gap:1rem;flex-wrap:wrap}
+.section-head h2{font-size:20px;font-weight:800}
+.btn-inline{width:auto;padding:.6rem 1.1rem;font-size:13px}
+.credit{text-align:center;padding:2rem 1rem;color:var(--text2);font-size:13px;border-top:1px solid var(--border);margin-top:2rem}
+.credit a{color:var(--primary);text-decoration:none;font-weight:700}
+
+/* PAINEL ADMIN */
+.adminbox{max-width:760px}
+.adm-tabs{display:flex;gap:.3rem;overflow-x:auto;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:.3rem;margin-bottom:1.3rem;scrollbar-width:none}
+.adm-tabs::-webkit-scrollbar{display:none}
+.adm-tab{padding:.5rem .8rem;background:transparent;border:none;color:var(--text2);border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;flex:0 0 auto;transition:.2s;display:flex;align-items:center;gap:.35rem}
+.adm-tab.active{background:var(--primary);color:#fff}
+.adm-tab:hover:not(.active){background:var(--s1);color:var(--text)}
+.adm-pane{display:none}
+.adm-pane.active{display:block;animation:fade .25s}
+.adm-stats{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:13px;line-height:1.9;margin-bottom:1.2rem}
+.adm-list{max-height:290px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--s2)}
+.adm-row{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:13px}
+.adm-row:last-child{border-bottom:none}
+.adm-row .nome{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.adm-row .sub{font-size:11px;color:var(--text2);font-weight:400}
+.adm-row .acts{display:flex;gap:.3rem;flex:0 0 auto}
+.adm-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--s1);color:var(--text2);cursor:pointer;font-size:11px;transition:.2s;display:flex;align-items:center;justify-content:center}
+.adm-btn:hover{border-color:var(--primary);color:var(--primary)}
+.adm-btn.dg:hover{border-color:var(--error);color:var(--error)}
+.adm-btn.ok:hover{border-color:var(--success);color:var(--success)}
+.adm-empty{padding:1.6rem;text-align:center;color:var(--text2);font-size:13px}
+.ajuda-item{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-bottom:.7rem;display:grid;gap:.5rem}
+.ajuda-item input,.ajuda-item textarea{padding:.55rem .7rem;background:var(--s1);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:inherit;width:100%}
+.ajuda-item textarea{resize:vertical;min-height:56px}
+.guia{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:.9rem;font-size:12.5px;line-height:1.7}
+.guia-step{margin-bottom:.55rem}
+.guia-step:last-child{margin-bottom:0}
+.guia code,.codebox code{background:var(--s1);padding:.1rem .35rem;border-radius:4px;font-size:11.5px;color:var(--primary)}
+.codebox{background:#0d0d10;border:1px solid var(--border);border-radius:10px;padding:.9rem;font-size:11px;line-height:1.6;overflow-x:auto;margin-top:.7rem;color:#c8c8d0;white-space:pre;max-height:230px;overflow-y:auto}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo"><i class="fas fa-masks-theater"></i> <span id="siteName">DiaDeCosplay</span></div>
+    <a id="waLink" class="wa-link" target="_blank"><i class="fab fa-whatsapp"></i> Grupo WhatsApp</a>
+  </div>
+  <div class="header-right">
+    <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
+    <div class="user-chip" id="userChip" onclick="openMyProfile()" style="display:none">
+      <span class="dot"></span><span id="userChipText"></span>
+    </div>
+    <div class="admin-star" onclick="openAdmin()" title="Admin"><i class="fas fa-star"></i></div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="cosplayers"><i class="fas fa-masks-theater"></i> Cosplayers</div>
+  <div class="tab" data-tab="eventos"><i class="fas fa-calendar-days"></i> Eventos</div>
+  <div class="tab" data-tab="ideias"><i class="fas fa-lightbulb"></i> Ideias</div>
+  <div class="tab" data-tab="cenas"><i class="fas fa-film"></i> Cenas</div>
+  <div class="tab" data-tab="colabs"><i class="fas fa-people-group"></i> Colabs</div>
+  <div class="tab" data-tab="ajuda"><i class="fas fa-circle-question"></i> Ajuda</div>
+</div>
+
+<!-- COSPLAYERS -->
+<div id="cosplayers" class="content active"><div class="wrapper">
+  <div id="welcomeBox"></div>
+  <div class="controls">
+    <input type="text" class="search" id="search" placeholder="🔍 Buscar cosplayer...">
+  </div>
+  <div class="filters">
+    <button class="fbtn active" data-f="todos">Todos</button>
+    <div class="fsep"></div>
+    <button class="fbtn" data-f="cosplay">👺 Cosplay</button>
+    <button class="fbtn" data-f="wigmaker">💇 WigMaker</button>
+    <button class="fbtn" data-f="propmaker">🛠️ PropMaker</button>
+    <button class="fbtn" data-f="cosmaker">💄 CosMaker</button>
+    <div class="fsep"></div>
+    <button class="fbtn" data-f="post">🆕 Com postagem</button>
+    <button class="fbtn" data-f="semcat">❔ Sem categoria</button>
+  </div>
+  <div class="toolbar">
+    <div class="count" id="count">0 cosplayers</div>
+    <div class="views">
+      <button class="vbtn active" data-v="grid"><i class="fas fa-table-cells-large"></i> Colunas</button>
+      <button class="vbtn" data-v="carousel"><i class="fas fa-arrows-left-right"></i> Deslizar</button>
+    </div>
+  </div>
+  <div id="cosGrid" class="grid"></div>
+</div></div>
+
+<!-- EVENTOS -->
+<div id="eventos" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-calendar-days"></i> Eventos</h2>
+    <button class="btn btn-inline" onclick="newEvento()"><i class="fas fa-plus"></i> <span id="evBtnLabel">Sugerir Evento</span></button>
+  </div>
+  <div id="evGate"></div>
+  <div class="filters">
+    <button class="fbtn active" data-ef="proximos">📅 Próximos</button>
+    <button class="fbtn" data-ef="natal">📍 Natal / RN</button>
+    <button class="fbtn" data-ef="fora">✈️ Outras cidades</button>
+    <div class="fsep"></div>
+    <button class="fbtn" data-ef="gratis">🆓 Gratuitos</button>
+    <button class="fbtn" data-ef="passados">🕐 Já passaram</button>
+    <button class="fbtn admin-only" data-ef="pendentes">⏳ Aguardando <span id="pendCount"></span></button>
+  </div>
+  <div id="evList" class="list"></div>
+</div></div>
+
+<!-- IDEIAS -->
+<div id="ideias" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-lightbulb"></i> Ideias de Cosplay</h2>
+    <button class="btn btn-inline" onclick="tryAdd('ideia')"><i class="fas fa-plus"></i> Propor Ideia</button>
+  </div>
+  <div id="ideiaGate"></div>
+  <div id="ideiaList" class="list"></div>
+</div></div>
+
+<!-- CENAS -->
+<div id="cenas" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-film"></i> Cenas para Recriar</h2>
+    <button class="btn btn-inline" onclick="tryAdd('cena')"><i class="fas fa-plus"></i> Sugerir Cena</button>
+  </div>
+  <div id="cenaGate"></div>
+  <div id="cenaList" class="list"></div>
+</div></div>
+
+<!-- COLABS -->
+<div id="colabs" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-people-group"></i> Colaborações & Duos</h2>
+    <button class="btn btn-inline" onclick="openNovaColab()"><i class="fas fa-plus"></i> Propor Colab</button>
+  </div>
+  <div id="colabGate"></div>
+  <div class="filters" style="margin-bottom:1rem">
+    <button class="fbtn active" data-ecf="todos">Todas</button>
+    <div class="fsep"></div>
+    <button class="fbtn" data-ecf="aberta">🔓 Procurando</button>
+    <button class="fbtn" data-ecf="fechada">✅ Confirmada</button>
+  </div>
+  <div id="colabList" class="list"></div>
+</div></div>
+
+<!-- AJUDA -->
+<div id="ajuda" class="content"><div class="wrapper">
+  <h2 style="font-size:20px;font-weight:800;margin-bottom:1.2rem"><i class="fas fa-circle-question"></i> Como funciona</h2>
+  <div class="help-grid" id="helpGrid"></div>
+  <div class="credit" id="creditBox"></div>
+</div></div>
+
+<!-- MODAL: EDITAR PERFIL -->
+<div id="mEdit" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mEdit')">&times;</button>
+  <div class="mtitle">✏️ <span id="editTitle">Editar Perfil</span></div>
+
+  <div class="fg">
+    <label class="fl">📧 Seu email <span style="color:var(--error)">*</span></label>
+    <input type="email" class="fi" id="fEmail" placeholder="seu@email.com" oninput="emailGate()" autocomplete="off">
+    <span class="hint" id="emailHint"><i class="fas fa-lock"></i> <b>Seu email é privado.</b> Ninguém vê ele — nem outros cosplayers. Serve só pra te identificar e o site te reconhecer quando entrar.</span>
+  </div>
+
+  <div id="gateAlert"></div>
+
+  <div class="fg">
+    <label class="fl"><i class="fab fa-instagram"></i> Seu @ do Instagram</label>
+    <input type="text" class="fi" id="fUser" placeholder="@seuusuario">
+    <span class="hint" id="hintUser">Trocou de @? Pode corrigir — mas <b>só uma vez</b>, então confira antes de salvar.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🙋 Seu nome</label>
+    <input type="text" class="fi" id="fNome" placeholder="Como você quer ser chamado(a)">
+    <span class="hint" id="hintNome">Aparece junto com seu @. Pode definir <b>uma vez</b>.</span>
+  </div>
+
+  <div class="fg" id="boxTrocaEmail" style="display:none">
+    <label class="fl">🔐 Confirme que é você</label>
+    <input type="text" class="fi" id="fConfirma" placeholder="Digite seu @ ou seu nome">
+    <span class="hint">Você está trocando o email do perfil. Para confirmar, digite o <b>@ do Instagram</b> ou o <b>nome</b> cadastrado neste perfil.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🏷️ Você é... <span style="font-weight:400;color:var(--text2)">(pode marcar mais de um)</span></label>
+    <div class="chips">
+      <div class="chip"><input type="checkbox" id="cCosplay" value="cosplay"><label for="cCosplay"><span class="ci">👺</span>Cosplay</label></div>
+      <div class="chip"><input type="checkbox" id="cWig" value="wigmaker"><label for="cWig"><span class="ci">💇</span>WigMaker</label></div>
+      <div class="chip"><input type="checkbox" id="cProp" value="propmaker"><label for="cProp"><span class="ci">🛠️</span>PropMaker</label></div>
+      <div class="chip"><input type="checkbox" id="cCos" value="cosmaker"><label for="cCos"><span class="ci">💄</span>CosMaker</label></div>
+    </div>
+    <span class="hint">Você escolhe. Ninguém define isso por você. <b>CosMaker</b> é pra quem faz maquiagem.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">😎 Seu emoji <span style="font-weight:400;color:var(--text2)">(aparece na sua carta)</span></label>
+    <div class="emoji-grid" id="emojiGrid"></div>
+    <span class="hint">Escolha o que mais tem a ver com você. Clique de novo pra tirar.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">📸 Suas fotos <span style="font-weight:400;color:var(--text2)">(até 3)</span></label>
+    <div class="fotos-grid" id="fotosGrid"></div>
+    <input type="file" id="fPhoto" accept="image/*" style="display:none">
+    <div class="switch-row">
+      <label for="fSlide">🔄 Alternar as fotos sozinho (a cada 3s)</label>
+      <div class="switch"><input type="checkbox" id="fSlide" checked><span onclick="document.getElementById('fSlide').click()"></span></div>
+    </div>
+    <span class="hint">Pode mandar foto grande direto da câmera — o site otimiza sozinho.</span>
+  </div>
+
+  <div style="border:1px solid var(--border);border-radius:12px;padding:1.1rem;margin-bottom:1.1rem;background:var(--s2)">
+    <div style="font-size:14px;font-weight:800;margin-bottom:.9rem"><i class="fab fa-instagram"></i> Nova postagem</div>
+
+    <div class="fg">
+      <label class="fl">Link da postagem</label>
+      <input type="url" class="fi" id="fPost" placeholder="https://www.instagram.com/p/...">
+      <span class="hint">Use o link do seu Instagram.</span>
+    </div>
+
+    <div class="fg">
+      <label class="fl">🎞️ Prévia da postagem (foto ou vídeo)</label>
+      <input type="file" class="fi" id="fMedia" accept="image/*,video/*">
+      <span class="hint">Suba <b>a imagem ou vídeo da própria postagem</b> — não a mesma foto do perfil. Ela desliza por cima da sua foto no hover. Fotos são otimizadas sozinhas; vídeo até 6MB (corte uns 5s).</span>
+    </div>
+
+    <div class="fg" style="margin-bottom:0">
+      <label class="fl">⏰ Agendar publicação</label>
+      <input type="datetime-local" class="fi" id="fSchedule">
+      <span class="hint">Deixe vazio para publicar agora. Se agendar, a postagem só aparece pros outros a partir da hora marcada.</span>
+      <div id="scheduleInfo"></div>
+      <button class="btn sec" onclick="clearPost()" style="margin-top:.7rem;font-size:12px;padding:.5rem"><i class="fas fa-eraser"></i> Remover postagem atual</button>
+    </div>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🎵 TikTok</label>
+    <input type="text" class="fi" id="fTiktok" placeholder="@usuario">
+  </div>
+  <div class="fg">
+    <label class="fl">𝕏 Twitter</label>
+    <input type="text" class="fi" id="fTwitter" placeholder="@usuario">
+  </div>
+  <div class="fg">
+    <label class="fl">▶️ YouTube</label>
+    <input type="text" class="fi" id="fYoutube" placeholder="@canal">
+  </div>
+
+  <div class="bgrp">
+    <button class="btn" id="btnSalvarPerfil" onclick="saveProfile()"><i class="fas fa-check"></i> Salvar</button>
+    <button class="btn sec" onclick="closeModal('mEdit')">Cancelar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: IDEIA -->
+<div id="mIdeia" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mIdeia')">&times;</button>
+  <div class="mtitle">💡 Propor Ideia</div>
+  <div id="ideiaAuthor"></div>
+  <div class="fg"><label class="fl">Título</label><input type="text" class="fi" id="iTitle" placeholder="Ex: Ensaio temático de Demon Slayer"></div>
+  <div class="fg"><label class="fl">Descrição</label><textarea class="ft" id="iDesc" placeholder="Como seria essa ideia?"></textarea></div>
+  <div class="fg"><label class="fl">Personagens</label><input type="text" class="fi" id="iChars" placeholder="Tanjiro, Nezuko, Zenitsu..."></div>
+  <div class="bgrp">
+    <button class="btn" onclick="saveIdeia()"><i class="fas fa-check"></i> Enviar</button>
+    <button class="btn sec" onclick="closeModal('mIdeia')">Cancelar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: CENA -->
+<div id="mCena" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mCena')">&times;</button>
+  <div class="mtitle">🎬 Sugerir Cena</div>
+  <div id="cenaAuthor"></div>
+  <div class="fg"><label class="fl">Título da cena</label><input type="text" class="fi" id="cTitle" placeholder="Ex: Luta final do Naruto vs Sasuke"></div>
+  <div class="fg"><label class="fl">Obra / Fonte</label><input type="text" class="fi" id="cSource" placeholder="Anime, filme, jogo..."></div>
+  <div class="fg"><label class="fl">Descrição</label><textarea class="ft" id="cDesc" placeholder="Descreva a cena"></textarea></div>
+  <div class="fg"><label class="fl">Personagens</label><input type="text" class="fi" id="cChars" placeholder="Quem aparece"></div>
+  <div class="fg"><label class="fl">Dificuldade</label>
+    <select class="fs" id="cDiff"><option value="Fácil">Fácil</option><option value="Média" selected>Média</option><option value="Difícil">Difícil</option></select>
+  </div>
+  <div class="bgrp">
+    <button class="btn" onclick="saveCena()"><i class="fas fa-check"></i> Enviar</button>
+    <button class="btn sec" onclick="closeModal('mCena')">Cancelar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: EVENTO -->
+<div id="mEvento" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mEvento')">&times;</button>
+  <div class="mtitle">📅 <span id="evModalTitle">Novo Evento</span></div>
+  <div id="evSuggestNote"></div>
+
+  <div class="alert a-info">
+    <i class="fas fa-link"></i>
+    <span>Cole o link do site do evento e clique em <b>Puxar dados</b> — o site tenta ler título, data e preço sozinho. Se não conseguir, é só preencher na mão.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🔗 Link do site oficial / ingresso</label>
+    <div style="display:flex;gap:.5rem">
+      <input type="url" class="fi" id="eUrl" placeholder="https://sympla.com.br/..." style="flex:1">
+      <button class="btn" style="width:auto;padding:.75rem 1rem;white-space:nowrap" onclick="fetchEvento()"><i class="fas fa-download"></i> Puxar</button>
+    </div>
+    <span class="hint">Sympla, Eventbrite, Instagram do evento, site próprio — qualquer link.</span>
+    <div id="fetchStatus"></div>
+  </div>
+
+  <div class="fg"><label class="fl">Título <span style="color:var(--error)">*</span></label><input type="text" class="fi" id="eTitle" placeholder="Ex: Natal Anime Fest 2026"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+    <div class="fg"><label class="fl">Data <span style="color:var(--error)">*</span></label><input type="date" class="fi" id="eDate"></div>
+    <div class="fg"><label class="fl">Horário</label><input type="time" class="fi" id="eTime"></div>
+  </div>
+
+  <div class="fg">
+    <label class="fl">📍 Cidade</label>
+    <select class="fs" id="eCity">
+      <option value="Natal">Natal / RN</option>
+      <option value="Parnamirim">Parnamirim / RN</option>
+      <option value="Mossoró">Mossoró / RN</option>
+      <option value="São Gonçalo">São Gonçalo do Amarante / RN</option>
+      <option value="outra">Outra cidade</option>
+    </select>
+  </div>
+
+  <div class="fg"><label class="fl">Local</label><input type="text" class="fi" id="eLocal" placeholder="Ex: Centro de Convenções de Natal"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+    <div class="fg"><label class="fl">💰 Preço</label><input type="text" class="fi" id="ePrice" placeholder="R$ 40 ou Gratuito"></div>
+    <div class="fg"><label class="fl">🏷️ Tipo</label>
+      <select class="fs" id="eType">
+        <option value="Anime">Anime / Cosplay</option>
+        <option value="Geek">Geek / Games</option>
+        <option value="Concurso">Concurso de Cosplay</option>
+        <option value="Encontro">Encontro / Meetup</option>
+        <option value="Ensaio">Ensaio fotográfico</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="fg"><label class="fl">🖼️ Imagem / cartaz</label><input type="file" class="fi" id="eImg" accept="image/*"><span class="hint">Opcional. Pode mandar em alta — o site otimiza sozinho.</span></div>
+
+  <div class="fg"><label class="fl">Descrição</label><textarea class="ft" id="eDesc" placeholder="Atrações, concursos, convidados..."></textarea></div>
+
+  <div class="bgrp">
+    <button class="btn" onclick="saveEvento()"><i class="fas fa-check"></i> <span id="evSubmitLabel">Salvar</span></button>
+    <button class="btn sec" onclick="closeModal('mEvento')">Cancelar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: LOGIN ADMIN -->
+<div id="mPresencas" class="modal"><div class="mbox" style="max-width:460px">
+  <button class="mclose" onclick="closeModal('mPresencas')">&times;</button>
+  <div class="mtitle">🙋 Quem vai</div>
+  <p style="font-size:14px;font-weight:700;margin-bottom:.3rem" id="presTitle"></p>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:1rem" id="presCount"></p>
+  <div class="adm-list" id="presList"></div>
+  <div class="bgrp">
+    <button class="btn sec" id="presCopiar"><i class="fas fa-copy"></i> Copiar lista</button>
+    <button class="btn sec" onclick="closeModal('mPresencas')">Fechar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: NOVA COLABORAÇÃO -->
+<div id="mColab" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mColab')">&times;</button>
+  <div class="mtitle">👯 Propor Colaboração</div>
+  <div id="colabAuthor"></div>
+  
+  <div class="fg">
+    <label class="fl">🎭 Tipo de Colab <span style="color:var(--error)">*</span></label>
+    <select class="fs" id="cTipo">
+      <option value="">Escolha...</option>
+      <option value="duo">👯 Duo</option>
+      <option value="trio">👨‍👩‍👧 Trio/Grupo</option>
+      <option value="casal">💑 Casal</option>
+      <option value="ensaio">📸 Ensaio</option>
+      <option value="conteudo">🎥 Conteúdo</option>
+    </select>
+  </div>
+
+  <div class="fg">
+    <label class="fl">Descrição <span style="color:var(--error)">*</span></label>
+    <textarea class="ft" id="cDesc" placeholder="Ex: Duo de Naruto/Sasuke, procuro alguém que faça Sasuke"></textarea>
+  </div>
+
+  <div class="fg">
+    <label class="fl">Personagens / Procura-se</label>
+    <input type="text" class="fi" id="cChars" placeholder="Ex: Naruto, Sasuke">
+  </div>
+
+  <div class="fg">
+    <label class="fl">📧 Email para contato (privado)</label>
+    <input type="email" class="fi" id="cContato" placeholder="seu@email.com">
+  </div>
+
+  <div class="bgrp">
+    <button class="btn" onclick="saveColab()"><i class="fas fa-paper-plane"></i> Propor</button>
+    <button class="btn sec" onclick="closeModal('mColab')">Cancelar</button>
+  </div>
+</div></div>
+
+<div id="mLogin" class="modal"><div class="mbox" style="max-width:400px">
+  <button class="mclose" onclick="closeModal('mLogin')">&times;</button>
+  <div class="mtitle">⭐ Acesso Admin</div>
+  <div class="fg"><label class="fl">Usuário</label><input type="text" class="fi" id="aUser" placeholder="" autocomplete="off" onkeydown="if(event.key==='Enter')document.getElementById('aPass').focus()"></div>
+  <div class="fg"><label class="fl">Senha</label><input type="password" class="fi" id="aPass" placeholder="" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()"></div>
+  <button class="btn" onclick="doLogin()"><i class="fas fa-unlock"></i> Entrar</button>
+</div></div>
+
+<!-- MODAL: PAINEL ADMIN -->
+<div id="mAdmin" class="modal"><div class="mbox adminbox">
+  <button class="mclose" onclick="closeModal('mAdmin')">&times;</button>
+  <div class="mtitle">⚙️ Painel Admin</div>
+
+  <div class="adm-tabs">
+    <button class="adm-tab active" data-at="geral"><i class="fas fa-sliders"></i> Geral</button>
+    <button class="adm-tab" data-at="cosplayers"><i class="fas fa-users"></i> Cosplayers</button>
+    <button class="adm-tab" data-at="eventos"><i class="fas fa-calendar"></i> Eventos</button>
+    <button class="adm-tab" data-at="conteudo"><i class="fas fa-comments"></i> Ideias e Cenas</button>
+    <button class="adm-tab" data-at="ajuda"><i class="fas fa-circle-question"></i> Ajuda</button>
+    <button class="adm-tab" data-at="dados"><i class="fas fa-database"></i> Dados</button>
+    <button class="adm-tab" data-at="cloud"><i class="fas fa-cloud"></i> Cloudflare</button>
+  </div>
+
+  <!-- GERAL -->
+  <div class="adm-pane active" id="at-geral">
+    <div class="fg"><label class="fl">Nome do site</label><input type="text" class="fi" id="cfgName" placeholder="DiaDeCosplay"></div>
+    <div class="fg"><label class="fl"><i class="fab fa-whatsapp"></i> Link do grupo</label><input type="url" class="fi" id="cfgWa"><span class="hint">Deixe vazio para esconder o botão do WhatsApp.</span></div>
+    <div class="fg"><label class="fl">Aviso no topo da página</label><textarea class="ft" id="cfgAviso" placeholder="Ex: Encontro dia 06/09 depois do almoço!"></textarea><span class="hint">Aparece pra todo mundo na aba Cosplayers. Vazio = nada aparece.</span></div>
+    <div class="fg"><label class="fl">Idealizador (rodapé da Ajuda)</label><input type="text" class="fi" id="cfgCredito" placeholder="@ofcvictorcorreia"></div>
+    <div id="admStats" class="adm-stats"></div>
+    <button class="btn" onclick="saveConfig()"><i class="fas fa-check"></i> Salvar configurações</button>
+  </div>
+
+  <!-- COSPLAYERS -->
+  <div class="adm-pane" id="at-cosplayers">
+    <div class="fg">
+      <label class="fl">➕ Adicionar cosplayers</label>
+      <textarea class="ft" id="admNovosCos" placeholder="@fulano&#10;@ciclano&#10;@beltrano"></textarea>
+      <span class="hint">Um @ por linha. Pode colar a lista inteira que ele ignora os repetidos.</span>
+      <button class="btn" onclick="admAddCos()" style="margin-top:.6rem"><i class="fas fa-plus"></i> Adicionar</button>
+    </div>
+    <div class="fg">
+      <label class="fl">📢 Cobrar quem falta</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+        <button class="btn sec" onclick="copiarFaltantes()"><i class="fas fa-copy"></i> Lista de quem falta</button>
+        <button class="btn sec" onclick="copiarLinkGrupo()"><i class="fab fa-whatsapp"></i> Recado pro grupo</button>
+      </div>
+      <span class="hint">Gera o texto pronto pra colar no WhatsApp marcando quem ainda não cadastrou.</span>
+    </div>
+
+    <div class="fg">
+      <label class="fl">📋 Lista atual</label>
+      <input type="text" class="fi" id="admCosSearch" placeholder="Filtrar..." oninput="admRenderCos()" style="margin-bottom:.6rem">
+      <div class="adm-list" id="admCosList"></div>
+    </div>
+  </div>
+
+  <!-- EVENTOS -->
+  <div class="adm-pane" id="at-eventos">
+    <button class="btn" onclick="closeModal('mAdmin');switchTab('eventos');newEvento()"><i class="fas fa-plus"></i> Criar novo evento</button>
+    <div class="fg" style="margin-top:1.2rem">
+      <label class="fl">📅 Eventos cadastrados</label>
+      <div class="adm-list" id="admEvList"></div>
+    </div>
+  </div>
+
+  <!-- IDEIAS E CENAS -->
+  <div class="adm-pane" id="at-conteudo">
+    <div class="fg">
+      <label class="fl">💡 Ideias enviadas</label>
+      <div class="adm-list" id="admIdeiaList"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">🎬 Cenas sugeridas</label>
+      <div class="adm-list" id="admCenaList"></div>
+    </div>
+    <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Como admin você pode apagar qualquer ideia ou cena, mesmo as de outras pessoas.</span></div>
+  </div>
+
+  <!-- AJUDA -->
+  <div class="adm-pane" id="at-ajuda">
+    <div class="alert a-info"><i class="fas fa-pen"></i><span>Edite os cartões que aparecem na aba Ajuda. Deixe o título vazio para remover o cartão.</span></div>
+    <div id="admAjudaList"></div>
+    <button class="btn sec" onclick="admAddAjuda()"><i class="fas fa-plus"></i> Novo cartão</button>
+    <button class="btn" onclick="saveAjuda()" style="margin-top:.6rem"><i class="fas fa-check"></i> Salvar Ajuda</button>
+  </div>
+
+  <!-- DADOS -->
+  <div class="adm-pane" id="at-dados">
+    <div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>Os dados ficam salvos <b>só neste navegador</b>. Se limpar o histórico, some tudo. Faça backup com frequência — ou use a aba Cloudflare para guardar online.</span></div>
+
+    <div class="fg">
+      <label class="fl">💾 Backup</label>
+      <button class="btn sec" onclick="exportData()"><i class="fas fa-download"></i> Baixar backup (JSON)</button>
+      <span class="hint">Gera um arquivo com tudo: cosplayers, eventos, ideias, cenas e configurações.</span>
+    </div>
+
+    <div class="fg">
+      <label class="fl">📤 Restaurar backup</label>
+      <input type="file" class="fi" id="admImport" accept=".json,application/json">
+      <span class="hint">Escolha um arquivo de backup para restaurar.</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.6rem">
+        <button class="btn sec" onclick="importData(false)"><i class="fas fa-code-merge"></i> Juntar</button>
+        <button class="btn sec" onclick="importData(true)"><i class="fas fa-arrows-rotate"></i> Substituir</button>
+      </div>
+      <span class="hint"><b>Juntar</b> mantém o que já existe e só adiciona o que falta. <b>Substituir</b> apaga tudo e usa só o arquivo.</span>
+    </div>
+
+    <div class="fg">
+      <label class="fl">📋 Colar JSON direto</label>
+      <textarea class="ft" id="admJsonPaste" placeholder='{"cosplayers":[...],"eventos":[...]}'></textarea>
+      <button class="btn sec" onclick="importPasted()" style="margin-top:.6rem"><i class="fas fa-paste"></i> Importar do texto</button>
+    </div>
+
+    <div class="fg">
+      <label class="fl" style="color:var(--error)">⚠️ Zona de perigo</label>
+      <button class="btn sec" onclick="wipe()" style="border-color:var(--error);color:var(--error)"><i class="fas fa-trash"></i> Apagar todos os dados</button>
+    </div>
+  </div>
+
+  <!-- CLOUDFLARE -->
+  <div class="adm-pane" id="at-cloud">
+    <div class="alert a-warn"><i class="fas fa-rotate"></i><span><b>Atualize o código do Worker!</b> A versão nova hospeda as fotos separadamente (corrige o sumiço), faz backup diário automático e recusa gravações suspeitas. Copie abaixo e cole na Cloudflare.</span></div>
+    <div class="alert a-ok"><i class="fas fa-circle-check"></i><span><b>Nuvem conectada e sincronizando sozinha.</b> Tudo que você ou os cosplayers mudarem é enviado automaticamente em poucos segundos, e o site busca novidades a cada minuto.</span></div>
+
+    <div class="fg">
+      <label class="fl">🔗 URL do Worker</label>
+      <input type="url" class="fi" id="cfgWorker" readonly style="opacity:.75">
+    </div>
+    <div class="fg">
+      <label class="fl">🔑 Chave de escrita</label>
+      <div style="display:flex;gap:.5rem">
+        <input type="password" class="fi" id="cfgKey" readonly autocomplete="off" style="flex:1;opacity:.75">
+        <button class="btn sec" style="width:auto;padding:.75rem 1rem" onclick="toggleKey()"><i class="fas fa-eye" id="keyEye"></i></button>
+      </div>
+      <span class="hint">Já vem configurada no código. Visível só aqui dentro do painel.</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:.8rem">
+      <button class="btn sec" onclick="cloudPush(false)"><i class="fas fa-cloud-arrow-up"></i> Enviar agora</button>
+      <button class="btn sec" onclick="cloudPull(false)"><i class="fas fa-cloud-arrow-down"></i> Puxar agora</button>
+    </div>
+    <div id="cloudStatus"></div>
+
+    <div class="fg" style="margin-top:1.4rem">
+      <label class="fl">ℹ️ Como está funcionando</label>
+      <div class="guia">
+        <div class="guia-step">☁️ O ícone de nuvem no topo mostra o estado: <b>verde</b> = tudo salvo, <b>azul piscando</b> = enviando, <b>vermelho</b> = sem conexão.</div>
+        <div class="guia-step">🔄 Clicar nesse ícone força uma atualização na hora.</div>
+        <div class="guia-step">📱 Qualquer aparelho que abrir o site já recebe os dados da nuvem sozinho.</div>
+        <div class="guia-step">💾 Mesmo assim, baixe um backup na aba <b>Dados</b> de vez em quando.</div>
+      </div>
+      <button class="btn sec" onclick="copyWorker()" style="margin-top:.7rem"><i class="fas fa-copy"></i> Ver código do Worker</button>
+      <pre class="codebox" id="workerCode"></pre>
+    </div>
+  </div>
+
+  <div class="bgrp">
+    <button class="btn sec" onclick="closeModal('mAdmin')">Fechar</button>
+    <button class="btn sec" onclick="logout()"><i class="fas fa-right-from-bracket"></i> Sair</button>
+  </div>
+</div></div>
+
+<script>
+const KEY='diadecosplay_v5';
+const ME='diadecosplay_me';
+let filter='todos', editId=null;
+
+const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rogerio_peixotosw','@Zel_Coss','@freakybbs__','@zack_cosplayerr','@denjiro.cos','@inosukenatalense','@larii.olivra','@_ysii.dftl','@cos_alexs','@giovanna_fogassa','@Vitor.chainsaw','@santxz_dzn','@cosplay_hinaa','@deadpool4parede','@guhmi._','@deadmaid99','@melanybastos_','@kon.cosplay','@y.bonnie_0','@moon_summy','@valdecirjunior99','@ninik.cos','@sakana.coss','@the_.cosplay','@elaquefez','@mah4swaran','@sawako.cos_','@ketsukai','@nohaka_desu','@mariteocos','@newdyelim','@siricuticos.dub','@yuyu.coss','@Yukke.elaris','@NextEvee','@joaovitorqzn','@weslley_pereir','@joaovictor.diniz.77','@alrakcosplay','@mar_cosplayy','@kamenridernordestino','@lunna_hime','@_postc0s','@ayane.coss','@k4zucos','@sunflowerbro.art_','@Kura.cosp','@cosk1ng','@cosplay_delta','@ark.cosplayer','@_liam.h1a0','@raiju.cos','@etsukocosplay_','@kaian.emanoel','@retrowave_cosplay','@j0j00x','@naaayrin','@bibs.cos','@cos.celsius','@Rackie.cos','@danielsantospenha','@LunaroCosplayer','@kamui_dante','@7aramil'];
+
+/* ===== CONEXÃO COM A NUVEM (já configurada) ===== */
+const CLOUD_URL='https://diadecosplay-api.joao-victor-correia10.workers.dev';
+const CLOUD_KEY='diadecosplay2026';
+
+/* ===== CREDENCIAIS DO ADMIN ===== */
+const ADMIN_USER='victor20';
+const ADMIN_PASS='victor20';
+/* aceita com ou sem espaço, maiúscula ou @ na frente */
+function norm(s){return (s||'').toLowerCase().replace(/[\s@]/g,'')}
+
+let db={wa:'https://chat.whatsapp.com/EbLKGI91PVFCSwtRtypIHp',cosplayers:[],eventos:[],ideias:[],cenas:[]};
+
+/* ===== STORAGE ===== */
+function load(){
+  const s=localStorage.getItem(KEY);
+  if(s){
+    const saved=JSON.parse(s);
+    // credenciais nunca vêm do armazenamento — ficam só no código
+    delete saved.admin;delete saved.pass;
+    db={...db,...saved};
+  }
+}
+let syncTimer=null, syncing=false, pendente=false, tentativas=0;
+
+function save(auto=true){
+  try{
+    db.updatedAt=Date.now();
+    localStorage.setItem(KEY,JSON.stringify(db));
+    if(auto){pendente=true;agendarSync()}
+    return true;
+  }catch(e){
+    toast('O navegador ficou sem espaço. Faça backup no painel admin.','err');
+    return false;
+  }
+}
+
+/* agenda o envio — nunca descarta uma alteração */
+function agendarSync(atraso=700){
+  if(!(db.config||{}).workerUrl)return;
+  syncBadge('up','Enviando alterações...');
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(rodarSync,atraso);
+}
+
+async function rodarSync(){
+  if(syncing){agendarSync(1200);return}   // já tem envio rolando: tenta de novo depois
+  if(!pendente)return;
+  const ok=await cloudPush(true);
+  if(ok){
+    pendente=false;tentativas=0;
+  }else{
+    tentativas++;
+    if(tentativas<6)agendarSync(Math.min(1500*tentativas,8000)); // tenta de novo, esperando mais a cada falha
+    else syncBadge('off','Não consegui salvar na nuvem — verifique a internet');
+  }
+}
+
+/* garante o envio antes de fechar/trocar de aba */
+function flushSync(){
+  if(!pendente)return;
+  const c=db.config||{};
+  if(!c.workerUrl||!navigator.sendBeacon)return;
+  try{
+    const blob=new Blob([JSON.stringify({...db,_k:c.writeKey})],{type:'text/plain'});
+    navigator.sendBeacon(c.workerUrl+'?k='+encodeURIComponent(c.writeKey),blob);
+    pendente=false;
+  }catch(e){}
+}
+
+function syncBadge(estado,texto){
+  const el=document.getElementById('syncBadge');
+  if(!el)return;
+  el.className='sync-badge '+estado;
+  el.innerHTML={
+    on:'<i class="fas fa-cloud-arrow-up"></i>',
+    up:'<i class="fas fa-arrows-rotate fa-spin"></i>',
+    off:'<i class="fas fa-cloud-slash"></i>'
+  }[estado]||'';
+  el.title=texto||'';
+}
+function seed(){
+  if(!Array.isArray(db.cosplayers))db.cosplayers=[];
+
+  // MIGRAÇÃO de versões antigas
+  let changed=false;
+  db.cosplayers.forEach(c=>{
+    if(!Array.isArray(c.cats)){
+      c.cats=[];
+      if(c.cat==='cosplay')c.cats=['cosplay'];
+      else if(c.cat==='estilizadora')c.cats=['wigmaker'];
+      else if(c.cat==='ambos')c.cats=['cosplay','wigmaker'];
+      delete c.cat;changed=true;
+    }
+    if(c.media===undefined){c.media=null;c.mediaType='';c.schedule='';changed=true}
+    if(c.emoji===undefined){c.emoji='';changed=true}
+    if(c.nome===undefined){c.nome='';changed=true}
+    if(c.userTrocado===undefined){c.userTrocado=false;c.nomeTrocado=false;changed=true}
+    if(!Array.isArray(c.photos)){
+      c.photos=c.photo?[c.photo]:[];
+      c.slideshow=true;changed=true;
+    }
+  });
+
+  // ADICIONA os que faltam, SEM apagar perfis já preenchidos
+  const existentes=db.cosplayers.map(c=>c.username.toLowerCase());
+  let maxId=db.cosplayers.reduce((m,c)=>Math.max(m,c.id),0);
+  LIST.forEach(u=>{
+    if(!existentes.includes(u.toLowerCase())){
+      db.cosplayers.push({id:++maxId,username:u,nome:'',email:'',cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',userTrocado:false,nomeTrocado:false});
+      changed=true;
+    }
+  });
+
+  if(changed)save();
+  db.eventos.forEach(e=>{if(!Array.isArray(e.presencas))e.presencas=[]});
+  if(!Array.isArray(db.colabs))db.colabs=[];
+  seedEvento();
+  seedAjuda();
+}
+
+const AJUDA_PADRAO=[
+  {icon:'👆',title:'Clique no card',text:'Tocar na foto ou no @ te leva direto pro Instagram do cosplayer.'},
+  {icon:'✉️',title:'Enviar mensagem',text:'O botão de mensagem abre o Direct do Instagram da pessoa direto, sem você precisar procurar.'},
+  {icon:'🙋',title:'Confirme presença',text:'Nos eventos, clique em Confirmar presença. Assim o Victor sabe quantos esperar e quem vai estar lá.'},
+  {icon:'🔗',title:'Compartilhe sua carta',text:'O botão Compartilhar gera um link que abre direto na sua carta — bom pra postar no story.'},
+  {icon:'📧',title:'Cadastre seu email',text:'Clique em "Editar" no seu card e coloque seu email. É ele que libera todo o resto.'},
+  {icon:'🏷️',title:'Você escolhe a categoria',text:'Cosplay, WigMaker, PropMaker e CosMaker (maquiagem) — marque quantas quiser. Ninguém define isso por você.'},
+  {icon:'🔒',title:'Seu email é privado',text:'Ninguém vê seu email. Os outros só veem que você está cadastrado. Ele serve só pra te identificar.'},
+  {icon:'🛡️',title:'Perfil protegido',text:'Depois de cadastrado, só quem souber o email consegue editar aquele perfil. O site mostra só o começo do email como dica.'},
+  {icon:'✏️',title:'Mudou de @?',text:'Com o email confirmado, você pode corrigir seu @ do Instagram e seu nome quando quiser.'},
+  {icon:'👀',title:'Prévia na foto',text:'Passe o mouse (ou deslize o dedo) sobre a foto de alguém e a nova postagem aparece — foto ou vídeo.'},
+  {icon:'⏰',title:'Agende sua postagem',text:'Dá pra marcar dia e hora. A postagem só aparece pros outros quando chegar o horário.'},
+  {icon:'📸',title:'Nova postagem',text:'Cole o link de uma postagem do seu Instagram e ela aparece como botão no seu card.'},
+  {icon:'💡',title:'Ideias e Cenas',text:'Depois do email cadastrado, você pode propor ideias e sugerir cenas. O sistema já te reconhece.'},
+  {icon:'📅',title:'Sugira eventos',text:'Com email cadastrado você pode indicar eventos. O admin aprova e ele entra no calendário com seu nome.'},
+  {icon:'😎',title:'Sua carta',text:'Escolha um emoji que te representa — ele aparece na sua carta junto com o que você faz.'},
+  {icon:'🖼️',title:'Até 3 fotos',text:'Coloque de 1 a 3 fotos no perfil. Se quiser, elas se alternam sozinhas a cada 3 segundos.'},
+  {icon:'⚠️',title:'@ e nome: uma vez só',text:'Você pode corrigir seu @ e definir seu nome uma única vez. Confira antes de salvar.'},
+  {icon:'🙋',title:'Seu nome',text:'Além do @, você pode colocar como quer ser chamado(a). Aparece em destaque na carta.'}
+];
+
+function seedAjuda(){
+  if(!Array.isArray(db.ajuda)||!db.ajuda.length){
+    db.ajuda=AJUDA_PADRAO.map(a=>({...a}));save();
+  }
+  if(!db.config)db.config={siteName:'DiaDeCosplay',aviso:'',credito:'@ofcvictorcorreia'};
+  // a conexão com a nuvem vem sempre do código — garante que nunca fique vazia
+  if(!db.config.workerUrl)db.config.workerUrl=CLOUD_URL;
+  if(!db.config.writeKey)db.config.writeKey=CLOUD_KEY;
+  save();
+}
+
+/* EVENTO FIXO: encontro do dia 06/09 */
+function seedEvento(){
+  if(db.eventos.some(e=>e.fixo))return;
+  db.eventos.push({
+    id:900609,fixo:true,
+    title:'Encontro DiaDeCosplay',
+    date:'2026-09-06',time:'14:00',
+    city:'Natal',local:'A confirmar',
+    price:'Gratuito',type:'Encontro',url:'',
+    desc:'Encontro da galera depois do almoço. Vou levar câmera e lentes para fazer os vídeos e as fotos de geral, e também o autógrafo móvel — todo mundo assina e rende um vídeo massa. Serve de preparativo para os próximos eventos. Se você tem uma ideia de recriar um anime, manda lá na aba Ideias!',
+    img:null,status:'aprovado',by:'@ofcvictorcorreia'
+  });
+  save();
+}
+
+/* ===== HOSPEDAGEM DE FOTOS NA NUVEM =====
+   As fotos NÃO ficam mais dentro do pacote de dados.
+   Cada uma vira um arquivo próprio na Cloudflare e o perfil guarda só o endereço.
+   Isso evita estourar o espaço do navegador — que era o motivo das fotos sumirem. */
+
+function ehDataUrl(s){return typeof s==='string'&&s.startsWith('data:')}
+function novoIdFoto(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+async function subirFoto(dataUrl){
+  // Validação robusta de foto
+  if(!dataUrl||typeof dataUrl!=='string'){throw new Error('❌ Foto inválida')}
+  if(!dataUrl.startsWith('data:image')){throw new Error('❌ Não é uma imagem')}
+  if(dataUrl.length>8000000){throw new Error('❌ Foto muito grande (máx 8MB)')}
+  
+  const c=db.config||{};
+  if(!c.workerUrl||!c.writeKey){
+    throw new Error('❌ Nuvem não configurada - contate o admin');
+  }
+  
+  const id=novoIdFoto();
+  const tentativas=3;
+  let ultimoErro=null;
+  
+  console.log('📤 Enviando foto pra nuvem...');
+  
+  for(let i=0; i<tentativas; i++){
+    try{
+      const r=await fetch(`${c.workerUrl}/f/${id}`,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
+        body:dataUrl,
+        cache:'no-store',
+        signal: AbortSignal.timeout(30000)
+      });
+      
+      if(r.status===409){
+        // 409 = binding não configurado, mas tenta mesmo assim
+        console.warn('⚠️ Worker 409: continuando...');
+        // CONTINUA, não faz fallback!
+      }
+      
+      if(!r.ok && r.status!==409){
+        throw new Error(`Servidor respondeu ${r.status}`);
+      }
+      
+      const url=`${c.workerUrl}/f/${id}`;
+      console.log('✅ Foto online!',url);
+      return url; // ✅ RETORNA URL ONLINE
+      
+    }catch(e){
+      ultimoErro=e.message;
+      console.warn(`Tentativa ${i+1}/${tentativas}: ${e.message}`);
+      
+      if(i<tentativas-1){
+        // Espera antes de tentar de novo
+        await new Promise(r=>setTimeout(r,1000*(i+1)));
+      }
+    }
+  }
+  
+  // Se chegou aqui = falhou todas as tentativas
+  console.error('❌ Foto não conseguiu subir:', ultimoErro);
+  throw new Error(`❌ Não consegui enviar a foto após ${tentativas} tentativas. Tente de novo!`);
+}
+
+/* sobe TODAS as fotos obrigatoriamente pra nuvem */
+async function hospedarFotos(c){
+  if(!c)return;
+  const novas=[];
+  
+  // Processa fotos do perfil
+  for(const f of (c.photos||[])){
+    if(!f){continue}
+    
+    if(ehDataUrl(f)){
+      try{
+        // ✅ FORÇA upload, sem fallback local!
+        const url=await subirFoto(f);
+        if(url&&url.startsWith('http')){
+          novas.push(url);
+        }else{
+          throw new Error('URL inválida retornada');
+        }
+      }catch(e){
+        // ❌ Se falhar, RE-LANÇA o erro (não mantém local)
+        console.error('❌ Falha crítica em foto:',e.message);
+        throw e; // Propaga erro pra saveProfile avisar usuário
+      }
+    }else if(f.startsWith('http')){
+      novas.push(f); // Já está online
+    }
+  }
+  
+  c.photos=novas.length?novas:[];
+  c.photo=novas[0]||null;
+
+  // Processa mídia da postagem
+  if(c.media&&ehDataUrl(c.media)){
+    try{
+      const url=await subirFoto(c.media);
+      if(url&&url.startsWith('http')){
+        c.media=url;
+      }else{
+        throw new Error('Mídia: URL inválida');
+      }
+    }catch(e){
+      console.error('❌ Falha em mídia:',e.message);
+      throw e; // Propaga erro
+    }
+  }
+}
+
+/* varre o site atrás de fotos que ficaram só no navegador e sobe pra nuvem */
+async function reenviarFotosPendentes(){
+  let mudou=false;
+  for(const c of db.cosplayers){
+    const pend=(c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media);
+    if(pend){await hospedarFotos(c);mudou=true}
+  }
+  for(const e of db.eventos){
+    if(ehDataUrl(e.img)){
+      try{e.img=await subirFoto(e.img);mudou=true}catch(x){}
+    }
+  }
+  if(mudou){save();renderCos();renderEventos()}
+}
+
+function pesoDados(){
+  try{return JSON.stringify(db).length}catch(e){return 0}
+}
+
+/* ===== GERENCIADOR DE FOTOS (até 3) ===== */
+let fotosTemp=[];
+
+function renderFotos(){
+  const g=document.getElementById('fotosGrid');
+  let html='';
+  for(let i=0;i<3;i++){
+    if(fotosTemp[i]){
+      html+=`<div class="foto-slot cheio">
+        <img src="${fotosTemp[i]}" alt="foto ${i+1}">
+        <div class="foto-x" onclick="removerFoto(${i})" title="Remover"><i class="fas fa-xmark"></i></div>
+        ${i===0?'<div class="foto-cap">PRINCIPAL</div>':''}
+      </div>`;
+    }else{
+      const primeiroVazio=fotosTemp.length===i;
+      html+=`<div class="foto-slot" ${primeiroVazio?'onclick="escolherFoto()"':''} style="${primeiroVazio?'':'opacity:.4'}">
+        <div class="add"><i class="fas fa-plus"></i><small>${primeiroVazio?'ADICIONAR':''}</small></div>
+      </div>`;
+    }
+  }
+  g.innerHTML=html;
+}
+
+function escolherFoto(){
+  if(!emailGate()){toast('Confirme o email do perfil primeiro','err');return}
+  const inp=document.getElementById('fPhoto');
+  inp.value='';inp.click();
+}
+
+function removerFoto(i){
+  fotosTemp.splice(i,1);
+  renderFotos();
+  toast('Foto removida — clique em Salvar pra confirmar');
+}
+
+function aoEscolherFoto(e){
+  const f=e.target.files[0];
+  if(!f)return;
+  if(fotosTemp.length>=3){toast('Máximo de 3 fotos','err');return}
+  toast(`Otimizando foto (${tamanhoLegivel(f.size)})...`);
+  comprimirImagem(f,1000,.82).then(out=>{
+    if(fotosTemp.includes(out)){toast('Essa foto já está no seu perfil','err');return}
+    fotosTemp.push(out);renderFotos();
+    toast(`Foto ${fotosTemp.length} de 3 adicionada`,'ok');
+  }).catch(err=>toast(err.message||'Não consegui processar a foto','err'));
+}
+
+/* ===== ROTAÇÃO DAS FOTOS NOS CARDS ===== */
+let slideIndex=0;
+function girarFotos(){
+  slideIndex++;
+  document.querySelectorAll('.card-img[data-slides]').forEach(el=>{
+    const imgs=el.querySelectorAll('img.slide');
+    if(imgs.length<2)return;
+    const at=slideIndex%imgs.length;
+    imgs.forEach((im,i)=>im.classList.toggle('on',i===at));
+    el.querySelectorAll('.dot-i').forEach((d,i)=>d.classList.toggle('on',i===at));
+  });
+}
+const EMOJIS=['⚔️','🗡️','🛡️','🔥','⚡','🌸','🌙','⭐','💫','👑','🎭','🎬','🎨','🖌️','✂️','🧵','💇','🪄','🔮','🧿','🐉','🦊','🐺','🦋','🕷️','🌊','❄️','🍥','🍡','🎌','💜','💙','💚','🖤','🤍','❤️','🌈','☠️','👺','👹','🤖','👾','🎮','🃏','🎯','💎','🪶','🍀'];
+
+function renderEmojiGrid(sel){
+  document.getElementById('emojiGrid').innerHTML=EMOJIS.map(e=>
+    `<div class="emoji-pick ${e===sel?'sel':''}" data-e="${e}" onclick="pickEmoji('${e}')">${e}</div>`
+  ).join('');
+}
+function pickEmoji(e){
+  const cur=document.querySelector('.emoji-pick.sel');
+  const same=cur&&cur.dataset.e===e;
+  document.querySelectorAll('.emoji-pick').forEach(x=>x.classList.remove('sel'));
+  if(!same)document.querySelector(`.emoji-pick[data-e="${e}"]`).classList.add('sel');
+}
+function getPickedEmoji(){
+  const el=document.querySelector('.emoji-pick.sel');
+  return el?el.dataset.e:'';
+}
+
+/* TIER: quanto mais completo o perfil, mais "rara" a carta */
+function tierOf(c){
+  let p=0;
+  if(c.email)p++;
+  if(c.nome)p++;
+  if((c.photos&&c.photos.length)||c.photo)p++;
+  if(c.photos&&c.photos.length>1)p++;
+  if((c.cats||[]).length)p++;
+  if(c.emoji)p++;
+  if(postLive(c))p++;
+  if(c.media)p++;
+  if(c.tiktok||c.twitter||c.youtube)p++;
+  if(p>=6)return{cls:'tier-icon',mark:'icon',label:'ÍCONE'};
+  if(p>=4)return{cls:'tier-gold',mark:'gold',label:'OURO'};
+  if(p>=2)return{cls:'tier-silver',mark:'',label:'PRATA'};
+  return{cls:'',mark:'',label:'BRONZE'};
+}
+/* ===== COMPRESSÃO AUTOMÁTICA DE IMAGENS ===== */
+function comprimirImagem(file,maxLado=1280,qualidade=.82){
+  return new Promise((resolve,reject)=>{
+    if(!file.type.startsWith('image/')){reject(new Error('nao-imagem'));return}
+    const r=new FileReader();
+    r.onerror=()=>reject(new Error('Não consegui ler o arquivo'));
+    r.onload=e=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('Arquivo de imagem inválido'));
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxLado||h>maxLado){
+          if(w>h){h=Math.round(h*maxLado/w);w=maxLado}
+          else{w=Math.round(w*maxLado/h);h=maxLado}
+        }
+        const cv=document.createElement('canvas');
+        cv.width=w;cv.height=h;
+        const ctx=cv.getContext('2d');
+        ctx.imageSmoothingQuality='high';
+        ctx.drawImage(img,0,0,w,h);
+        let q=qualidade,out=cv.toDataURL('image/jpeg',q);
+        while(out.length>900000&&q>.4){q-=.12;out=cv.toDataURL('image/jpeg',q)}
+        resolve(out);
+      };
+      img.src=e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+function tamanhoLegivel(b){return b>1048576?(b/1048576).toFixed(1)+'MB':Math.round(b/1024)+'KB'}
+
+function postLive(c){
+  if(!c.post&&!c.media)return false;
+  if(!c.schedule)return true;
+  return new Date(c.schedule)<=new Date();
+}
+function schedLabel(c){
+  if(!c.schedule)return '';
+  const d=new Date(c.schedule);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ===== SESSÃO DO COSPLAYER (reconhecimento por email) ===== */
+function getMe(){
+  const email=localStorage.getItem(ME);
+  if(!email)return null;
+  return db.cosplayers.find(c=>c.email.toLowerCase()===email.toLowerCase())||null;
+}
+function setMe(email){localStorage.setItem(ME,email)}
+function clearMe(){localStorage.removeItem(ME)}
+
+function renderMe(){
+  const me=getMe();
+  const chip=document.getElementById('userChip');
+  const box=document.getElementById('welcomeBox');
+  box.innerHTML='';
+  if(me){
+    chip.style.display='flex';
+    document.getElementById('userChipText').textContent=me.username;
+  }else{
+    chip.style.display='none';
+  }
+}
+function signOut(){clearMe();renderMe();renderCos();renderGates();renderEvGate();renderEventos();toast('Sessão encerrada')}
+function openMyProfile(){const me=getMe();if(me)openEdit(me.id)}
+
+/* ===== RENDER COSPLAYERS ===== */
+function renderCos(){
+  const g=document.getElementById('cosGrid');
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  let arr=[...db.cosplayers];
+
+  if(filter==='semcat')arr=arr.filter(c=>!c.cats||!c.cats.length);
+  else if(filter==='post')arr=arr.filter(c=>postLive(c));
+  else if(filter!=='todos')arr=arr.filter(c=>(c.cats||[]).includes(filter));
+
+  const q=document.getElementById('search').value.toLowerCase().trim();
+  if(q)arr=arr.filter(c=>c.username.toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q));
+
+  arr.sort((a,b)=>{
+    if(me){if(a.id===me.id)return -1;if(b.id===me.id)return 1}
+    const nf=c=>((c.photos&&c.photos.length)?c.photos.length:(c.photo?1:0));
+    const sa=(postLive(a)?8:0)+(nf(a)?4:0)+(a.email?2:0)+((a.cats||[]).length?1:0);
+    const sb=(postLive(b)?8:0)+(nf(b)?4:0)+(b.email?2:0)+((b.cats||[]).length?1:0);
+    if(sb!==sa)return sb-sa;
+    return a.username.localeCompare(b.username);
+  });
+
+  document.getElementById('count').textContent=`${arr.length} cosplayer${arr.length===1?'':'s'}`;
+  if(!arr.length){g.innerHTML=`<div class="empty"><i class="fas fa-face-frown"></i><b>Nada encontrado</b>Tente outro filtro ou busca</div>`;return}
+
+  const CAT={cosplay:'👺 Cosplay',wigmaker:'💇 WigMaker',propmaker:'🛠️ PropMaker',cosmaker:'💄 CosMaker'};
+
+  g.innerHTML=arr.map(c=>{
+    const ig=`https://instagram.com/${c.username.replace('@','')}`;
+    const isMe=me&&me.id===c.id;
+    const mine=isMe||admin;
+    const live=postLive(c);
+    const pending=c.schedule&&!live;
+    const fotos=(c.photos&&c.photos.length)?c.photos:(c.photo?[c.photo]:[]);
+    const gira=fotos.length>1&&c.slideshow!==false;
+
+    const temPreview=live&&c.media&&!fotos.includes(c.media);
+    const preview=temPreview?`<div class="preview">
+        ${c.mediaType==='video'
+          ? `<video src="${c.media}" muted loop playsinline preload="metadata"></video>`
+          : `<img src="${c.media}" alt="prévia da postagem">`}
+        <div class="preview-tag"><i class="fab fa-instagram"></i> NOVA POSTAGEM</div>
+      </div>`:'';
+
+    const idChips=[];
+    if(c.emoji)idChips.push(`<div class="id-chip id-emoji">${c.emoji}</div>`);
+    (c.cats||[]).forEach(k=>{if(CAT[k])idChips.push(`<div class="id-chip">${CAT[k]}</div>`)});
+
+    const badges=[];
+    if(pending&&mine)badges.push(`<div class="badge badge-timer"><i class="fas fa-clock"></i> ${schedLabel(c)}</div>`);
+
+    const t=tierOf(c);
+
+    const imgsHtml=fotos.length
+      ? (fotos.length>1
+          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}">`).join('')
+          : `<img src="${fotos[0]}" alt="${c.username}">`)
+      : `<i class="fab fa-instagram ph"></i>`;
+
+    return `<div class="card ${t.cls} ${temPreview?'has-preview':''}">
+      <div class="card-img" ${gira?'data-slides="1"':''} data-id="${c.id}" onclick="cardTap(event,${c.id},'${ig}')" title="Ver no Instagram">
+        ${imgsHtml}
+        ${preview}
+        ${fotos.length>1?`<div class="dots">${fotos.map((_,i)=>`<div class="dot-i${i===0?' on':''}"></div>`).join('')}</div>`:''}
+        ${badges.length?`<div class="badge-stack">${badges.join('')}</div>`:''}
+        ${isMe?`<div class="badge-me">VOCÊ</div>`:''}
+        ${idChips.length?`<div class="id-bar">${idChips.join('')}</div>`:''}
+        ${temPreview?`<div class="peek-hint"><i class="fas fa-play"></i></div>`:''}
+      </div>
+      <div class="card-body">
+        ${c.nome
+          ? `<div><div class="card-name">${c.nome}</div><a href="${ig}" target="_blank" class="card-user">${c.username}</a></div>`
+          : `<a href="${ig}" target="_blank" class="card-user solo">${c.username}</a>`}
+        ${(c.tiktok||c.twitter||c.youtube)?`<div class="socials">
+          ${c.tiktok?`<a href="https://tiktok.com/@${c.tiktok.replace('@','')}" target="_blank" title="TikTok"><i class="fab fa-tiktok"></i></a>`:''}
+          ${c.twitter?`<a href="https://x.com/${c.twitter.replace('@','')}" target="_blank" title="Twitter"><i class="fab fa-x-twitter"></i></a>`:''}
+          ${c.youtube?`<a href="https://youtube.com/${c.youtube}" target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>`:''}
+        </div>`:''}
+        <div class="card-btns">
+          <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
+          <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
+          <a href="https://ig.me/m/${c.username.replace('@','')}" target="_blank" class="bs full msg"><i class="fas fa-paper-plane"></i> Enviar mensagem</a>
+          <button class="bs full share" onclick="compartilhar(${c.id})"><i class="fas fa-share-nodes"></i> Compartilhar carta</button>
+          ${live&&c.post
+            ? (mine
+                ? `<div class="bs-row">
+                     <a href="${c.post}" target="_blank" class="bs post"><i class="fas fa-photo-film"></i> Ver postagem</a>
+                     <button class="bs bs-icon" onclick="openEdit(${c.id},true)" title="Trocar postagem"><i class="fas fa-rotate"></i></button>
+                   </div>`
+                : `<a href="${c.post}" target="_blank" class="bs full post"><i class="fas fa-photo-film"></i> Ver nova postagem</a>`)
+            : pending
+              ? (mine?`<button class="bs full addpost" onclick="openEdit(${c.id},true)"><i class="fas fa-clock"></i> Agendada · ${schedLabel(c)}</button>`:'')
+              : `<button class="bs full addpost" onclick="openEdit(${c.id},true)"><i class="fas fa-plus"></i> Colocar nova postagem</button>`}
+          ${admin?`<button class="bs full del admin-only" onclick="delCos(${c.id})"><i class="fas fa-trash"></i> Deletar</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  bindPreviews();
+}
+
+/* PRÉVIA: hover no desktop, deslizar/tocar no mobile */
+function bindPreviews(){
+  document.querySelectorAll('.card-img').forEach(el=>{
+    const vid=el.querySelector('video');
+    if(vid){
+      el.addEventListener('mouseenter',()=>vid.play().catch(()=>{}));
+      el.addEventListener('mouseleave',()=>{vid.pause();vid.currentTime=0});
+    }
+    // toque/deslize no mobile revela a prévia
+    let sx=0,sy=0;
+    el.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY},{passive:true});
+    el.addEventListener('touchmove',e=>{
+      if(!el.querySelector('.preview'))return;
+      const dx=Math.abs(e.touches[0].clientX-sx),dy=Math.abs(e.touches[0].clientY-sy);
+      if(dx>18&&dx>dy){el.classList.add('show-preview');if(vid)vid.play().catch(()=>{})}
+    },{passive:true});
+    el.addEventListener('touchend',()=>{
+      setTimeout(()=>{el.classList.remove('show-preview');if(vid){vid.pause();vid.currentTime=0}},2600);
+    },{passive:true});
+  });
+}
+
+/* clique no card: se a prévia está aberta no mobile, não navega */
+function cardTap(e,id,ig){
+  const el=e.currentTarget;
+  if(el.classList.contains('show-preview')){el.classList.remove('show-preview');return}
+  window.open(ig,'_blank');
+}
+
+/* ===== EDIT PROFILE ===== */
+function openEdit(id,focusPost){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c)return;
+  editId=id;
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const souDono=me&&c.email&&me.email.toLowerCase()===c.email.toLowerCase();
+
+  document.getElementById('editTitle').textContent=`Perfil de ${c.username}`;
+  // o email só vem preenchido pra quem é o dono ou pro admin
+  document.getElementById('fEmail').value=(souDono||admin)?(c.email||''):'';
+  document.getElementById('fUser').value=c.username||'';
+  document.getElementById('fNome').value=c.nome||'';
+  document.getElementById('fConfirma').value='';
+  document.getElementById('boxTrocaEmail').style.display='none';
+
+  // @ e nome só podem ser alterados uma vez
+  const travaU=c.userTrocado&&!admin, travaN=c.nomeTrocado&&!admin;
+  document.getElementById('fUser').readOnly=travaU;
+  document.getElementById('fNome').readOnly=travaN;
+  document.getElementById('hintUser').innerHTML=travaU
+    ? '<i class="fas fa-lock"></i> Você já usou sua alteração de @. Se precisar mudar de novo, fale com o admin.'
+    : 'Trocou de @? Pode corrigir — mas <b>só uma vez</b>, então confira antes de salvar.';
+  document.getElementById('hintNome').innerHTML=travaN
+    ? '<i class="fas fa-lock"></i> Você já definiu seu nome. Para mudar de novo, fale com o admin.'
+    : 'Aparece junto com seu @. Pode definir <b>uma vez</b>.';
+  document.getElementById('cCosplay').checked=(c.cats||[]).includes('cosplay');
+  document.getElementById('cWig').checked=(c.cats||[]).includes('wigmaker');
+  document.getElementById('cProp').checked=(c.cats||[]).includes('propmaker');
+  document.getElementById('cCos').checked=(c.cats||[]).includes('cosmaker');
+  document.getElementById('fSlide').checked=c.slideshow!==false;
+  fotosTemp=(c.photos&&c.photos.length)?[...c.photos]:(c.photo?[c.photo]:[]);
+  renderFotos();
+  document.getElementById('fPost').value=c.post||'';
+  document.getElementById('fSchedule').value=c.schedule||'';
+  document.getElementById('fTiktok').value=c.tiktok||'';
+  document.getElementById('fTwitter').value=c.twitter||'';
+  document.getElementById('fYoutube').value=c.youtube||'';
+  document.getElementById('fPhoto').value='';
+  document.getElementById('fMedia').value='';
+  renderEmojiGrid(c.emoji||'');
+  emailGate();
+  schedInfo();
+  openModal('mEdit');
+  if(focusPost)setTimeout(()=>document.getElementById('fPost').focus(),300);
+}
+
+function schedInfo(){
+  const c=db.cosplayers.find(x=>x.id===editId);
+  const box=document.getElementById('scheduleInfo');
+  if(!c){box.innerHTML='';return}
+  const v=document.getElementById('fSchedule').value;
+  if(v&&new Date(v)>new Date()){
+    const d=new Date(v);
+    box.innerHTML=`<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-clock"></i><span>Vai aparecer pros outros em <b>${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long'})} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</b>. Até lá só você e o admin veem.</span></div>`;
+  }else if(c.media||c.post){
+    box.innerHTML=`<div class="alert a-ok" style="margin:.7rem 0 0"><i class="fas fa-circle-check"></i><span>Postagem no ar${c.media?` · prévia ${c.mediaType==='video'?'em vídeo':'em foto'} ativa`:''}</span></div>`;
+  }else box.innerHTML='';
+}
+
+/* ===== TRAVA DE SEGURANÇA DO PERFIL ===== */
+/* Mostra só o começo do email, o resto fica escondido */
+function mascararEmail(email){
+  if(!email)return '';
+  const [local,dominio]=email.split('@');
+  const ini=local.slice(0,3);
+  const pontos='•'.repeat(Math.max(3,local.length-3));
+  const dom=dominio?dominio[0]+'•'.repeat(Math.max(2,dominio.length-1)):'';
+  return `${ini}${pontos}@${dom}`;
+}
+
+function emailGate(){
+  const c=db.cosplayers.find(x=>x.id===editId);
+  const digitado=document.getElementById('fEmail').value.trim().toLowerCase();
+  const box=document.getElementById('gateAlert');
+  const admin=document.documentElement.classList.contains('admin');
+  const dono=(c&&c.email)?c.email.toLowerCase():'';
+
+  let liberado=false, aviso='';
+
+  if(admin){
+    liberado=true;
+    aviso=`<div class="alert a-info"><i class="fas fa-shield-halved"></i><span>Você está como <b>admin</b> — pode editar esse perfil mesmo sem o email dele.</span></div>`;
+  }
+  else if(!dono){
+    // perfil ainda sem dono: quem cadastrar primeiro fica com ele
+    liberado=digitado.length>4&&digitado.includes('@')&&digitado.includes('.');
+    aviso=liberado
+      ? `<div class="alert a-ok"><i class="fas fa-user-plus"></i><span>Esse perfil ainda não tem dono. Ao salvar, ele fica vinculado a esse email — <b>guarde bem</b>, é ele que vai liberar suas edições daqui pra frente.</span></div>`
+      : `<div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span><b>Esse perfil ainda não tem email</b> — então não pode colocar foto, rede social ou postagem. Cadastre seu email acima para liberar tudo.</span></div>`;
+  }
+  else if(digitado===dono){
+    liberado=true;
+    aviso=`<div class="alert a-ok"><i class="fas fa-lock-open"></i><span>Email confere. Perfil liberado para edição.</span></div>`;
+  }
+  else{
+    liberado=false;
+    aviso=`<div class="alert a-warn"><i class="fas fa-lock"></i><span><b>Esse perfil já pertence a alguém.</b> Digite o email cadastrado para liberar a edição.<br>
+      Começa com: <b style="font-family:monospace;letter-spacing:1px">${mascararEmail(c.email)}</b>
+      ${digitado.length>4?'<br><span style="color:var(--error)">O email digitado não confere.</span>':''}</span></div>`;
+  }
+
+  ['fUser','fNome','fConfirma','fPost','fMedia','fSchedule','fTiktok','fTwitter','fYoutube','fSlide','cCosplay','cWig','cProp','cCos'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.disabled=!liberado;
+  });
+  document.querySelectorAll('.emoji-pick').forEach(el=>el.style.pointerEvents=liberado?'auto':'none');
+  document.getElementById('fotosGrid').style.pointerEvents=liberado?'auto':'none';
+  document.getElementById('fotosGrid').style.opacity=liberado?'1':'.45';
+  document.getElementById('btnSalvarPerfil').disabled=!liberado;
+  box.innerHTML=aviso;
+  return liberado;
+}
+
+function clearPost(){
+  const c=db.cosplayers.find(x=>x.id===editId);
+  if(!c)return;
+  if(!confirm('Remover a postagem atual (link, prévia e agendamento)?'))return;
+  c.post='';c.media=null;c.mediaType='';c.schedule='';
+  save();
+  document.getElementById('fPost').value='';
+  document.getElementById('fSchedule').value='';
+  document.getElementById('fMedia').value='';
+  schedInfo();renderCos();toast('Postagem removida','ok');
+}
+
+function saveProfile(){
+  const c=db.cosplayers.find(x=>x.id===editId);
+  if(!c)return;
+
+  // TRAVA: confere de novo na hora de salvar
+  if(!emailGate()){toast('Email não confere — edição bloqueada','err');return}
+
+  const email=document.getElementById('fEmail').value.trim();
+  if(!email||!email.includes('@')||!email.includes('.')){toast('Coloque um email válido','err');return}
+
+  const admin=document.documentElement.classList.contains('admin');
+  const emailAntigo=(c.email||'').toLowerCase();
+  const trocandoEmail=emailAntigo&&email.toLowerCase()!==emailAntigo;
+
+  // TROCA DE EMAIL: precisa confirmar com o @ ou o nome do perfil
+  if(trocandoEmail&&!admin){
+    const box=document.getElementById('boxTrocaEmail');
+    if(box.style.display==='none'){
+      box.style.display='block';
+      document.getElementById('fConfirma').focus();
+      toast('Confirme com seu @ ou seu nome para trocar o email','err');
+      return;
+    }
+    const conf=document.getElementById('fConfirma').value.trim().toLowerCase().replace('@','');
+    const alvoU=c.username.toLowerCase().replace('@','');
+    const alvoN=(c.nome||'').toLowerCase();
+    if(conf!==alvoU&&(!alvoN||conf!==alvoN)){
+      toast('O @ ou nome digitado não confere com este perfil','err');return;
+    }
+  }
+
+  // o email não pode estar em uso por outro perfil
+  const outro=db.cosplayers.find(x=>x.id!==c.id&&x.email&&x.email.toLowerCase()===email.toLowerCase());
+  if(outro){toast(`Esse email já está vinculado a ${outro.username}`,'err');return}
+
+  // troca de @ (uma vez só)
+  let novoUser=document.getElementById('fUser').value.trim();
+  if(novoUser){
+    if(!novoUser.startsWith('@'))novoUser='@'+novoUser;
+    novoUser=novoUser.replace(/\s/g,'');
+    if(novoUser.toLowerCase()!==c.username.toLowerCase()){
+      if(c.userTrocado&&!admin){toast('Você já usou sua alteração de @','err');return}
+      const dup=db.cosplayers.find(x=>x.id!==c.id&&x.username.toLowerCase()===novoUser.toLowerCase());
+      if(dup){toast('Esse @ já está na lista','err');return}
+      c.username=novoUser;
+      if(!admin)c.userTrocado=true;
+    }
+  }
+
+  const novoNome=document.getElementById('fNome').value.trim();
+  if(novoNome!==(c.nome||'')){
+    if(c.nomeTrocado&&!admin){toast('Você já definiu seu nome','err');return}
+    c.nome=novoNome;
+    if(!admin&&novoNome)c.nomeTrocado=true;
+  }
+
+  c.email=email;
+  c.emoji=getPickedEmoji();
+  c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
+  c.photos=[...fotosTemp];
+  c.photo=fotosTemp[0]||null;
+  c.slideshow=document.getElementById('fSlide').checked;
+  c.post=document.getElementById('fPost').value.trim();
+  c.schedule=document.getElementById('fSchedule').value;
+  c.tiktok=document.getElementById('fTiktok').value.trim();
+  c.twitter=document.getElementById('fTwitter').value.trim();
+  c.youtube=document.getElementById('fYoutube').value.trim();
+
+  const media=document.getElementById('fMedia').files[0];
+
+  const finish=async()=>{
+    try{
+      // Valida fotos ANTES de enviar
+      const totalFotos=(c.photos||[]).reduce((n,f)=>n+(f?f.length:0),0);
+      if(totalFotos>50000000){ // 50MB total
+        toast('❌ Fotos muito grandes no total. Reduza quantidade/tamanho.','err');
+        return;
+      }
+      
+      // 🔴 FORÇA upload pra nuvem - sem fallback local!
+      if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)){
+        toast('📤 Enviando fotos pra NUVEM (todos vão ver)...');
+        try{
+          await hospedarFotos(c); // Se falhar, RE-LANÇA erro
+          toast('✅ Fotos online! Todos vão ver agora!','ok');
+        }catch(e){
+          // ❌ FALHOU = não salva local, força novo tentativa
+          toast('❌ Erro ao enviar: '+e.message+'. Tente de novo!','err');
+          console.error('Upload crítico falhou:',e);
+          return; // NÃO SALVA, força user tentar de novo
+        }
+      }
+      
+      // Só salva se upload funcionou
+      save();
+      setMe(email);
+      renderMe();
+      renderCos();
+      renderGates();
+      renderEvGate();
+      renderEventos();
+      renderColabs();
+      closeModal('mEdit');
+      
+      const msg=(c.schedule&&new Date(c.schedule)>new Date())
+        ? `✅ Salvo! Postagem agendada para ${schedLabel(c)}`
+        : '✅ Perfil salvo e ONLINE! Todos conseguem ver agora!';
+      toast(msg,'ok');
+      
+    }catch(e){
+      console.error('Erro crítico ao salvar:',e);
+      toast('❌ Erro: '+e.message,'err');
+    }
+  };
+
+  const readMedia=()=>{
+    if(!media)return void finish().catch(e=>toast('Erro ao salvar: '+e.message,'err'));
+    // vídeo não dá pra comprimir no navegador — mantém limite
+    if(media.type.startsWith('video')){
+      if(media.size>6*1024*1024){
+        toast(`Vídeo de ${tamanhoLegivel(media.size)} é grande demais. Corte pra uns 5 segundos ou use uma foto.`,'err');
+        return;
+      }
+      const r=new FileReader();
+      r.onload=e=>{c.media=e.target.result;c.mediaType='video';finish().catch(x=>toast('Erro ao salvar','err'))};
+      r.readAsDataURL(media);
+      return;
+    }
+    toast(`Otimizando prévia (${tamanhoLegivel(media.size)})...`);
+    comprimirImagem(media,1000,.8).then(out=>{
+      if(fotosTemp.includes(out)){toast('A prévia ficou igual a uma das suas fotos — escolha a imagem da postagem','err');return}
+      c.media=out;c.mediaType='image';finish().catch(x=>toast('Erro ao salvar','err'));
+    }).catch(err=>toast(err.message||'Não consegui processar a prévia','err'));
+  };
+
+  readMedia();
+}
+
+function delCos(id){
+  if(!confirm('Remover esse cosplayer da lista?'))return;
+  db.cosplayers=db.cosplayers.filter(c=>c.id!==id);
+  save();renderCos();toast('Removido','ok');
+}
+
+/* ===== IDEIAS / CENAS ===== */
+function renderGates(){
+  const me=getMe();
+  const html=me
+    ? `<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Identificado como <b>${me.username}</b> — suas contribuições entram automaticamente no seu nome. <i class="fas fa-lock"></i> Seu email fica privado.</span></div>`
+    : `<div class="alert a-warn"><i class="fas fa-lock"></i><span><b>Cadastre seu email primeiro.</b> Vá em <b>Cosplayers</b>, ache seu @, clique em <b>Editar</b> e coloque seu email. Depois disso você pode propor ideias e sugerir cenas — e o site já te reconhece sozinho.</span></div>`;
+  document.getElementById('ideiaGate').innerHTML=html;
+  document.getElementById('cenaGate').innerHTML=html;
+}
+
+function renderColabGate(){
+  const me=getMe();
+  const html=me
+    ? `<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Identificado como <b>${me.username}</b> — suas propostas de colab aparecem com seu nome.</span></div>`
+    : `<div class="alert a-warn"><i class="fas fa-lock"></i><span><b>Cadastre seu email primeiro</b> (aba Cosplayers → Editar) para propor colaborações.</span></div>`;
+  document.getElementById('colabGate').innerHTML=html;
+}
+
+function tryAdd(kind){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
+  const authorHtml=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Publicando como <b>${me.username}</b> — <i class="fas fa-lock"></i> seu email não aparece pra ninguém.</span></div>`;
+  if(kind==='ideia'){document.getElementById('ideiaAuthor').innerHTML=authorHtml;openModal('mIdeia')}
+  else{document.getElementById('cenaAuthor').innerHTML=authorHtml;openModal('mCena')}
+}
+
+function saveIdeia(){
+  const me=getMe();if(!me)return;
+  const t=document.getElementById('iTitle').value.trim();
+  if(!t){toast('Coloque um título','err');return}
+  db.ideias.unshift({id:Date.now(),title:t,desc:document.getElementById('iDesc').value.trim(),chars:document.getElementById('iChars').value.trim(),author:me.username,email:me.email,date:new Date().toISOString()});
+  save();renderIdeias();closeModal('mIdeia');
+  ['iTitle','iDesc','iChars'].forEach(i=>document.getElementById(i).value='');
+  toast('Ideia publicada!','ok');
+}
+
+function saveCena(){
+  const me=getMe();if(!me)return;
+  const t=document.getElementById('cTitle').value.trim();
+  if(!t){toast('Coloque um título','err');return}
+  db.cenas.unshift({id:Date.now(),title:t,source:document.getElementById('cSource').value.trim(),desc:document.getElementById('cDesc').value.trim(),chars:document.getElementById('cChars').value.trim(),diff:document.getElementById('cDiff').value,author:me.username,email:me.email,date:new Date().toISOString()});
+  save();renderCenas();closeModal('mCena');
+  ['cTitle','cSource','cDesc','cChars'].forEach(i=>document.getElementById(i).value='');
+  toast('Cena publicada!','ok');
+}
+
+function renderIdeias(){
+  const me=getMe();
+  const el=document.getElementById('ideiaList');
+  if(!db.ideias.length){el.innerHTML=`<div class="empty"><i class="fas fa-lightbulb"></i><b>Nenhuma ideia ainda</b>Seja o primeiro a propor</div>`;return}
+  // organiza: as minhas primeiro, depois mais recentes
+  const arr=[...db.ideias].sort((a,b)=>{
+    if(me){if(a.email===me.email&&b.email!==me.email)return -1;if(b.email===me.email&&a.email!==me.email)return 1}
+    return new Date(b.date)-new Date(a.date);
+  });
+  el.innerHTML=arr.map(i=>`<div class="item">
+    <h3>${i.title}</h3>
+    ${i.desc?`<p>${i.desc}</p>`:''}
+    ${i.chars?`<div>${i.chars.split(',').map(c=>`<span class="tag">${c.trim()}</span>`).join('')}</div>`:''}
+    <div class="item-meta"><i class="fas fa-user"></i> ${i.author} ${me&&i.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
+      ${me&&i.email===me.email?`<button class="bs del" style="margin-left:auto;padding:.3rem .6rem" onclick="delIdeia(${i.id})"><i class="fas fa-trash"></i></button>`:''}
+    </div>
+  </div>`).join('');
+}
+function delIdeia(id){db.ideias=db.ideias.filter(i=>i.id!==id);save();renderIdeias();toast('Ideia removida','ok')}
+
+function renderCenas(){
+  const me=getMe();
+  const el=document.getElementById('cenaList');
+  if(!db.cenas.length){el.innerHTML=`<div class="empty"><i class="fas fa-film"></i><b>Nenhuma cena ainda</b>Seja o primeiro a sugerir</div>`;return}
+  const arr=[...db.cenas].sort((a,b)=>{
+    if(me){if(a.email===me.email&&b.email!==me.email)return -1;if(b.email===me.email&&a.email!==me.email)return 1}
+    return new Date(b.date)-new Date(a.date);
+  });
+  el.innerHTML=arr.map(c=>`<div class="item">
+    <h3>${c.title}</h3>
+    ${c.source?`<p><b>${c.source}</b></p>`:''}
+    ${c.desc?`<p>${c.desc}</p>`:''}
+    <div><span class="tag">${c.diff}</span>${c.chars?c.chars.split(',').map(x=>`<span class="tag">${x.trim()}</span>`).join(''):''}</div>
+    <div class="item-meta"><i class="fas fa-user"></i> ${c.author} ${me&&c.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
+      ${me&&c.email===me.email?`<button class="bs del" style="margin-left:auto;padding:.3rem .6rem" onclick="delCena(${c.id})"><i class="fas fa-trash"></i></button>`:''}
+    </div>
+  </div>`).join('');
+}
+function delCena(id){db.cenas=db.cenas.filter(c=>c.id!==id);save();renderCenas();toast('Cena removida','ok')}
+
+/* ===== CONFIRMAÇÃO DE PRESENÇA ===== */
+function togglePresenca(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email na aba Cosplayers para confirmar presença','err');switchTab('cosplayers');return}
+  const e=db.eventos.find(x=>x.id===id);if(!e)return;
+  e.presencas=e.presencas||[];
+  const i=e.presencas.findIndex(p=>p.email===me.email);
+  if(i>=0){
+    e.presencas.splice(i,1);
+    toast('Presença desmarcada');
+  }else{
+    e.presencas.push({email:me.email,user:me.username,nome:me.nome||'',emoji:me.emoji||''});
+    toast('Presença confirmada! 🎉','ok');
+  }
+  save();renderEventos();
+}
+
+function verPresencas(id){
+  const e=db.eventos.find(x=>x.id===id);if(!e)return;
+  const lista=e.presencas||[];
+  document.getElementById('presTitle').textContent=e.title;
+  document.getElementById('presCount').textContent=`${lista.length} confirmado${lista.length===1?'':'s'}`;
+  document.getElementById('presList').innerHTML=lista.length
+    ? lista.map(p=>`<div class="adm-row">
+        <div class="nome">${p.emoji||'🎭'} ${p.nome?p.nome+' · ':''}${p.user}</div>
+        <div class="acts"><a class="adm-btn" href="https://ig.me/m/${p.user.replace('@','')}" target="_blank" title="Mandar mensagem"><i class="fas fa-paper-plane"></i></a></div>
+      </div>`).join('')
+    : '<div class="adm-empty">Ninguém confirmou ainda</div>';
+  document.getElementById('presCopiar').onclick=()=>{
+    const txt=`Confirmados em "${e.title}" (${lista.length}):\n\n`+lista.map((p,i)=>`${i+1}. ${p.user}${p.nome?' — '+p.nome:''}`).join('\n');
+    navigator.clipboard.writeText(txt).then(()=>toast('Lista copiada!','ok'));
+  };
+  openModal('mPresencas');
+}
+
+function copiarFaltantes(){
+  const faltam=db.cosplayers.filter(c=>!c.email);
+  if(!faltam.length){toast('Todo mundo já cadastrou! 🎉','ok');return}
+  const txt=`Faltam ${faltam.length} cadastrar no DiaDeCosplay:\n\n`+faltam.map(c=>c.username).join(' ');
+  navigator.clipboard.writeText(txt).then(()=>toast(`${faltam.length} @ copiados`,'ok'));
+}
+
+function copiarLinkGrupo(){
+  const prontos=db.cosplayers.filter(c=>c.email).length;
+  const total=db.cosplayers.length;
+  const link=location.origin+location.pathname;
+  const txt=`🎭 *DiaDeCosplay* já está no ar!\n\n${prontos} de ${total} já montaram a carta. Falta a sua!\n\n👉 Entre no link, ache seu @, clique em *Editar* e coloque seu email. Depois é só escolher suas fotos, seu emoji e o que você faz (Cosplay, WigMaker, PropMaker ou CosMaker).\n\n${link}`;
+  navigator.clipboard.writeText(txt).then(()=>toast('Recado copiado! Cole no grupo.','ok'));
+}
+
+/* ===== COMPARTILHAR CARTA / LINK DIRETO ===== */
+function compartilhar(id){
+  const c=db.cosplayers.find(x=>x.id===id);if(!c)return;
+  const url=location.origin+location.pathname+'#'+c.username.replace('@','');
+  const txt=`${c.nome?c.nome+' ':''}${c.username} no DiaDeCosplay`;
+  if(navigator.share){
+    navigator.share({title:'DiaDeCosplay',text:txt,url}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(url).then(()=>toast('Link da carta copiado!','ok'))
+      .catch(()=>toast('Link: '+url));
+  }
+}
+
+function abrirPorHash(){
+  const h=decodeURIComponent(location.hash.replace('#','')).trim();
+  if(!h)return;
+  const c=db.cosplayers.find(x=>x.username.toLowerCase().replace('@','')===h.toLowerCase().replace('@',''));
+  if(!c)return;
+  switchTab('cosplayers');
+  document.getElementById('search').value=c.username;
+  renderCos();
+  setTimeout(()=>{
+    const card=document.querySelector('.card');
+    if(card){card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.add('destaque')}
+  },200);
+}
+
+/* ===== EVENTOS ===== */
+let evFilter='proximos', evEditId=null;
+
+function newEvento(){
+  const admin=document.documentElement.classList.contains('admin');
+  const me=getMe();
+  if(!admin&&!me){
+    toast('Cadastre seu email primeiro para sugerir eventos','err');
+    switchTab('cosplayers');return;
+  }
+  evEditId=null;
+  document.getElementById('evModalTitle').textContent=admin?'Novo Evento':'Sugerir Evento';
+  document.getElementById('evSubmitLabel').textContent=admin?'Publicar':'Enviar sugestão';
+  document.getElementById('evSuggestNote').innerHTML=admin?'':
+    `<div class="alert a-info"><i class="fas fa-paper-plane"></i><span>Sua sugestão vai pro admin conferir. Assim que aprovada, aparece pra todo mundo com seu nome como quem indicou.</span></div>`;
+  ['eUrl','eTitle','eDate','eTime','eLocal','ePrice','eDesc'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('eCity').value='Natal';
+  document.getElementById('eType').value='Anime';
+  document.getElementById('eImg').value='';
+  document.getElementById('fetchStatus').innerHTML='';
+  openModal('mEvento');
+}
+
+function renderEvGate(){
+  const admin=document.documentElement.classList.contains('admin');
+  const me=getMe();
+  const box=document.getElementById('evGate');
+  document.getElementById('evBtnLabel').textContent=admin?'Novo Evento':'Sugerir Evento';
+  const pend=db.eventos.filter(e=>e.status==='pendente').length;
+  document.getElementById('pendCount').textContent=pend?`(${pend})`:'';
+
+  if(admin){
+    box.innerHTML=pend?`<div class="alert a-warn"><i class="fas fa-bell"></i><span><b>${pend} sugestão${pend>1?'ões':''} de evento</b> esperando sua aprovação — veja na aba <b>Aguardando</b>.</span></div>`:'';
+  }else if(me){
+    box.innerHTML=`<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Você pode <b>sugerir eventos</b>. O admin confere antes de publicar pra todo mundo.</span></div>`;
+  }else{
+    box.innerHTML=`<div class="alert a-warn"><i class="fas fa-lock"></i><span><b>Cadastre seu email</b> na aba Cosplayers para poder sugerir eventos que você conhece.</span></div>`;
+  }
+}
+
+function editEvento(id){
+  const e=db.eventos.find(x=>x.id===id);if(!e)return;
+  evEditId=id;
+  document.getElementById('evModalTitle').textContent='Editar Evento';
+  document.getElementById('eUrl').value=e.url||'';
+  document.getElementById('eTitle').value=e.title||'';
+  document.getElementById('eDate').value=e.date||'';
+  document.getElementById('eTime').value=e.time||'';
+  document.getElementById('eCity').value=e.city||'Natal';
+  document.getElementById('eLocal').value=e.local||'';
+  document.getElementById('ePrice').value=e.price||'';
+  document.getElementById('eType').value=e.type||'Anime';
+  document.getElementById('eDesc').value=e.desc||'';
+  document.getElementById('eImg').value='';
+  document.getElementById('fetchStatus').innerHTML='';
+  openModal('mEvento');
+}
+
+/* PUXAR DADOS DO SITE — tenta ler a página via leitor público */
+async function fetchEvento(){
+  const url=document.getElementById('eUrl').value.trim();
+  const box=document.getElementById('fetchStatus');
+  if(!url){toast('Cole o link primeiro','err');return}
+
+  box.innerHTML=`<div class="alert a-info" style="margin:.7rem 0 0"><i class="fas fa-spinner fa-spin"></i><span>Lendo o site...</span></div>`;
+
+  try{
+    const r=await fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain'}});
+    if(!r.ok)throw new Error('bloqueado');
+    const txt=(await r.text()).slice(0,6000);
+
+    let found=[];
+
+    // TÍTULO
+    const t=txt.match(/^Title:\s*(.+)$/m);
+    if(t&&!document.getElementById('eTitle').value){
+      document.getElementById('eTitle').value=t[1].split('|')[0].split('–')[0].trim().slice(0,90);
+      found.push('título');
+    }
+
+    // PREÇO
+    const p=txt.match(/R\$\s?\d{1,3}(?:\.\d{3})*(?:,\d{2})?/);
+    if(p&&!document.getElementById('ePrice').value){
+      document.getElementById('ePrice').value=p[0];found.push('preço');
+    }else if(/gratuito|entrada franca|grátis/i.test(txt)&&!document.getElementById('ePrice').value){
+      document.getElementById('ePrice').value='Gratuito';found.push('preço');
+    }
+
+    // DATA
+    const meses={janeiro:1,fevereiro:2,'março':3,marco:3,abril:4,maio:5,junho:6,julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12};
+    let dm=txt.match(/(\d{1,2})\s*de\s*(janeiro|fevereiro|mar[çc]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s*de\s*(\d{4}))?/i);
+    if(dm&&!document.getElementById('eDate').value){
+      const mes=meses[dm[2].toLowerCase()];
+      const ano=dm[3]||new Date().getFullYear();
+      document.getElementById('eDate').value=`${ano}-${String(mes).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`;
+      found.push('data');
+    }else{
+      const d2=txt.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if(d2&&!document.getElementById('eDate').value){
+        document.getElementById('eDate').value=`${d2[3]}-${d2[2]}-${d2[1]}`;found.push('data');
+      }
+    }
+
+    // CIDADE
+    if(/natal/i.test(txt))document.getElementById('eCity').value='Natal';
+    else if(/mossor[óo]/i.test(txt))document.getElementById('eCity').value='Mossoró';
+    else if(/parnamirim/i.test(txt))document.getElementById('eCity').value='Parnamirim';
+
+    box.innerHTML=found.length
+      ? `<div class="alert a-ok" style="margin:.7rem 0 0"><i class="fas fa-circle-check"></i><span>Puxei: <b>${found.join(', ')}</b>. Confira e corrija o que precisar antes de salvar.</span></div>`
+      : `<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-triangle-exclamation"></i><span>Li o site mas não achei os dados no formato esperado. Preenche na mão que funciona igual.</span></div>`;
+
+  }catch(err){
+    box.innerHTML=`<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-triangle-exclamation"></i><span>Não consegui ler esse site (muitos bloqueiam leitura automática). Preenche na mão — o link fica salvo do mesmo jeito e o botão "Ver no site" vai funcionar normal.</span></div>`;
+  }
+}
+
+function saveEvento(){
+  const admin=document.documentElement.classList.contains('admin');
+  const me=getMe();
+  const t=document.getElementById('eTitle').value.trim();
+  const d=document.getElementById('eDate').value;
+  if(!t||!d){toast('Título e data são obrigatórios','err');return}
+
+  const old=evEditId?db.eventos.find(e=>e.id===evEditId):null;
+
+  const data={
+    id:evEditId||Date.now(),
+    title:t,date:d,
+    time:document.getElementById('eTime').value,
+    city:document.getElementById('eCity').value,
+    local:document.getElementById('eLocal').value.trim(),
+    price:document.getElementById('ePrice').value.trim(),
+    type:document.getElementById('eType').value,
+    url:document.getElementById('eUrl').value.trim(),
+    desc:document.getElementById('eDesc').value.trim(),
+    img:old?old.img:null,
+    status:admin?'aprovado':'pendente',
+    by:old?old.by:(admin?'':(me?me.username:''))
+  };
+  if(old&&!admin)data.status=old.status;
+
+  const finish=async()=>{
+    if(ehDataUrl(data.img)){
+      toast('Enviando cartaz pra nuvem...');
+      try{data.img=await subirFoto(data.img)}catch(e){}
+    }
+    if(evEditId)db.eventos=db.eventos.map(e=>e.id===evEditId?data:e);
+    else db.eventos.push(data);
+    save();renderEventos();renderEvGate();closeModal('mEvento');
+    toast(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!'),'ok');
+  };
+
+  const f=document.getElementById('eImg').files[0];
+  if(f){
+    toast(`Otimizando imagem (${tamanhoLegivel(f.size)})...`);
+    comprimirImagem(f,1200,.8)
+      .then(dataUrl=>{data.img=dataUrl;finish()}).catch(e=>toast('Erro na imagem','err'))
+      .catch(err=>toast(err.message||'Não consegui processar a imagem','err'));
+  }else finish();
+}
+
+function aprovarEvento(id){
+  const e=db.eventos.find(x=>x.id===id);if(!e)return;
+  e.status='aprovado';save();renderEventos();renderEvGate();toast('Evento aprovado e publicado!','ok');
+}
+
+function renderEventos(){
+  const el=document.getElementById('evList');
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  const RN=['Natal','Parnamirim','Mossoró','São Gonçalo'];
+  const admin=document.documentElement.classList.contains('admin');
+  const me=getMe();
+  let arr=[...db.eventos];
+
+  if(evFilter==='pendentes'){
+    arr=arr.filter(e=>e.status==='pendente');
+  }else{
+    // público só vê aprovados (ou as próprias sugestões)
+    arr=arr.filter(e=>e.status!=='pendente'||admin||(me&&e.by===me.username));
+    if(evFilter==='passados')arr=arr.filter(e=>new Date(e.date+'T12:00')<hoje);
+    else{
+      arr=arr.filter(e=>new Date(e.date+'T12:00')>=hoje);
+      if(evFilter==='natal')arr=arr.filter(e=>RN.includes(e.city));
+      else if(evFilter==='fora')arr=arr.filter(e=>!RN.includes(e.city));
+      else if(evFilter==='gratis')arr=arr.filter(e=>/grat|free/i.test(e.price||''));
+    }
+  }
+
+  arr.sort((a,b)=>evFilter==='passados'?new Date(b.date)-new Date(a.date):new Date(a.date)-new Date(b.date));
+
+  if(!arr.length){
+    const msgs={natal:'Nenhum evento em Natal marcado',fora:'Nenhum evento fora do RN',gratis:'Nenhum evento gratuito',passados:'Nenhum evento passado',pendentes:'Nenhuma sugestão pendente'};
+    el.innerHTML=`<div class="empty"><i class="fas fa-calendar-days"></i><b>${msgs[evFilter]||'Nenhum evento marcado'}</b>${admin?'Clique em "Novo Evento" para publicar':'Conhece um evento? Clique em "Sugerir Evento"'}</div>`;
+    return;
+  }
+
+  el.innerHTML=arr.map(e=>{
+    const dt=new Date(e.date+'T12:00');
+    const dias=Math.ceil((dt-hoje)/86400000);
+    const conta=dias===0?'HOJE':dias===1?'AMANHÃ':dias>0?`em ${dias} dias`:'';
+    const gratis=/grat|free/i.test(e.price||'');
+    const pend=e.status==='pendente';
+    const nPres=(e.presencas||[]).length;
+    const euVou=me&&(e.presencas||[]).some(p=>p.email===me.email);
+    return `<div class="item ev-item" ${pend?'style="border-color:var(--warn)"':''}>
+      ${e.img?`<div class="ev-img"><img src="${e.img}" alt="${e.title}"></div>`:''}
+      <div class="ev-top">
+        <div class="ev-date">
+          <span class="ev-d">${String(dt.getDate()).padStart(2,'0')}</span>
+          <span class="ev-m">${dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.','').toUpperCase()}</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <h3>${e.title}</h3>
+          <div class="ev-meta">
+            ${e.time?`<span><i class="fas fa-clock"></i> ${e.time}</span>`:''}
+            <span><i class="fas fa-location-dot"></i> ${e.local?e.local+' · ':''}${e.city}</span>
+          </div>
+        </div>
+      </div>
+      <div class="ev-tags">
+        ${pend?`<span class="tag" style="background:var(--warn);border-color:var(--warn);color:#1a1a1e">⏳ AGUARDANDO APROVAÇÃO</span>`:''}
+        ${conta&&!pend?`<span class="tag tag-hot">${conta}</span>`:''}
+        <span class="tag">${e.type}</span>
+        ${e.price?`<span class="tag ${gratis?'tag-free':'tag-price'}">${gratis?'🆓 '+e.price:'💰 '+e.price}</span>`:'<span class="tag">preço a confirmar</span>'}
+      </div>
+      ${e.desc?`<p>${e.desc}</p>`:''}
+      ${e.by?`<p style="font-size:11px;color:var(--text2)"><i class="fas fa-user"></i> indicado por ${e.by}</p>`:''}
+      ${(!pend&&dias>=0)?`<div class="pres-bar">
+        <button class="bs ${euVou?'indo':'vou'}" onclick="togglePresenca(${e.id})">
+          <i class="fas ${euVou?'fa-circle-check':'fa-hand'}"></i> ${euVou?'Eu vou!':'Confirmar presença'}
+        </button>
+        <button class="bs" onclick="verPresencas(${e.id})" title="Ver quem vai">
+          <i class="fas fa-users"></i> ${nPres}
+        </button>
+      </div>`:''}
+      <div class="ev-actions">
+        ${e.url?`<a href="${e.url}" target="_blank" class="bs"><i class="fas fa-arrow-up-right-from-square"></i> Ver no site</a>`:''}
+        ${admin&&pend?`<button class="bs" style="background:var(--success);border-color:var(--success);color:#fff" onclick="aprovarEvento(${e.id})"><i class="fas fa-check"></i> Aprovar</button>`:''}
+        ${admin?`<button class="bs" onclick="editEvento(${e.id})"><i class="fas fa-pen"></i></button>
+        <button class="bs del" onclick="delEvento(${e.id})"><i class="fas fa-trash"></i></button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function delEvento(id){if(!confirm('Remover esse evento?'))return;db.eventos=db.eventos.filter(e=>e.id!==id);save();renderEventos();toast('Evento removido','ok')}
+
+/* ===== ADMIN ===== */
+function openAdmin(){
+  if(!document.documentElement.classList.contains('admin')){openModal('mLogin');return}
+  loadConfigFields();
+  admRenderAll();
+  document.getElementById('workerCode').textContent=WORKER_CODE;
+  openModal('mAdmin');
+}
+
+function loadConfigFields(){
+  const c=db.config||{};
+  document.getElementById('cfgName').value=c.siteName||'DiaDeCosplay';
+  document.getElementById('cfgWa').value=db.wa||'';
+  document.getElementById('cfgAviso').value=c.aviso||'';
+  document.getElementById('cfgCredito').value=c.credito||'@ofcvictorcorreia';
+  document.getElementById('cfgWorker').value=CLOUD_URL;
+  document.getElementById('cfgKey').value=CLOUD_KEY;
+}
+
+function toggleKey(){
+  const i=document.getElementById('cfgKey'),e=document.getElementById('keyEye');
+  const ver=i.type==='password';
+  i.type=ver?'text':'password';
+  e.className=ver?'fas fa-eye-slash':'fas fa-eye';
+}
+
+function saveConfig(){
+  db.config=db.config||{};
+  db.config.siteName=document.getElementById('cfgName').value.trim()||'DiaDeCosplay';
+  db.wa=document.getElementById('cfgWa').value.trim();
+  db.config.aviso=document.getElementById('cfgAviso').value.trim();
+  db.config.credito=document.getElementById('cfgCredito').value.trim();
+  db.config.workerUrl=CLOUD_URL;
+  db.config.writeKey=CLOUD_KEY;
+  save();applyConfig();admStats();
+  toast('Configurações salvas','ok');
+}
+
+function applyConfig(){
+  const c=db.config||{};
+  document.getElementById('siteName').textContent=c.siteName||'DiaDeCosplay';
+  document.title=c.siteName||'DiaDeCosplay';
+  const wa=document.getElementById('waLink');
+  if(db.wa){wa.href=db.wa;wa.style.display='inline-flex'}else wa.style.display='none';
+  const av=document.getElementById('welcomeBox');
+  av.innerHTML=c.aviso?`<div class="alert a-info"><i class="fas fa-bullhorn"></i><span>${c.aviso}</span></div>`:'';
+  const cr=document.getElementById('creditBox');
+  if(cr)cr.innerHTML=c.credito?`Idealizado por <a href="https://instagram.com/${(c.credito||'').replace('@','')}" target="_blank">${c.credito}</a>`:'';
+}
+
+function admStats(){
+  const d=db;
+  document.getElementById('admStats').innerHTML=
+   `👤 <b>${d.cosplayers.length}</b> cosplayers · 📧 <b>${d.cosplayers.filter(c=>c.email).length}</b> com email · 📸 <b>${d.cosplayers.filter(c=>(c.photos&&c.photos.length)||c.photo).length}</b> com foto<br>
+    👺 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosplay')).length}</b> Cosplay · 💇 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('wigmaker')).length}</b> WigMaker · 🛠️ <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('propmaker')).length}</b> PropMaker · 💄 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosmaker')).length}</b> CosMaker<br>
+    🔗 <b>${d.cosplayers.filter(c=>postLive(c)).length}</b> postagens no ar · ⏰ <b>${d.cosplayers.filter(c=>c.schedule&&!postLive(c)).length}</b> agendadas<br>
+    📅 <b>${d.eventos.length}</b> eventos (${d.eventos.filter(e=>e.status==='pendente').length} aguardando) · 🙋 <b>${d.eventos.reduce((n,e)=>n+((e.presencas||[]).length),0)}</b> presenças · 💡 <b>${d.ideias.length}</b> ideias · 🎬 <b>${d.cenas.length}</b> cenas`;
+}
+
+function admRenderAll(){admStats();admRenderCos();admRenderEv();admRenderConteudo();admRenderAjuda()}
+
+/* --- COSPLAYERS --- */
+function admAddCos(){
+  const txt=document.getElementById('admNovosCos').value.trim();
+  if(!txt){toast('Cole pelo menos um @','err');return}
+  const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(s=>s.startsWith('@')?s:'@'+s);
+  const existentes=db.cosplayers.map(c=>c.username.toLowerCase());
+  let maxId=db.cosplayers.reduce((m,c)=>Math.max(m,c.id),0);
+  let add=0;
+  nomes.forEach(u=>{
+    if(!existentes.includes(u.toLowerCase())){
+      db.cosplayers.push({id:++maxId,username:u,nome:'',email:'',cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',userTrocado:false,nomeTrocado:false});
+      existentes.push(u.toLowerCase());add++;
+    }
+  });
+  save();document.getElementById('admNovosCos').value='';
+  admRenderAll();renderCos();
+  toast(add?`${add} adicionado(s)`:'Todos já estavam na lista','ok');
+}
+
+function admRenderCos(){
+  const q=(document.getElementById('admCosSearch').value||'').toLowerCase();
+  const arr=db.cosplayers.filter(c=>c.username.toLowerCase().includes(q));
+  const el=document.getElementById('admCosList');
+  if(!arr.length){el.innerHTML='<div class="adm-empty">Nenhum cosplayer</div>';return}
+  el.innerHTML=arr.map(c=>`<div class="adm-row">
+    <div class="nome">${c.emoji||''} ${c.nome?c.nome+' ':''}${c.username}
+      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''}</div>
+    </div>
+    <div class="acts">
+      <button class="adm-btn" onclick="closeModal('mAdmin');openEdit(${c.id})" title="Editar perfil"><i class="fas fa-pen"></i></button>
+      <button class="adm-btn dg" onclick="admDelCos(${c.id})" title="Remover"><i class="fas fa-trash"></i></button>
+    </div>
+  </div>`).join('');
+}
+function admDelCos(id){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!confirm(`Remover ${c.username} da lista?`))return;
+  db.cosplayers=db.cosplayers.filter(x=>x.id!==id);
+  save();admRenderAll();renderCos();toast('Removido','ok');
+}
+
+/* --- EVENTOS --- */
+function admRenderEv(){
+  const el=document.getElementById('admEvList');
+  if(!db.eventos.length){el.innerHTML='<div class="adm-empty">Nenhum evento</div>';return}
+  const arr=[...db.eventos].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  el.innerHTML=arr.map(e=>`<div class="adm-row">
+    <div class="nome">${e.status==='pendente'?'⏳ ':''}${e.title}
+      <div class="sub">${new Date(e.date+'T12:00').toLocaleDateString('pt-BR')} · ${e.city}${e.price?' · '+e.price:''}${e.by?' · por '+e.by:''}</div>
+    </div>
+    <div class="acts">
+      ${e.status==='pendente'?`<button class="adm-btn ok" onclick="aprovarEvento(${e.id});admRenderAll()" title="Aprovar"><i class="fas fa-check"></i></button>`:''}
+      <button class="adm-btn" onclick="closeModal('mAdmin');switchTab('eventos');editEvento(${e.id})" title="Editar"><i class="fas fa-pen"></i></button>
+      <button class="adm-btn dg" onclick="delEvento(${e.id});admRenderAll()" title="Remover"><i class="fas fa-trash"></i></button>
+    </div>
+  </div>`).join('');
+}
+
+/* --- IDEIAS E CENAS --- */
+function admRenderConteudo(){
+  const i=document.getElementById('admIdeiaList');
+  i.innerHTML=db.ideias.length?db.ideias.map(x=>`<div class="adm-row">
+    <div class="nome">${x.title}<div class="sub">por ${x.author}${x.chars?' · '+x.chars:''}</div></div>
+    <div class="acts"><button class="adm-btn dg" onclick="admDelIdeia(${x.id})"><i class="fas fa-trash"></i></button></div>
+  </div>`).join(''):'<div class="adm-empty">Nenhuma ideia enviada</div>';
+
+  const c=document.getElementById('admCenaList');
+  c.innerHTML=db.cenas.length?db.cenas.map(x=>`<div class="adm-row">
+    <div class="nome">${x.title}<div class="sub">${x.source?x.source+' · ':''}${x.diff} · por ${x.author}</div></div>
+    <div class="acts"><button class="adm-btn dg" onclick="admDelCena(${x.id})"><i class="fas fa-trash"></i></button></div>
+  </div>`).join(''):'<div class="adm-empty">Nenhuma cena sugerida</div>';
+}
+function admDelIdeia(id){if(!confirm('Apagar essa ideia?'))return;db.ideias=db.ideias.filter(i=>i.id!==id);save();admRenderAll();renderIdeias();toast('Ideia apagada','ok')}
+function admDelCena(id){if(!confirm('Apagar essa cena?'))return;db.cenas=db.cenas.filter(c=>c.id!==id);save();admRenderAll();renderCenas();toast('Cena apagada','ok')}
+
+/* --- AJUDA EDITÁVEL --- */
+function admRenderAjuda(){
+  document.getElementById('admAjudaList').innerHTML=(db.ajuda||[]).map((a,i)=>`
+    <div class="ajuda-item">
+      <input type="text" value="${(a.icon||'').replace(/"/g,'&quot;')}" placeholder="Emoji (ex: 🔒)" data-aj="icon" data-i="${i}" style="max-width:110px">
+      <input type="text" value="${(a.title||'').replace(/"/g,'&quot;')}" placeholder="Título" data-aj="title" data-i="${i}">
+      <textarea placeholder="Texto explicativo" data-aj="text" data-i="${i}">${a.text||''}</textarea>
+    </div>`).join('');
+}
+function admAddAjuda(){db.ajuda=db.ajuda||[];db.ajuda.push({icon:'✨',title:'',text:''});admRenderAjuda()}
+function saveAjuda(){
+  const novo=(db.ajuda||[]).map(a=>({...a}));
+  document.querySelectorAll('[data-aj]').forEach(el=>{
+    novo[+el.dataset.i][el.dataset.aj]=el.value;
+  });
+  db.ajuda=novo.filter(a=>a.title.trim());
+  save();renderAjuda();admRenderAjuda();toast('Ajuda atualizada','ok');
+}
+function renderAjuda(){
+  document.getElementById('helpGrid').innerHTML=(db.ajuda||[]).map(a=>
+    `<div class="help-card"><span style="font-size:26px;display:block;margin-bottom:.7rem">${a.icon||'✨'}</span><h4>${a.title}</h4><p>${a.text||''}</p></div>`
+  ).join('');
+}
+
+/* --- IMPORTAR / EXPORTAR --- */
+function exportData(){
+  const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');
+  a.href=u;a.download=`diadecosplay-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  toast('Backup baixado','ok');
+}
+function aplicarImport(obj,substituir){
+  if(!obj||typeof obj!=='object'){toast('Arquivo inválido','err');return}
+  if(substituir){
+    if(!confirm('Isso apaga tudo que está aqui e usa só o arquivo. Continuar?'))return;
+    db={...db,...obj};
+  }else{
+    ['cosplayers','eventos','ideias','cenas'].forEach(k=>{
+      if(!Array.isArray(obj[k]))return;
+      const ids=(db[k]||[]).map(x=>x.id);
+      const nomes=(db.cosplayers||[]).map(c=>c.username.toLowerCase());
+      obj[k].forEach(item=>{
+        if(k==='cosplayers'){if(!nomes.includes((item.username||'').toLowerCase()))db[k].push(item)}
+        else if(!ids.includes(item.id))db[k].push(item);
+      });
+    });
+    if(obj.config)db.config={...db.config,...obj.config};
+    if(obj.ajuda&&!db.ajuda?.length)db.ajuda=obj.ajuda;
+    if(obj.wa&&!db.wa)db.wa=obj.wa;
+  }
+  save();seed();applyConfig();admRenderAll();
+  renderCos();renderEventos();renderIdeias();renderCenas();renderAjuda();
+  toast(substituir?'Dados substituídos':'Dados juntados','ok');
+}
+function importData(substituir){
+  const f=document.getElementById('admImport').files[0];
+  if(!f){toast('Escolha um arquivo primeiro','err');return}
+  const r=new FileReader();
+  r.onload=e=>{try{aplicarImport(JSON.parse(e.target.result),substituir)}catch(x){toast('JSON inválido','err')}};
+  r.readAsText(f);
+}
+function importPasted(){
+  const t=document.getElementById('admJsonPaste').value.trim();
+  if(!t){toast('Cole o JSON primeiro','err');return}
+  try{aplicarImport(JSON.parse(t),false);document.getElementById('admJsonPaste').value=''}
+  catch(x){toast('JSON inválido','err')}
+}
+function wipe(){
+  if(!confirm('Apagar TODOS os dados deste navegador? Não tem volta.'))return;
+  if(!confirm('Tem certeza mesmo? Faça o backup antes se ainda não fez.'))return;
+  localStorage.removeItem(KEY);localStorage.removeItem(ME);location.reload();
+}
+
+/* --- CLOUDFLARE --- */
+const WORKER_CODE=`export default {
+  async fetch(request, env) {
+    const cors = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, X-Write-Key"
+    };
+    const noCache = {
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Content-Type": "application/json"
+    };
+
+    if (request.method === "OPTIONS")
+      return new Response(null, { headers: cors });
+
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const key = request.headers.get("X-Write-Key") || url.searchParams.get("k");
+
+    // ===== FOTOS: /f/<id> =====
+    if (path.startsWith("/f/")) {
+      const id = "foto:" + path.slice(3);
+
+      if (request.method === "GET") {
+        const dataUrl = await env.DC_KV.get(id, { cacheTtl: 86400 });
+        if (!dataUrl) return new Response("Nao encontrada", { status: 404, headers: cors });
+
+        const virgula = dataUrl.indexOf(",");
+        const tipo = dataUrl.slice(5, dataUrl.indexOf(";"));
+        const bin = atob(dataUrl.slice(virgula + 1));
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+        return new Response(bytes, {
+          headers: {
+            ...cors,
+            "Content-Type": tipo || "image/jpeg",
+            "Cache-Control": "public, max-age=31536000, immutable"
+          }
+        });
+      }
+
+      if (request.method === "POST") {
+        if (key !== env.WRITE_KEY)
+          return new Response("Chave invalida", { status: 401, headers: cors });
+        const body = await request.text();
+        if (!body.startsWith("data:"))
+          return new Response("Formato invalido", { status: 400, headers: cors });
+        await env.DC_KV.put(id, body);
+        return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, ...noCache } });
+      }
+    }
+
+    // ===== DADOS DO SITE =====
+    if (request.method === "GET") {
+      const data = await env.DC_KV.get("dados", { cacheTtl: 60 });
+      return new Response(data || "{}", { headers: { ...cors, ...noCache } });
+    }
+
+    if (request.method === "POST") {
+      if (key !== env.WRITE_KEY)
+        return new Response("Chave invalida", { status: 401, headers: cors });
+
+      const body = await request.text();
+      if (!body || body.length < 20)
+        return new Response("Corpo vazio", { status: 400, headers: cors });
+
+      // trava de seguranca: nao aceita um pacote muito menor que o guardado
+      const atual = await env.DC_KV.get("dados");
+      if (atual && atual.length > 5000 && body.length < atual.length * 0.4)
+        return new Response("Recusado: pacote suspeito", { status: 409, headers: cors });
+
+      await env.DC_KV.put("dados", body);
+      await env.DC_KV.put("backup:" + new Date().toISOString().slice(0, 10), body,
+        { expirationTtl: 60 * 60 * 24 * 14 });
+
+      return new Response(JSON.stringify({ ok: true, t: Date.now() }), {
+        headers: { ...cors, ...noCache }
+      });
+    }
+
+    return new Response("Metodo nao suportado", { status: 405, headers: cors });
+  }
+};`;
+
+function copyWorker(){
+  navigator.clipboard.writeText(WORKER_CODE)
+    .then(()=>toast('Código copiado! Cole no seu Worker.','ok'))
+    .catch(()=>toast('Não consegui copiar — selecione o texto na tela','err'));
+}
+
+function cloudStatus(html){document.getElementById('cloudStatus').innerHTML=html}
+
+async function cloudPush(auto=false){
+  const c=db.config||{};
+  if(!c.workerUrl||!c.writeKey){
+    if(!auto)toast('❌ Conexão não configurada','err');
+    return false;
+  }
+  if(syncing)return false;
+  syncing=true;
+  syncBadge('up','Enviando dados...');
+  if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>📤 Enviando dados pra NUVEM...</span></div>`);
+  
+  try{
+    const r=await fetch(c.workerUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Write-Key':c.writeKey},
+      body:JSON.stringify(db),
+      cache:'no-store',
+      signal: AbortSignal.timeout(15000) // 15 segundos
+    });
+    
+    if(r.status===401){
+      throw new Error('❌ Chave de escrita incorreta — confira WRITE_KEY');
+    }
+    if(r.status===409){
+      console.warn('⚠️ Binding não configurado, mas continuando...');
+      // NÃO retorna false, tenta mesmo assim
+    }
+    if(!r.ok && r.status!==409){
+      throw new Error(`Servidor respondeu ${r.status}`);
+    }
+    
+    syncBadge('on','✅ Online · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    if(!auto){
+      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados ONLINE! Todos conseguem ver agora!</span></div>`);
+      toast('Dados sincronizados com sucesso','ok');
+    }
+    return true;
+  }catch(e){
+    console.error('❌ Erro sync:',e.message);
+    syncBadge('off',e.message);
+    if(!auto){
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Tente de novo ou recarregue o site</small></span></div>`);
+    }
+    return false;
+  }finally{
+    syncing=false;
+  }
+}
+
+async function cloudPull(auto=false){
+  const c=db.config||{};
+  if(!c.workerUrl){
+    if(!auto)toast('Conexão não configurada','err');
+    return;
+  }
+  // nunca puxa por cima de algo que ainda não subiu
+  if(auto&&(pendente||syncing))return;
+  if(!auto&&!confirm('Isso traz os dados da nuvem e substitui os deste navegador. Continuar?'))return;
+  if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Buscando...</span></div>`);
+  
+  try{
+    const r=await fetch(c.workerUrl+'?t='+Date.now(),{
+      cache:'no-store',
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if(!r.ok){
+      if(r.status===409){
+        console.warn('⚠️ Worker: 409 (binding não configurado)');
+        syncBadge('on','Local apenas (Worker 409)');
+        return;
+      }
+      throw new Error(`Worker respondeu ${r.status}`);
+    }
+    
+    const obj=await r.json();
+    if(!obj||!obj.cosplayers){
+      if(auto){
+        pendente=true;
+        agendarSync(300);
+        return;
+      }
+      throw new Error('Nada salvo na nuvem — clique em Enviar primeiro');
+    }
+    if(auto&&(db.updatedAt||0)>=(obj.updatedAt||0)){
+      syncBadge('on','Tudo em dia');
+      return;
+    }
+
+    // TRAVA ANTI-PERDA: não aceita nuvem com menos gente ou menos fotos que aqui
+    const fotosLocais=db.cosplayers.reduce((n,c)=>n+((c.photos||[]).length),0);
+    const fotosNuvem=(obj.cosplayers||[]).reduce((n,c)=>n+((c.photos||[]).length),0);
+    if(auto&&(obj.cosplayers.length<db.cosplayers.length||fotosNuvem<fotosLocais)){
+      console.warn('⚠️ Nuvem com menos dados que local — reenviando');
+      pendente=true;
+      agendarSync(300);
+      syncBadge('up','Restaurando dados...');
+      return;
+    }
+
+    const conf=db.config;
+    const modalAberto=document.querySelector('.modal.active');
+    db={...db,...obj};
+    db.config={...(obj.config||{}),...conf};
+    db.config.workerUrl=CLOUD_URL;
+    db.config.writeKey=CLOUD_KEY;
+    localStorage.setItem(KEY,JSON.stringify(db));
+    seed();
+    applyConfig();
+    
+    // não redesenha por baixo de quem está editando
+    if(!modalAberto){
+      renderCos();
+      renderEventos();
+      renderIdeias();
+      renderCenas();
+      renderAjuda();
+      renderMe();
+      renderGates();
+      renderEvGate();
+      renderColabs();
+      renderColabGate();
+      if(document.documentElement.classList.contains('admin'))admRenderAll();
+    }
+    
+    syncBadge('on','Atualizado agora');
+    if(!auto){
+      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados atualizados da nuvem.</span></div>`);
+      toast('Dados sincronizados','ok');
+    }
+  }catch(e){
+    console.error('❌ Erro pull:',e.message);
+    syncBadge('off',e.message);
+    if(!auto){
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados locais continuam seguros!</small></span></div>`);
+    }
+  }
+}
+
+function doLogin(){
+  const u=norm(document.getElementById('aUser').value);
+  const p=norm(document.getElementById('aPass').value);
+  if(u===norm(ADMIN_USER)&&p===norm(ADMIN_PASS)){
+    document.documentElement.classList.add('admin');
+    sessionStorage.setItem('dc_admin','1');
+    document.getElementById('aUser').value='';
+    document.getElementById('aPass').value='';
+    closeModal('mLogin');renderCos();renderEventos();renderEvGate();toast('Acesso liberado','ok');openAdmin();
+  }else toast('Usuário ou senha incorretos','err');
+}
+function logout(){document.documentElement.classList.remove('admin');sessionStorage.removeItem('dc_admin');closeModal('mAdmin');renderCos();renderEventos();renderEvGate();toast('Você saiu do admin')}
+
+/* ===== COLABORAÇÕES ===== */
+function renderColabs(){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const el=document.getElementById('colabList');
+  let arr=[...db.colabs||[]];
+  
+  const filtro=document.querySelector('[data-ecf].active')?.dataset.ecf||'todos';
+  if(filtro==='aberta')arr=arr.filter(c=>c.status!=='fechada');
+  else if(filtro==='fechada')arr=arr.filter(c=>c.status==='fechada');
+  
+  if(!arr.length){
+    el.innerHTML=`<div class="empty"><i class="fas fa-people-group"></i><b>Nenhuma colab ainda</b>Seja o primeiro a propor uma!</div>`;
+    return;
+  }
+  
+  el.innerHTML=arr.map(c=>{
+    const autor=db.cosplayers.find(x=>x.username===c.author);
+    return `<div class="item">
+      ${c.status==='fechada'?'<div class="badge badge-ok" style="margin-bottom:.5rem"><i class="fas fa-check-circle"></i> CONFIRMADA</div>':'<div class="badge badge-warn" style="margin-bottom:.5rem"><i class="fas fa-door-open"></i> PROCURANDO</div>'}
+      <h3>${c.tipo.replace(/-/g,' ').toUpperCase()}</h3>
+      <p>${c.desc}</p>
+      ${c.chars?`<p style="font-size:13px;color:var(--text2)"><b>Personagens:</b> ${c.chars}</p>`:''}
+      <p style="font-size:12px;color:var(--text2)"><i class="fas fa-user"></i> ${c.author}</p>
+      ${c.contato&&(admin||me?.username===c.author)?`<p style="font-size:11px"><i class="fas fa-envelope"></i> ${c.contato}</p>`:''}
+      ${admin?`<div class="acts"><button class="bs" onclick="editarColab(${c.id})"><i class="fas fa-pen"></i></button><button class="bs del" onclick="delColab(${c.id})"><i class="fas fa-trash"></i></button></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openNovaColab(){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
+  const authorHtml=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Publicando como <b>${me.username}</b> — seu email é privado.</span></div>`;
+  document.getElementById('colabAuthor').innerHTML=authorHtml;
+  document.getElementById('cTipo').value='';
+  document.getElementById('cDesc').value='';
+  document.getElementById('cChars').value='';
+  document.getElementById('cContato').value=me.email||'';
+  openModal('mColab');
+}
+
+function saveColab(){
+  const me=getMe();if(!me)return;
+  const tipo=document.getElementById('cTipo').value.trim();
+  const desc=document.getElementById('cDesc').value.trim();
+  if(!tipo||!desc){toast('Tipo e descrição são obrigatórios','err');return}
+  
+  db.colabs=db.colabs||[];
+  db.colabs.push({
+    id:Date.now(),
+    tipo,
+    desc,
+    chars:document.getElementById('cChars').value.trim(),
+    contato:document.getElementById('cContato').value.trim(),
+    author:me.username,
+    email:me.email,
+    status:'aberta',
+    date:new Date().toISOString()
+  });
+  save();renderColabs();closeModal('mColab');
+  toast('Colaboração proposta! 👯','ok');
+}
+
+function delColab(id){
+  if(!confirm('Remover essa proposta?'))return;
+  db.colabs=db.colabs.filter(c=>c.id!==id);
+  save();renderColabs();toast('Removido','ok');
+}
+
+/* ===== UI ===== */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.content').forEach(c=>c.classList.toggle('active',c.id===name));
+}
+function openModal(id){document.getElementById(id).classList.add('active')}
+function closeModal(id){document.getElementById(id).classList.remove('active')}
+function toast(msg,type=''){
+  const d=document.createElement('div');d.className='toast '+type;d.textContent=msg;
+  document.body.appendChild(d);setTimeout(()=>d.remove(),3200);
+}
+
+/* ===== INIT ===== */
+function init(){
+  load();seed();
+  if(sessionStorage.getItem('dc_admin'))document.documentElement.classList.add('admin');
+
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+  document.querySelectorAll('.adm-tab').forEach(t=>t.onclick=()=>{
+    document.querySelectorAll('.adm-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.adm-pane').forEach(p=>p.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('at-'+t.dataset.at).classList.add('active');
+  });
+  document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fbtn[data-f]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');filter=b.dataset.f;renderCos();
+  });
+  document.querySelectorAll('.fbtn[data-ef]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fbtn[data-ef]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');evFilter=b.dataset.ef;renderEventos();
+  });
+  document.querySelectorAll('.fbtn[data-ecf]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fbtn[data-ecf]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');renderColabs();
+  });
+  document.querySelectorAll('.vbtn').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('cosGrid').classList.toggle('carousel',b.dataset.v==='carousel');
+  });
+  document.getElementById('search').oninput=renderCos;
+  document.getElementById('fPhoto').addEventListener('change',aoEscolherFoto);
+  document.getElementById('fSchedule').oninput=schedInfo;
+  document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active')});
+
+  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();
+
+  // RELÓGIO: publica automaticamente as postagens agendadas quando chega a hora
+  setInterval(()=>{
+    const now=new Date();
+    const due=db.cosplayers.some(c=>c.schedule&&new Date(c.schedule)<=now&&new Date(c.schedule)>new Date(now-35000));
+    if(due){renderCos();toast('Uma postagem agendada acabou de entrar no ar','ok')}
+  },30000);
+
+  // GALERIA: alterna as fotos a cada 3 segundos
+  setInterval(girarFotos,3000);
+
+  // NUVEM: busca ao abrir e mantém tudo em dia
+  syncBadge('up','Conectando...');
+  cloudPull(true);
+  setInterval(()=>cloudPull(true),12000);          // confere novidades a cada 12s
+  setInterval(()=>{if(pendente)agendarSync(200)},5000);
+  setTimeout(abrirPorHash,300);
+  window.addEventListener('hashchange',abrirPorHash);
+  setTimeout(reenviarFotosPendentes,4000);
+  setInterval(reenviarFotosPendentes,120000); // não deixa nada preso na fila
+
+  window.addEventListener('online',()=>{if(pendente)agendarSync(200);cloudPull(true)});
+  window.addEventListener('beforeunload',flushSync);
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)flushSync();
+    else{if(pendente)agendarSync(200);cloudPull(true)}
+  });
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
