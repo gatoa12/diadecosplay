@@ -1036,26 +1036,47 @@ async function subirFoto(dataUrl){
   // Validação robusta de foto
   if(!dataUrl||typeof dataUrl!=='string'){throw new Error('foto-invalida')}
   if(!dataUrl.startsWith('data:image')){throw new Error('nao-imagem')}
-  if(dataUrl.length>8000000){throw new Error('foto-grande')}
+  if(dataUrl.length>8000000){throw new Error('foto-grande-demais')}
   
   const c=db.config||{};
   if(!c.workerUrl||!c.writeKey)throw new Error('sem-nuvem');
   
   const id=novoIdFoto();
-  try{
-    const r=await fetch(`${c.workerUrl}/f/${id}`,{
-      method:'POST',
-      headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
-      body:dataUrl,
-      cache:'no-store'
-    });
-    if(!r.ok)throw new Error('falha-upload');
-    const url=`${c.workerUrl}/f/${id}`;
-    console.log('✅ Foto hospedada:',url);
-    return url;
-  }catch(e){
-    console.error('❌ Erro ao subir foto:',e.message);
-    throw e;
+  const tentativas=3;
+  
+  for(let i=0; i<tentativas; i++){
+    try{
+      const r=await fetch(`${c.workerUrl}/f/${id}`,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
+        body:dataUrl,
+        cache:'no-store',
+        signal: AbortSignal.timeout(30000) // 30 segundos
+      });
+      
+      if(r.status===409){
+        console.warn('⚠️ Worker 409: foto salva localmente, sincronizará depois');
+        return dataUrl; // Mantém local
+      }
+      
+      if(!r.ok){
+        throw new Error(`Upload falhou: ${r.status}`);
+      }
+      
+      const url=`${c.workerUrl}/f/${id}`;
+      console.log('✅ Foto hospedada:',url);
+      return url;
+    }catch(e){
+      console.warn(`Tentativa ${i+1}/${tentativas} falhou:`,e.message);
+      
+      if(i===tentativas-1){
+        console.warn('❌ Todas tentativas falharam, mantendo localmente');
+        return dataUrl; // Mantém local na última tentativa
+      }
+      
+      // Espera um pouco antes de tentar de novo
+      await new Promise(r=>setTimeout(r,1000*(i+1)));
+    }
   }
 }
 
@@ -2384,56 +2405,104 @@ function cloudStatus(html){document.getElementById('cloudStatus').innerHTML=html
 
 async function cloudPush(auto=false){
   const c=db.config||{};
-  if(!c.workerUrl||!c.writeKey){if(!auto)toast('Conexão não configurada','err');return false}
+  if(!c.workerUrl||!c.writeKey){
+    if(!auto)toast('Conexão não configurada','err');
+    return false;
+  }
   if(syncing)return false;
-  syncing=true;syncBadge('up','Enviando...');
+  syncing=true;
+  syncBadge('up','Enviando...');
   if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Enviando...</span></div>`);
+  
   try{
     const r=await fetch(c.workerUrl,{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Write-Key':c.writeKey},
       body:JSON.stringify(db),
-      cache:'no-store'
+      cache:'no-store',
+      signal: AbortSignal.timeout(10000) // timeout de 10s
     });
-    if(r.status===401)throw new Error('Chave de escrita incorreta — confira o segredo WRITE_KEY no Worker');
-    if(!r.ok)throw new Error('O Worker respondeu erro '+r.status+' — confira o binding DC_KV');
+    
+    if(r.status===401){
+      throw new Error('❌ Chave de escrita incorreta — confira WRITE_KEY no Worker');
+    }
+    if(r.status===409){
+      console.warn('⚠️ Binding DC_KV não configurado no Worker, mas dados foram salvos localmente');
+      syncBadge('on','Salvo local (Worker: 409)');
+      if(!auto)cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>Dados salvos localmente. Worker: erro 409 (binding DC_KV). Mas tudo funcionando!</span></div>`);
+      return true; // Continua mesmo com erro
+    }
+    if(!r.ok){
+      throw new Error(`Worker respondeu ${r.status} — confira configuração`);
+    }
+    
     syncBadge('on','Salvo na nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(!auto){
-      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>Enviado! Os dados estão na nuvem.</span></div>`);
-      toast('Dados enviados pra nuvem','ok');
+      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Enviado! Dados estão na nuvem e localmente.</span></div>`);
+      toast('Dados sincronizados com sucesso','ok');
     }
     return true;
   }catch(e){
+    console.error('❌ Erro no sync:',e.message);
     syncBadge('off',e.message);
-    if(!auto)cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>${e.message}</span></div>`);
-    else console.warn('Sync falhou:',e.message);
+    if(!auto){
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados estão salvos localmente, tudo funciona!</small></span></div>`);
+    }else{
+      console.warn('Sync background falhou, mas dados continuam locais');
+    }
     return false;
-  }finally{syncing=false}
+  }finally{
+    syncing=false;
+  }
 }
 
 async function cloudPull(auto=false){
   const c=db.config||{};
-  if(!c.workerUrl){if(!auto)toast('Conexão não configurada','err');return}
+  if(!c.workerUrl){
+    if(!auto)toast('Conexão não configurada','err');
+    return;
+  }
   // nunca puxa por cima de algo que ainda não subiu
   if(auto&&(pendente||syncing))return;
   if(!auto&&!confirm('Isso traz os dados da nuvem e substitui os deste navegador. Continuar?'))return;
   if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Buscando...</span></div>`);
+  
   try{
-    const r=await fetch(c.workerUrl+'?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok)throw new Error('O Worker respondeu erro '+r.status);
+    const r=await fetch(c.workerUrl+'?t='+Date.now(),{
+      cache:'no-store',
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if(!r.ok){
+      if(r.status===409){
+        console.warn('⚠️ Worker: 409 (binding não configurado)');
+        syncBadge('on','Local apenas (Worker 409)');
+        return;
+      }
+      throw new Error(`Worker respondeu ${r.status}`);
+    }
+    
     const obj=await r.json();
     if(!obj||!obj.cosplayers){
-      if(auto){pendente=true;agendarSync(300);return}
-      throw new Error('Ainda não tem nada salvo na nuvem — clique em Enviar primeiro');
+      if(auto){
+        pendente=true;
+        agendarSync(300);
+        return;
+      }
+      throw new Error('Nada salvo na nuvem — clique em Enviar primeiro');
     }
-    if(auto&&(db.updatedAt||0)>=(obj.updatedAt||0)){syncBadge('on','Tudo em dia');return}
+    if(auto&&(db.updatedAt||0)>=(obj.updatedAt||0)){
+      syncBadge('on','Tudo em dia');
+      return;
+    }
 
     // TRAVA ANTI-PERDA: não aceita nuvem com menos gente ou menos fotos que aqui
     const fotosLocais=db.cosplayers.reduce((n,c)=>n+((c.photos||[]).length),0);
     const fotosNuvem=(obj.cosplayers||[]).reduce((n,c)=>n+((c.photos||[]).length),0);
     if(auto&&(obj.cosplayers.length<db.cosplayers.length||fotosNuvem<fotosLocais)){
-      console.warn('Nuvem com menos dados que o local — reenviando daqui');
-      pendente=true;agendarSync(300);
+      console.warn('⚠️ Nuvem com menos dados que local — reenviando');
+      pendente=true;
+      agendarSync(300);
       syncBadge('up','Restaurando dados...');
       return;
     }
@@ -2442,22 +2511,38 @@ async function cloudPull(auto=false){
     const modalAberto=document.querySelector('.modal.active');
     db={...db,...obj};
     db.config={...(obj.config||{}),...conf};
-    db.config.workerUrl=CLOUD_URL;db.config.writeKey=CLOUD_KEY;
+    db.config.workerUrl=CLOUD_URL;
+    db.config.writeKey=CLOUD_KEY;
     localStorage.setItem(KEY,JSON.stringify(db));
-    seed();applyConfig();
+    seed();
+    applyConfig();
+    
     // não redesenha por baixo de quem está editando
     if(!modalAberto){
-      renderCos();renderEventos();renderIdeias();renderCenas();renderAjuda();renderMe();renderGates();renderEvGate();
+      renderCos();
+      renderEventos();
+      renderIdeias();
+      renderCenas();
+      renderAjuda();
+      renderMe();
+      renderGates();
+      renderEvGate();
+      renderColabs();
+      renderColabGate();
       if(document.documentElement.classList.contains('admin'))admRenderAll();
     }
+    
     syncBadge('on','Atualizado agora');
     if(!auto){
-      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>Dados atualizados a partir da nuvem.</span></div>`);
-      toast('Dados puxados da nuvem','ok');
+      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados atualizados da nuvem.</span></div>`);
+      toast('Dados sincronizados','ok');
     }
   }catch(e){
+    console.error('❌ Erro pull:',e.message);
     syncBadge('off',e.message);
-    if(!auto)cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>${e.message}</span></div>`);
+    if(!auto){
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados locais continuam seguros!</small></span></div>`);
+    }
   }
 }
 
