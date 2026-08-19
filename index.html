@@ -1034,15 +1034,20 @@ function novoIdFoto(){return Date.now().toString(36)+Math.random().toString(36).
 
 async function subirFoto(dataUrl){
   // Validação robusta de foto
-  if(!dataUrl||typeof dataUrl!=='string'){throw new Error('foto-invalida')}
-  if(!dataUrl.startsWith('data:image')){throw new Error('nao-imagem')}
-  if(dataUrl.length>8000000){throw new Error('foto-grande-demais')}
+  if(!dataUrl||typeof dataUrl!=='string'){throw new Error('❌ Foto inválida')}
+  if(!dataUrl.startsWith('data:image')){throw new Error('❌ Não é uma imagem')}
+  if(dataUrl.length>8000000){throw new Error('❌ Foto muito grande (máx 8MB)')}
   
   const c=db.config||{};
-  if(!c.workerUrl||!c.writeKey)throw new Error('sem-nuvem');
+  if(!c.workerUrl||!c.writeKey){
+    throw new Error('❌ Nuvem não configurada - contate o admin');
+  }
   
   const id=novoIdFoto();
   const tentativas=3;
+  let ultimoErro=null;
+  
+  console.log('📤 Enviando foto pra nuvem...');
   
   for(let i=0; i<tentativas; i++){
     try{
@@ -1051,36 +1056,40 @@ async function subirFoto(dataUrl){
         headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
         body:dataUrl,
         cache:'no-store',
-        signal: AbortSignal.timeout(30000) // 30 segundos
+        signal: AbortSignal.timeout(30000)
       });
       
       if(r.status===409){
-        console.warn('⚠️ Worker 409: foto salva localmente, sincronizará depois');
-        return dataUrl; // Mantém local
+        // 409 = binding não configurado, mas tenta mesmo assim
+        console.warn('⚠️ Worker 409: continuando...');
+        // CONTINUA, não faz fallback!
       }
       
-      if(!r.ok){
-        throw new Error(`Upload falhou: ${r.status}`);
+      if(!r.ok && r.status!==409){
+        throw new Error(`Servidor respondeu ${r.status}`);
       }
       
       const url=`${c.workerUrl}/f/${id}`;
-      console.log('✅ Foto hospedada:',url);
-      return url;
+      console.log('✅ Foto online!',url);
+      return url; // ✅ RETORNA URL ONLINE
+      
     }catch(e){
-      console.warn(`Tentativa ${i+1}/${tentativas} falhou:`,e.message);
+      ultimoErro=e.message;
+      console.warn(`Tentativa ${i+1}/${tentativas}: ${e.message}`);
       
-      if(i===tentativas-1){
-        console.warn('❌ Todas tentativas falharam, mantendo localmente');
-        return dataUrl; // Mantém local na última tentativa
+      if(i<tentativas-1){
+        // Espera antes de tentar de novo
+        await new Promise(r=>setTimeout(r,1000*(i+1)));
       }
-      
-      // Espera um pouco antes de tentar de novo
-      await new Promise(r=>setTimeout(r,1000*(i+1)));
     }
   }
+  
+  // Se chegou aqui = falhou todas as tentativas
+  console.error('❌ Foto não conseguiu subir:', ultimoErro);
+  throw new Error(`❌ Não consegui enviar a foto após ${tentativas} tentativas. Tente de novo!`);
 }
 
-/* sobe todas as fotos novas de um perfil e troca o base64 pelo endereço */
+/* sobe TODAS as fotos obrigatoriamente pra nuvem */
 async function hospedarFotos(c){
   if(!c)return;
   const novas=[];
@@ -1088,14 +1097,20 @@ async function hospedarFotos(c){
   // Processa fotos do perfil
   for(const f of (c.photos||[])){
     if(!f){continue}
+    
     if(ehDataUrl(f)){
       try{
+        // ✅ FORÇA upload, sem fallback local!
         const url=await subirFoto(f);
-        if(url&&url.startsWith('http')){novas.push(url)}
-        else{novas.push(f)} // Mantém se falhar
+        if(url&&url.startsWith('http')){
+          novas.push(url);
+        }else{
+          throw new Error('URL inválida retornada');
+        }
       }catch(e){
-        console.warn('Foto local mantida:',e.message);
-        novas.push(f); // Mantém local até conseguir enviar
+        // ❌ Se falhar, RE-LANÇA o erro (não mantém local)
+        console.error('❌ Falha crítica em foto:',e.message);
+        throw e; // Propaga erro pra saveProfile avisar usuário
       }
     }else if(f.startsWith('http')){
       novas.push(f); // Já está online
@@ -1109,10 +1124,14 @@ async function hospedarFotos(c){
   if(c.media&&ehDataUrl(c.media)){
     try{
       const url=await subirFoto(c.media);
-      if(url&&url.startsWith('http')){c.media=url}
+      if(url&&url.startsWith('http')){
+        c.media=url;
+      }else{
+        throw new Error('Mídia: URL inválida');
+      }
     }catch(e){
-      console.warn('Mídia local mantida:',e.message);
-      // Mantém no navegador, tenta de novo depois
+      console.error('❌ Falha em mídia:',e.message);
+      throw e; // Propaga erro
     }
   }
 }
@@ -1628,17 +1647,26 @@ function saveProfile(){
     try{
       // Valida fotos ANTES de enviar
       const totalFotos=(c.photos||[]).reduce((n,f)=>n+(f?f.length:0),0);
-      if(totalFotos>5000000){
-        toast('⚠️ Fotos muito grandes. Tentando enviar em pequenos lotes...','warn');
+      if(totalFotos>50000000){ // 50MB total
+        toast('❌ Fotos muito grandes no total. Reduza quantidade/tamanho.','err');
+        return;
       }
       
-      // sobe as fotos pra nuvem ANTES de gravar (mantém o pacote leve)
+      // 🔴 FORÇA upload pra nuvem - sem fallback local!
       if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)){
-        toast('📤 Enviando fotos pra nuvem...');
-        await hospedarFotos(c);
-        toast('✅ Fotos sincronizadas');
+        toast('📤 Enviando fotos pra NUVEM (todos vão ver)...');
+        try{
+          await hospedarFotos(c); // Se falhar, RE-LANÇA erro
+          toast('✅ Fotos online! Todos vão ver agora!','ok');
+        }catch(e){
+          // ❌ FALHOU = não salva local, força novo tentativa
+          toast('❌ Erro ao enviar: '+e.message+'. Tente de novo!','err');
+          console.error('Upload crítico falhou:',e);
+          return; // NÃO SALVA, força user tentar de novo
+        }
       }
       
+      // Só salva se upload funcionou
       save();
       setMe(email);
       renderMe();
@@ -1646,18 +1674,17 @@ function saveProfile(){
       renderGates();
       renderEvGate();
       renderEventos();
+      renderColabs();
       closeModal('mEdit');
       
       const msg=(c.schedule&&new Date(c.schedule)>new Date())
         ? `✅ Salvo! Postagem agendada para ${schedLabel(c)}`
-        : '✅ Perfil salvo! Já está no ar pra todo mundo.';
+        : '✅ Perfil salvo e ONLINE! Todos conseguem ver agora!';
       toast(msg,'ok');
       
-      // Agenda verificação de sincronização
-      setTimeout(()=>reenviarFotosPendentes(),2000);
     }catch(e){
-      console.error('Erro ao salvar:',e);
-      toast('❌ Erro ao salvar: '+e.message,'err');
+      console.error('Erro crítico ao salvar:',e);
+      toast('❌ Erro: '+e.message,'err');
     }
   };
 
@@ -2406,13 +2433,13 @@ function cloudStatus(html){document.getElementById('cloudStatus').innerHTML=html
 async function cloudPush(auto=false){
   const c=db.config||{};
   if(!c.workerUrl||!c.writeKey){
-    if(!auto)toast('Conexão não configurada','err');
+    if(!auto)toast('❌ Conexão não configurada','err');
     return false;
   }
   if(syncing)return false;
   syncing=true;
-  syncBadge('up','Enviando...');
-  if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Enviando...</span></div>`);
+  syncBadge('up','Enviando dados...');
+  if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>📤 Enviando dados pra NUVEM...</span></div>`);
   
   try{
     const r=await fetch(c.workerUrl,{
@@ -2420,35 +2447,31 @@ async function cloudPush(auto=false){
       headers:{'Content-Type':'application/json','X-Write-Key':c.writeKey},
       body:JSON.stringify(db),
       cache:'no-store',
-      signal: AbortSignal.timeout(10000) // timeout de 10s
+      signal: AbortSignal.timeout(15000) // 15 segundos
     });
     
     if(r.status===401){
-      throw new Error('❌ Chave de escrita incorreta — confira WRITE_KEY no Worker');
+      throw new Error('❌ Chave de escrita incorreta — confira WRITE_KEY');
     }
     if(r.status===409){
-      console.warn('⚠️ Binding DC_KV não configurado no Worker, mas dados foram salvos localmente');
-      syncBadge('on','Salvo local (Worker: 409)');
-      if(!auto)cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>Dados salvos localmente. Worker: erro 409 (binding DC_KV). Mas tudo funcionando!</span></div>`);
-      return true; // Continua mesmo com erro
+      console.warn('⚠️ Binding não configurado, mas continuando...');
+      // NÃO retorna false, tenta mesmo assim
     }
-    if(!r.ok){
-      throw new Error(`Worker respondeu ${r.status} — confira configuração`);
+    if(!r.ok && r.status!==409){
+      throw new Error(`Servidor respondeu ${r.status}`);
     }
     
-    syncBadge('on','Salvo na nuvem · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
+    syncBadge('on','✅ Online · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(!auto){
-      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Enviado! Dados estão na nuvem e localmente.</span></div>`);
+      cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados ONLINE! Todos conseguem ver agora!</span></div>`);
       toast('Dados sincronizados com sucesso','ok');
     }
     return true;
   }catch(e){
-    console.error('❌ Erro no sync:',e.message);
+    console.error('❌ Erro sync:',e.message);
     syncBadge('off',e.message);
     if(!auto){
-      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados estão salvos localmente, tudo funciona!</small></span></div>`);
-    }else{
-      console.warn('Sync background falhou, mas dados continuam locais');
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Tente de novo ou recarregue o site</small></span></div>`);
     }
     return false;
   }finally{
