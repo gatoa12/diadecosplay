@@ -1371,8 +1371,8 @@ function renderCos(){
 
     const imgsHtml=fotos.length
       ? (fotos.length>1
-          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}">`).join('')
-          : `<img src="${fotos[0]}" alt="${c.username}">`)
+          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" onerror="this.style.display='none'">`).join('')
+          : `<img src="${fotos[0]}" alt="${c.username}" onerror="this.style.display='none'">`)
       : `<i class="fab fa-instagram ph"></i>`;
 
     return `<div class="card ${t.cls} ${temPreview?'has-preview':''}">
@@ -2027,8 +2027,18 @@ function saveEvento(){
       toast('Enviando cartaz pra nuvem...');
       try{data.img=await subirFoto(data.img)}catch(e){}
     }
-    if(evEditId)db.eventos=db.eventos.map(e=>e.id===evEditId?data:e);
-    else db.eventos.push(data);
+    
+    // ✅ PREVINE DUPLICAÇÃO: verifica se evento já existe
+    const eventoExiste=db.eventos.find(e=>e.id===data.id);
+    
+    if(evEditId){
+      // Atualiza evento existente (sem duplicar)
+      db.eventos=db.eventos.map(e=>e.id===evEditId?data:e);
+    }else if(!eventoExiste){
+      // Só adiciona se não existe
+      db.eventos.push(data);
+    }
+    
     save();renderEventos();renderEvGate();closeModal('mEvento');
     toast(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!'),'ok');
   };
@@ -2714,11 +2724,11 @@ function init(){
   syncBadge('up','Conectando...');
   cloudPull(true);
   setInterval(()=>cloudPull(true),12000);          // confere novidades a cada 12s
-  // ✅ SINCRONIZAÇÃO AUTOMÁTICA FORTE: A CADA 5 SEGUNDOS
+  // ✅ SINCRONIZAÇÃO AUTOMÁTICA: A CADA 30 SEGUNDOS (reduzido para evitar duplicação)
   setInterval(()=>{
-    agendarSync(100); // FORÇA sync automático sempre, não apenas se pendente
-    cloudPull(true);  // Busca dados novos também
-  },5000);
+    agendarSync(100);
+    cloudPull(true);
+  },30000);
   setTimeout(abrirPorHash,300);
   window.addEventListener('hashchange',abrirPorHash);
   setTimeout(reenviarFotosPendentes,4000);
