@@ -973,6 +973,31 @@ function seed(){
   if(changed)save();
   db.eventos.forEach(e=>{if(!Array.isArray(e.presencas))e.presencas=[]});
   if(!Array.isArray(db.colabs))db.colabs=[];
+
+  // ✅ LIMPEZA DE DUPLICATAS: remove itens repetidos com o mesmo ID
+  const dedupPorId=(arr)=>{
+    if(!Array.isArray(arr))return [];
+    const vistos=new Set();
+    return arr.filter(item=>{
+      if(!item||item.id===undefined)return true;
+      if(vistos.has(item.id))return false;
+      vistos.add(item.id);
+      return true;
+    });
+  };
+  const antes=db.eventos.length;
+  db.eventos=dedupPorId(db.eventos);
+  db.cosplayers=dedupPorId(db.cosplayers);
+  db.ideias=dedupPorId(db.ideias);
+  db.cenas=dedupPorId(db.cenas);
+  db.colabs=dedupPorId(db.colabs);
+  if(db.eventos.length!==antes){
+    console.warn('⚠️ Duplicatas removidas:',antes-db.eventos.length);
+    save();
+    // reenvia a lista já limpa pra nuvem, pra sumir de vez com as cópias extras
+    setTimeout(()=>cloudPush(true),1000);
+  }
+
   seedEvento();
   seedAjuda();
 }
