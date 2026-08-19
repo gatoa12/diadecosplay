@@ -1057,106 +1057,48 @@ function seedEvento(){
 function ehDataUrl(s){return typeof s==='string'&&s.startsWith('data:')}
 function novoIdFoto(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
+/* ✅ SIMPLIFICADO: a foto NÃO depende mais de um endpoint separado do Worker.
+   Ela vai direto dentro do JSON principal (como data URL comprimida).
+   Isso elimina de vez qualquer problema de "URL quebrada" — a foto sempre
+   chega junto com o resto dos dados, no mesmo envio. */
 async function subirFoto(dataUrl){
-  // Validação robusta de foto
   if(!dataUrl||typeof dataUrl!=='string'){throw new Error('❌ Foto inválida')}
   if(!dataUrl.startsWith('data:image')){throw new Error('❌ Não é uma imagem')}
-  if(dataUrl.length>8000000){throw new Error('❌ Foto muito grande (máx 8MB)')}
-  
-  const c=db.config||{};
-  if(!c.workerUrl||!c.writeKey){
-    throw new Error('❌ Nuvem não configurada - contate o admin');
-  }
-  
-  const id=novoIdFoto();
-  const tentativas=3;
-  let ultimoErro=null;
-  
-  console.log('📤 Enviando foto pra nuvem...');
-  
-  for(let i=0; i<tentativas; i++){
-    try{
-      const r=await fetch(`${c.workerUrl}/f/${id}`,{
-        method:'POST',
-        headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
-        body:dataUrl,
-        cache:'no-store',
-        signal: AbortSignal.timeout(30000)
-      });
-      
-      if(r.status===409){
-        // 409 = binding não configurado, mas tenta mesmo assim
-        console.warn('⚠️ Worker 409: continuando...');
-        // CONTINUA, não faz fallback!
-      }
-      
-      if(!r.ok && r.status!==409){
-        throw new Error(`Servidor respondeu ${r.status}`);
-      }
-      
-      const url=`${c.workerUrl}/f/${id}`;
-      console.log('✅ Foto online!',url);
-      return url; // ✅ RETORNA URL ONLINE
-      
-    }catch(e){
-      ultimoErro=e.message;
-      console.warn(`Tentativa ${i+1}/${tentativas}: ${e.message}`);
-      
-      if(i<tentativas-1){
-        // Espera antes de tentar de novo
-        await new Promise(r=>setTimeout(r,1000*(i+1)));
-      }
-    }
-  }
-  
-  // Se chegou aqui = falhou todas as tentativas
-  console.error('❌ Foto não conseguiu subir:', ultimoErro);
-  throw new Error(`❌ Não consegui enviar a foto após ${tentativas} tentativas. Tente de novo!`);
+  if(dataUrl.length>900000){throw new Error('❌ Foto muito grande — tente uma foto menor')}
+  // Não faz upload separado nenhum. A própria data URL comprimida
+  // é o que vai ser salvo — junto com o resto do perfil.
+  return dataUrl;
 }
 
-/* sobe TODAS as fotos obrigatoriamente pra nuvem */
+/* garante que as fotos do perfil estão prontas (comprimidas) pra ir no JSON */
 async function hospedarFotos(c){
   if(!c)return;
   const novas=[];
   
-  // Processa fotos do perfil
   for(const f of (c.photos||[])){
     if(!f){continue}
-    
     if(ehDataUrl(f)){
       try{
-        // ✅ FORÇA upload, sem fallback local!
-        const url=await subirFoto(f);
-        if(url&&url.startsWith('http')){
-          novas.push(url);
-        }else{
-          throw new Error('URL inválida retornada');
-        }
+        const foto=await subirFoto(f); // valida e devolve a própria data URL
+        novas.push(foto);
       }catch(e){
-        // ❌ Se falhar, RE-LANÇA o erro (não mantém local)
-        console.error('❌ Falha crítica em foto:',e.message);
-        throw e; // Propaga erro pra saveProfile avisar usuário
+        console.error('❌ Falha em foto:',e.message);
+        throw e;
       }
-    }else if(f.startsWith('http')){
-      novas.push(f); // Já está online
+    }else if(f.startsWith('http')||f.startsWith('data:')){
+      novas.push(f); // já está no formato certo
     }
   }
   
   c.photos=novas.length?novas:[];
   c.photo=novas[0]||null;
 
-  // Processa mídia da postagem
   if(c.media&&ehDataUrl(c.media)){
     try{
-      const url=await subirFoto(c.media);
-      if(url&&url.startsWith('http')){
-        c.media=url;
-      }else{
-        throw new Error('Mídia: URL inválida');
-      }
+      c.media=await subirFoto(c.media);
     }catch(e){
       console.error('❌ Falha em mídia:',e.message);
-      throw e; // Propaga erro
+      throw e;
     }
   }
 }
@@ -2088,6 +2030,21 @@ function renderEventos(){
   const RN=['Natal','Parnamirim','Mossoró','São Gonçalo'];
   const admin=document.documentElement.classList.contains('admin');
   const me=getMe();
+
+  // ✅ TRAVA FINAL ANTI-DUPLICATA: nunca mostra 2 eventos com mesmo id
+  // ou mesmo título+data (mesmo se a nuvem ainda tiver cópias residuais)
+  const vistos=new Set();
+  const semDuplicata=db.eventos.filter(e=>{
+    const chave=e.id!==undefined?('id:'+e.id):('td:'+e.title+'|'+e.date+'|'+e.time);
+    if(vistos.has(chave))return false;
+    vistos.add(chave);
+    return true;
+  });
+  if(semDuplicata.length!==db.eventos.length){
+    db.eventos=semDuplicata;
+    save();
+    setTimeout(()=>cloudPush(true),800); // reenvia já limpo, some de vez da nuvem
+  }
   let arr=[...db.eventos];
 
   if(evFilter==='pendentes'){
@@ -2471,6 +2428,24 @@ async function cloudPush(auto=false){
     if(!auto)toast('❌ Conexão não configurada','err');
     return false;
   }
+
+  // ✅ TRAVA ANTI-PERDA CRÍTICA: nunca envia se os dados locais parecem
+  // suspeitosamente menores do que o maior número já visto de cosplayers.
+  // Isso impede que uma aba "vazia" (que ainda não terminou de puxar da
+  // nuvem) apague o trabalho de todo mundo.
+  const maiorJaVisto=parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
+  const atual=(db.cosplayers||[]).length;
+  if(atual>maiorJaVisto){
+    localStorage.setItem('dc_max_cosplayers',String(atual));
+  }else if(maiorJaVisto>0&&atual<maiorJaVisto*0.7){
+    console.error(`🛑 BLOQUEADO: envio recusado. Local tem ${atual} cosplayers, mas já vimos ${maiorJaVisto}. Isso pareceria perda de dados.`);
+    syncBadge('off','Envio bloqueado (proteção anti-perda)');
+    if(!auto){
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-shield-halved"></i><span>⚠️ Envio bloqueado por segurança: os dados daqui (${atual}) estão bem menores que o esperado (${maiorJaVisto}). Clica em "Puxar agora" pra atualizar antes de tentar de novo.</span></div>`);
+    }
+    return false;
+  }
+
   if(syncing)return false;
   syncing=true;
   syncBadge('up','Enviando dados...');
@@ -2572,6 +2547,12 @@ async function cloudPull(auto=false){
     db.config.workerUrl=CLOUD_URL;
     db.config.writeKey=CLOUD_KEY;
     localStorage.setItem(KEY,JSON.stringify(db));
+
+    // ✅ atualiza o "maior número já visto" toda vez que a nuvem confirma dados reais
+    const totalNuvem=(db.cosplayers||[]).length;
+    const maiorAtual=parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
+    if(totalNuvem>maiorAtual)localStorage.setItem('dc_max_cosplayers',String(totalNuvem));
+
     seed();
     applyConfig();
     
@@ -2749,11 +2730,11 @@ function init(){
   syncBadge('up','Conectando...');
   cloudPull(true);
   setInterval(()=>cloudPull(true),12000);          // confere novidades a cada 12s
-  // ✅ SINCRONIZAÇÃO AUTOMÁTICA: A CADA 30 SEGUNDOS (reduzido para evitar duplicação)
-  setInterval(()=>{
-    agendarSync(100);
-    cloudPull(true);
-  },30000);
+  // ❌ REMOVIDO DE PROPÓSITO: NUNCA fazer push automático em intervalo.
+  // Isso causava perda de dados quando uma aba carregava antes do pull
+  // inicial terminar e empurrava um estado vazio/incompleto por cima
+  // dos dados reais na nuvem. Envio só acontece quando o usuário salva
+  // algo de verdade (saveProfile, saveEvento, etc) — nunca "no vácuo".
   setTimeout(abrirPorHash,300);
   window.addEventListener('hashchange',abrirPorHash);
   setTimeout(reenviarFotosPendentes,4000);
