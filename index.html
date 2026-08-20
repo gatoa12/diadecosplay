@@ -2468,7 +2468,13 @@ async function cloudPush(auto=false){
       // NÃO retorna false, tenta mesmo assim
     }
     if(!r.ok && r.status!==409){
-      throw new Error(`Servidor respondeu ${r.status}`);
+      // ✅ Lê o corpo da resposta pra pegar a mensagem REAL do erro
+      let msgReal=`Servidor respondeu ${r.status}`;
+      try{
+        const corpo=await r.json();
+        if(corpo&&corpo.error)msgReal=corpo.error;
+      }catch(_e){/* corpo não era JSON, mantém a mensagem padrão */}
+      throw new Error(msgReal);
     }
     
     syncBadge('on','✅ Online · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
