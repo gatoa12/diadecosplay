@@ -1661,16 +1661,61 @@ function novoIdFoto(){return Date.now().toString(36)+Math.random().toString(36).
    Ela vai direto dentro do JSON principal (como data URL comprimida).
    Isso elimina de vez qualquer problema de "URL quebrada" — a foto sempre
    chega junto com o resto dos dados, no mesmo envio. */
+/* ✅ ARQUITETURA CORRIGIDA: com muita gente cadastrada (70+), guardar
+   TODAS as fotos dentro de um único pacote de dados fica grande demais
+   e passa a falhar silenciosamente pra algumas pessoas. A partir de agora,
+   cada foto é enviada SEPARADA pro Worker (guardada com seu próprio
+   endereço), e só o ENDEREÇO dela fica no perfil — o pacote principal
+   fica pequeno e rápido pra sempre, não importa quantas pessoas entrem. */
 async function subirFoto(dataUrl){
   if(!dataUrl||typeof dataUrl!=='string'){throw new Error('❌ Foto inválida')}
   if(!dataUrl.startsWith('data:image')){throw new Error('❌ Não é uma imagem')}
   if(dataUrl.length>900000){throw new Error('❌ Foto muito grande — tente uma foto menor')}
-  // Não faz upload separado nenhum. A própria data URL comprimida
-  // é o que vai ser salvo — junto com o resto do perfil.
-  return dataUrl;
+
+  const c=db.config||{};
+  if(!c.workerUrl||!c.writeKey){
+    throw new Error('❌ Nuvem não configurada — contate o admin');
+  }
+
+  const id=novoIdFoto();
+  const tentativas=3;
+  let ultimoErro=null;
+
+  for(let i=0;i<tentativas;i++){
+    try{
+      const r=await fetch(`${c.workerUrl}/f/${id}`,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
+        body:dataUrl,
+        cache:'no-store',
+        signal:AbortSignal.timeout(20000)
+      });
+      if(!r.ok){throw new Error(`Servidor respondeu ${r.status}`)}
+
+      const url=`${c.workerUrl}/f/${id}?v=${Date.now()}`;
+
+      // ✅ PROVA REAL: só aceita se a foto realmente carregar de volta
+      // do servidor — nunca devolve um link que não funciona de verdade.
+      await new Promise((resolve,reject)=>{
+        const teste=new Image();
+        teste.onload=()=>resolve();
+        teste.onerror=()=>reject(new Error('Link gerado mas a foto não carregou de volta'));
+        teste.src=url;
+      });
+
+      return url;
+    }catch(e){
+      ultimoErro=e.message;
+      console.warn(`Tentativa ${i+1}/${tentativas} de subir foto falhou: ${e.message}`);
+      if(i<tentativas-1)await new Promise(r=>setTimeout(r,1000*(i+1)));
+    }
+  }
+
+  throw new Error(`❌ Não consegui subir a foto após ${tentativas} tentativas (${ultimoErro}). Tenta de novo em instantes.`);
 }
 
-/* garante que as fotos do perfil estão prontas (comprimidas) pra ir no JSON */
+/* garante que as fotos do perfil foram de verdade enviadas pra nuvem
+   (não fica só a imagem embutida gigante) */
 async function hospedarFotos(c){
   if(!c)return;
   const novas=[];
@@ -1679,8 +1724,8 @@ async function hospedarFotos(c){
     if(!f){continue}
     if(ehDataUrl(f)){
       try{
-        const foto=await subirFoto(f); // valida e devolve a própria data URL
-        novas.push(foto);
+        const url=await subirFoto(f); // sobe de verdade e devolve o endereço
+        novas.push(url);
       }catch(e){
         console.error('❌ Falha em foto:',e.message);
         throw e;
@@ -1708,14 +1753,28 @@ async function reenviarFotosPendentes(){
   let mudou=false;
   for(const c of db.cosplayers){
     const pend=(c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media);
-    if(pend){await hospedarFotos(c);mudou=true}
+    if(pend){
+      try{
+        await hospedarFotos(c);
+        mudou=true;
+      }catch(e){
+        // ✅ se falhar pra uma pessoa, não trava a migração das outras —
+        // essa pessoa só tenta de novo no próximo ciclo (2 em 2 minutos)
+        console.warn(`Migração de foto pendente falhou pra ${c.username}: ${e.message}`);
+      }
+    }
   }
   for(const e of db.eventos){
     if(ehDataUrl(e.img)){
       try{e.img=await subirFoto(e.img);mudou=true}catch(x){}
     }
   }
-  if(mudou){save();renderCos();renderEventos()}
+  if(mudou){
+    save(false);
+    renderCos();renderEventos();
+    const ok=await cloudPush(false);
+    if(!ok){pendente=true;agendarSync(1000)}
+  }
 }
 
 function pesoDados(){
