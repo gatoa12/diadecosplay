@@ -31,17 +31,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .logo i{-webkit-text-fill-color:var(--primary)}
 .wa-link{display:inline-flex;align-items:center;gap:7px;padding:.5rem 1rem;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;transition:.25s}
 .wa-link:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(37,211,102,.35)}
-.header-right{display:flex;align-items:center;gap:1rem}
+.header-right{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
 .user-chip{display:flex;align-items:center;gap:.5rem;background:var(--s2);border:1px solid var(--border);padding:.4rem .8rem;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:.25s}
 .user-chip:hover{border-color:var(--primary)}
 .user-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--success)}
-.admin-star{font-size:20px;cursor:pointer;opacity:.35;transition:.3s;color:var(--warn)}
+.admin-star{font-size:20px;cursor:pointer;opacity:.35;transition:.3s;color:var(--warn);flex:0 0 auto}
 .admin-star:hover{opacity:1;transform:scale(1.2) rotate(15deg)}
-.sync-badge{display:none;font-size:15px;cursor:pointer;transition:.3s;width:30px;height:30px;align-items:center;justify-content:center;border-radius:8px}
+.sync-badge{display:none;font-size:15px;cursor:pointer;transition:.3s;width:30px;height:30px;align-items:center;justify-content:center;border-radius:8px;flex:0 0 auto}
 html.admin .sync-badge{display:flex}
-.sync-badge.on{color:var(--success)}
-.sync-badge.up{color:var(--secondary)}
-.sync-badge.off{color:var(--error)}
+/* ✅ Botão de atualizar — mesmo tamanho/estilo dos outros ícones do
+   cabeçalho, pra não ficar "desalinhado" quando a barra quebra linha
+   no celular */
+.header-icon-btn{background:var(--s2);border:1px solid var(--border);color:var(--text2);border-radius:8px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:.25s;flex:0 0 auto}
+.header-icon-btn:hover{border-color:var(--primary);color:var(--primary)}
+@media(max-width:520px){
+  .header{padding:.7rem 1rem;gap:.5rem}
+  .header-left{gap:.6rem}
+  .logo{font-size:19px}
+  .wa-link{padding:.4rem .7rem;font-size:11.5px}
+  .header-right{width:100%;justify-content:center;gap:.5rem;padding-top:.2rem}
+  .user-chip{font-size:11px;padding:.35rem .65rem}
+}
+.sync-badge.on{color:var(--success);background:rgba(40,167,69,.12)}
+.sync-badge.up{color:var(--secondary);background:rgba(127,119,221,.12)}
+.sync-badge.off{color:var(--error);background:rgba(220,53,69,.12)}
 .sync-badge:hover{background:var(--s2)}
 
 /* TABS */
@@ -421,7 +434,7 @@ html.admin .admin-only{display:flex!important}
   </div>
   <div class="header-right">
     <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
-    <button class="admin-btn" id="btnAtualizarTudo" onclick="atualizarELancarTudo()" title="Atualizar e enviar minhas alterações" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:.4rem .6rem;cursor:pointer;font-size:12px"><i class="fas fa-rotate" id="iconAtualizarTudo"></i></button>
+    <button class="header-icon-btn" id="btnAtualizarTudo" onclick="atualizarELancarTudo()" title="Atualizar e enviar minhas alterações" style="display:none"><i class="fas fa-rotate" id="iconAtualizarTudo"></i></button>
     <div class="user-chip" id="userChip" onclick="openMyProfile()" style="display:none">
       <span class="dot"></span><span id="userChipText"></span>
     </div>
@@ -1070,6 +1083,12 @@ html.admin .admin-only{display:flex!important}
       <span class="hint">Gera o texto pronto pra colar no WhatsApp marcando quem ainda não cadastrou.</span>
     </div>
 
+    <div class="fg" style="border:1px solid var(--error);border-radius:12px;padding:1rem;background:rgba(220,53,69,.06)">
+      <label class="fl">🧹 Corrigir tudo agora (@ com lixo, fotos e eventos duplicados)</label>
+      <span class="hint">Roda a correção completa na hora, sem esperar o site recarregar sozinho. Limpa @ com número colado (tipo "@1 - @nome"), fotos repetidas, eventos duplicados e lojas duplicadas — tudo de uma vez.</span>
+      <button class="btn" style="margin-top:.6rem;background:var(--error)" onclick="rodarCorrecaoManual()"><i class="fas fa-broom"></i> Corrigir tudo agora</button>
+    </div>
+
     <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem">
       <label class="fl">🔍 Checar @ duplicados ou parecidos</label>
       <span class="hint">Procura @ exatamente iguais (que não deveriam existir) e @ bem parecidos (que podem ser a mesma pessoa cadastrada duas vezes por engano).</span>
@@ -1448,22 +1467,27 @@ function seed(){
     setTimeout(()=>cloudPush(true),1000);
   }
 
-  // ✅ CONSERTO AUTOMÁTICO: corrige @ que ficaram com número/lixo colado na
-  // frente (ex: "@1 - @celipe.cosplay") — isso acontecia quando alguém
-  // colava uma lista numerada na caixa de "Adicionar cosplayers em lote".
-  // Se já existe uma versão limpa do mesmo @ (com dados de verdade
-  // preenchidos), mantém a boa e remove a "fantasma"; senão, só limpa
-  // o nome do próprio perfil, sem apagar nada.
-  const pareceLixo=(u)=>/^@\d/.test(u)||/^@[\s\-\).]/.test(u); // começa com @seguido de número, espaço, hífen ou parênteses
+  corrigirTudoAgora();
+
+  seedEvento();
+  seedAjuda();
+}
+
+/* ✅ Corrige TODOS os tipos de duplicata de uma vez: @ com lixo na frente,
+   fotos repetidas no mesmo perfil, eventos duplicados, lojas duplicadas
+   e vitrine com mais de 1 entrada por pessoa. Roda sozinha toda vez que
+   o site carrega, e também pode ser chamada manualmente pelo Admin. */
+function corrigirTudoAgora(){
+  // 1) @ com número/lixo na frente (ex: "@1 - @celipe.cosplay")
+  const pareceLixo=(u)=>/^@\d/.test(u)||/^@[\s\-\).]/.test(u);
   let corrigidos=0;
   const cosplayersLimpos=[];
-  const vistosLimpos=new Map(); // @ limpo (minúsculo) -> índice no array final
+  const vistosLimpos=new Map();
 
   db.cosplayers.forEach(c=>{
     if(!pareceLixo(c.username)){
       const chave=c.username.toLowerCase();
       if(vistosLimpos.has(chave)){
-        // já existe uma entrada limpa igual — mantém a com mais dados preenchidos
         const iExistente=vistosLimpos.get(chave);
         const pontosNovo=(c.email?2:0)+((c.photos||[]).length);
         const pontosExistente=(cosplayersLimpos[iExistente].email?2:0)+((cosplayersLimpos[iExistente].photos||[]).length);
@@ -1475,12 +1499,10 @@ function seed(){
       }
       return;
     }
-    // é um "fantasma" com lixo na frente — limpa o @ dele
     const limpo=limparPrefixoNumerico(c.username.replace(/^@/,''));
     const chave=limpo.toLowerCase();
     corrigidos++;
     if(vistosLimpos.has(chave)){
-      // já existe uma versão limpa de verdade — mantém a que tiver mais dados
       const iExistente=vistosLimpos.get(chave);
       const pontosFantasma=(c.email?2:0)+((c.photos||[]).length);
       const pontosExistente=(cosplayersLimpos[iExistente].email?2:0)+((cosplayersLimpos[iExistente].photos||[]).length);
@@ -1488,7 +1510,6 @@ function seed(){
         c.username=limpo;
         cosplayersLimpos[iExistente]=c;
       }
-      // senão, simplesmente descarta o fantasma (a boa já está na lista)
     }else{
       c.username=limpo;
       vistosLimpos.set(chave,cosplayersLimpos.length);
@@ -1498,16 +1519,11 @@ function seed(){
   if(corrigidos>0){
     console.warn(`🧹 ${corrigidos} @ corrigido(s)/fantasma(s) removido(s)`);
     db.cosplayers=cosplayersLimpos;
-    save();
-    setTimeout(()=>cloudPush(true),1200);
   }
 
-  // ✅ CAMADA DE INTEGRIDADE GERAL: roda toda vez que o site carrega.
-  // Regra fixa: nada se duplica, nunca — eventos, fotos, lojas, tudo.
-  let integridadeMexeu=false;
+  // 2) Camada de integridade geral: fotos, eventos, lojas, vitrine
+  let integridadeMexeu=corrigidos>0;
 
-  // 1) Fotos duplicadas dentro do MESMO perfil (a pessoa subiu a mesma
-  //    imagem 2x sem perceber, ou uma sincronização bugada duplicou)
   db.cosplayers.forEach(c=>{
     if(Array.isArray(c.photos)&&c.photos.length>1){
       const unicas=[...new Set(c.photos)];
@@ -1519,8 +1535,6 @@ function seed(){
     }
   });
 
-  // 2) Eventos com o MESMO título+data+hora mas IDs diferentes (cobre o
-  //    caso raro de duas pessoas criarem "o mesmo" evento ao mesmo tempo)
   {
     const vistosEv=new Set();
     const eventosLimpos=db.eventos.filter(e=>{
@@ -1535,8 +1549,6 @@ function seed(){
     }
   }
 
-  // 3) Lojas com o MESMO link (a trava existe ao indicar, mas confere
-  //    de novo aqui — cobre dados antigos de antes dessa trava existir)
   if(Array.isArray(db.lojas)&&db.lojas.length>1){
     const vistosLoja=new Map();
     const lojasLimpas=[];
@@ -1544,7 +1556,6 @@ function seed(){
       const chave=(l.link||'').toLowerCase().trim();
       if(!chave){lojasLimpas.push(l);return}
       if(vistosLoja.has(chave)){
-        // mantém a que tiver mais informação (foto, comentários, reações)
         const i=vistosLoja.get(chave);
         const pontosNova=(l.foto?2:0)+((l.comentarios||[]).length)+Object.values(l.reacoes||{}).reduce((n,a)=>n+a.length,0);
         const pontosAtual=(lojasLimpas[i].foto?2:0)+((lojasLimpas[i].comentarios||[]).length)+Object.values(lojasLimpas[i].reacoes||{}).reduce((n,a)=>n+a.length,0);
@@ -1560,7 +1571,6 @@ function seed(){
     }
   }
 
-  // 4) Vitrine: só 1 entrada por pessoa (mantém a mais recente)
   if(Array.isArray(db.vitrine)&&db.vitrine.length>1){
     const vistosVit=new Map();
     db.vitrine.forEach(v=>{
@@ -1577,13 +1587,19 @@ function seed(){
   }
 
   if(integridadeMexeu){
-    console.warn('🧹 Camada de integridade removeu duplicatas (fotos/eventos/lojas/vitrine)');
-    save();
-    setTimeout(()=>cloudPush(true),1400);
-  }
+    console.warn('🧹 Correção geral removeu duplicatas (fotos/eventos/lojas/vitrine/@)');
 
-  seedEvento();
-  seedAjuda();
+    // ✅ Ajusta o teto da trava anti-perda: se essa limpeza removeu
+    // "fantasmas" de verdade, a contagem cai de propósito — sem isso, a
+    // própria trava que existe pra PROTEGER dados acabava bloqueando o
+    // envio dessa correção, achando que era perda de verdade.
+    const novoTotal=(db.cosplayers||[]).length;
+    localStorage.setItem('dc_max_cosplayers',String(novoTotal));
+
+    save();
+    setTimeout(()=>cloudPush(true),1200);
+  }
+  return integridadeMexeu;
 }
 
 const AJUDA_PADRAO=[
@@ -1965,10 +1981,25 @@ function renderCos(){
   const q=document.getElementById('search').value.toLowerCase().trim();
   if(q)arr=arr.filter(c=>c.username.toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q));
 
+  // ✅ Peso do tempo de cosplay pra ordenação: quanto mais tempo, maior o peso
+  const PESO_TEMPO={'10':5,'6':4,'3':3,'1':2,'0':1};
+  const pesoTempo=c=>PESO_TEMPO[c.tempoCosplay]||0;
+  const temFoto=c=>((c.photos&&c.photos.length)?1:0)||(c.photo?1:0);
+
   arr.sort((a,b)=>{
     if(me){if(a.id===me.id)return -1;if(b.id===me.id)return 1}
+
+    // 1) Quem tem foto sempre aparece antes de quem não tem
+    const fa=temFoto(a),fb=temFoto(b);
+    if(fa!==fb)return fb-fa;
+
+    // 2) Entre quem tem (ou não tem) foto, mais tempo de cosplay vem primeiro
+    const ta=pesoTempo(a),tb=pesoTempo(b);
+    if(ta!==tb)return tb-ta;
+
+    // 3) Critérios de desempate: ordem pedida manualmente, depois qualidade geral
     const pa=indicePrioridade(a.username),pb=indicePrioridade(b.username);
-    if(pa!==pb)return pa-pb; // quem está na lista pedida vem na ordem certa
+    if(pa!==pb)return pa-pb;
     const nf=c=>((c.photos&&c.photos.length)?c.photos.length:(c.photo?1:0));
     const sa=(postLive(a)?8:0)+(nf(a)?4:0)+(a.email?2:0)+((a.cats||[]).length?1:0);
     const sb=(postLive(b)?8:0)+(nf(b)?4:0)+(b.email?2:0)+((b.cats||[]).length?1:0);
@@ -3226,6 +3257,18 @@ function distanciaLevenshtein(a,b){
     d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
   }
   return d[m][n];
+}
+
+async function rodarCorrecaoManual(){
+  toast('🧹 Corrigindo tudo, aguenta aí...');
+  const mexeu=corrigirTudoAgora();
+  admRenderAll();renderCos();renderEventos();renderLojas();renderVitrine();
+  if(mexeu){
+    const ok=await cloudPush(false);
+    toast(ok?'✅ Corrigido e enviado pra nuvem! Confere a lista agora.':'✅ Corrigido aqui, mas ainda confirmando com a nuvem...',ok?'ok':'err');
+  }else{
+    toast('✅ Já estava tudo certo, nada pra corrigir!','ok');
+  }
 }
 
 function checarDuplicados(){
