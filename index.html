@@ -10,6 +10,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;overflow-wrap:break-word}
 :root{
@@ -645,10 +646,21 @@ html.admin .admin-only{display:flex!important}
     <span class="hint" style="display:block;margin-bottom:.7rem">Como você é menor de 18 anos, um pai/mãe/responsável precisa autorizar sua participação na comunidade. Isso é só pra garantir que ele saiba que você está aqui — o contato dele fica privado e só é usado se alguma marca/empresa quiser propor uma colaboração com você (nesse caso, <b>a empresa fala com o responsável, nunca diretamente com você</b>).</span>
     <input type="text" class="fi" id="fRespNome" placeholder="Nome do responsável" style="margin-bottom:.6rem">
     <input type="text" class="fi" id="fRespWhats" placeholder="WhatsApp do responsável (com DDD)" style="margin-bottom:.6rem">
-    <div class="chip" style="width:fit-content">
+    <div class="chip" style="width:fit-content;margin-bottom:.9rem">
       <input type="checkbox" id="cRespConfirma">
       <label for="cRespConfirma"><span class="ci">✅</span>Confirmo que sou o responsável e autorizo essa participação</label>
     </div>
+
+    <label class="fl" style="font-size:13px">✍️ Agora, responsável, assine aqui embaixo <span style="color:var(--error)">*</span></label>
+    <span class="hint" style="display:block;margin-bottom:.5rem">Desenhe sua assinatura com o dedo (celular) ou o mouse (computador). Isso vira um documento (PDF) de autorização guardado no perfil.</span>
+    <div style="background:#fff;border-radius:10px;border:2px dashed var(--border);overflow:hidden;touch-action:none">
+      <canvas id="assinaturaCanvas" width="440" height="150" style="width:100%;display:block;cursor:crosshair"></canvas>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.5rem">
+      <span class="hint" id="assinaturaStatus" style="margin:0">Ainda sem assinatura</span>
+      <button type="button" class="btn sec" style="padding:.4rem .8rem;font-size:11.5px" onclick="limparAssinatura()"><i class="fas fa-eraser"></i> Limpar</button>
+    </div>
+    <button type="button" class="btn sec" id="btnBaixarTermo" style="display:none;margin-top:.7rem;width:100%" onclick="baixarMeuTermo()"><i class="fas fa-download"></i> Baixar comprovante (PDF)</button>
   </div>
 
   <div class="fg" id="boxTrocaEmail" style="display:none">
@@ -1894,7 +1906,23 @@ function openEdit(id,focusPost){
     document.getElementById('fRespWhats').value='';
     document.getElementById('cRespConfirma').checked=false;
   }
+  // ✅ SEMPRE limpa o quadro de assinatura ao abrir qualquer perfil — evita
+  // que um traço deixado num perfil "vaze" ou seja reaproveitado por engano
+  // no perfil de outra pessoa (o canvas é o mesmo elemento reaproveitado)
+  limparAssinatura();
   checarIdade();
+  setTimeout(()=>{
+    const status=document.getElementById('assinaturaStatus');
+    if(status){
+      if((souDono||admin)&&c.responsavel&&c.responsavel.pdfTermo){
+        status.textContent='📄 Já existe um termo assinado — só desenhe de novo se quiser atualizar';
+        status.style.color='var(--success)';
+      }else{
+        status.textContent='Ainda sem assinatura';
+        status.style.color='';
+      }
+    }
+  },60);
 
   // @ e nome só podem ser alterados uma vez
   const travaU=c.userTrocado&&!admin, travaN=c.nomeTrocado&&!admin;
@@ -1956,9 +1984,148 @@ function checarIdade(){
   const box=document.getElementById('boxResponsavel');
   if(!isNaN(idade)&&idade>0&&idade<18){
     box.style.display='block';
+    setTimeout(iniciarCanvasAssinatura,50); // espera o box ficar visível pra medir o tamanho certo
   }else{
     box.style.display='none';
   }
+}
+
+/* ===== ASSINATURA DESENHADA (responsável de menor de idade) ===== */
+let assinaturaCtx=null, assinaturaDesenhando=false, assinaturaTemTraco=false;
+
+function iniciarCanvasAssinatura(){
+  const canvas=document.getElementById('assinaturaCanvas');
+  if(!canvas||canvas.dataset.pronto)return; // já configurado, não duplica os listeners
+
+  // ajusta a resolução real do canvas pro tamanho exibido (evita traço borrado)
+  const escala=window.devicePixelRatio||1;
+  const largura=canvas.clientWidth||440;
+  canvas.width=largura*escala;
+  canvas.height=150*escala;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(escala,escala);
+  ctx.strokeStyle='#1a1a1e';
+  ctx.lineWidth=2.2;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  assinaturaCtx=ctx;
+
+  const pegarPos=(e)=>{
+    const r=canvas.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return{x:t.clientX-r.left,y:t.clientY-r.top};
+  };
+  const comecar=(e)=>{
+    e.preventDefault();
+    assinaturaDesenhando=true;
+    const p=pegarPos(e);
+    ctx.beginPath();ctx.moveTo(p.x,p.y);
+  };
+  const desenhar=(e)=>{
+    if(!assinaturaDesenhando)return;
+    e.preventDefault();
+    const p=pegarPos(e);
+    ctx.lineTo(p.x,p.y);ctx.stroke();
+    if(!assinaturaTemTraco){
+      assinaturaTemTraco=true;
+      const status=document.getElementById('assinaturaStatus');
+      if(status){status.textContent='✅ Assinatura capturada';status.style.color='var(--success)'}
+    }
+  };
+  const parar=()=>{assinaturaDesenhando=false};
+
+  canvas.addEventListener('mousedown',comecar);
+  canvas.addEventListener('mousemove',desenhar);
+  window.addEventListener('mouseup',parar);
+  canvas.addEventListener('touchstart',comecar,{passive:false});
+  canvas.addEventListener('touchmove',desenhar,{passive:false});
+  canvas.addEventListener('touchend',parar);
+
+  canvas.dataset.pronto='1';
+}
+
+function limparAssinatura(){
+  const canvas=document.getElementById('assinaturaCanvas');
+  if(!canvas||!assinaturaCtx)return;
+  assinaturaCtx.clearRect(0,0,canvas.width,canvas.height);
+  assinaturaTemTraco=false;
+  const status=document.getElementById('assinaturaStatus');
+  if(status){status.textContent='Ainda sem assinatura';status.style.color=''}
+  atualizarBotaoBaixarTermo();
+}
+
+/* mostra/esconde o botão de baixar o PDF, sempre olhando o perfil que
+   está aberto no momento no formulário de edição */
+function atualizarBotaoBaixarTermo(){
+  const btn=document.getElementById('btnBaixarTermo');
+  if(!btn)return;
+  const c=db.cosplayers.find(x=>x.id===editId);
+  const temTermo=c&&c.responsavel&&c.responsavel.pdfTermo;
+  btn.style.display=temTermo?'block':'none';
+}
+
+function baixarMeuTermo(){
+  const c=db.cosplayers.find(x=>x.id===editId);
+  if(!c||!c.responsavel||!c.responsavel.pdfTermo){toast('Ainda não tem um termo assinado pra baixar','err');return}
+  const a=document.createElement('a');
+  a.href=c.responsavel.pdfTermo;
+  a.download=`termo-autorizacao-${c.username.replace('@','')}.pdf`;
+  a.click();
+}
+
+/* Gera o PDF de autorização com os dados do cosplayer + responsável + assinatura */
+function gerarPdfAutorizacao(cosplayer,responsavel){
+  if(!window.jspdf){console.warn('jsPDF não carregou — PDF não gerado');return null}
+  const canvas=document.getElementById('assinaturaCanvas');
+  const assinaturaImg=canvas?canvas.toDataURL('image/png'):null;
+
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const dataAgora=new Date().toLocaleString('pt-BR');
+
+  doc.setFillColor(228,64,95);
+  doc.rect(0,0,210,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18);
+  doc.text('🎭 DiaDeCosplay',15,13);
+  doc.setFontSize(11);
+  doc.text('Termo de Autorização de Participação de Menor de Idade',15,21);
+
+  doc.setTextColor(30,30,30);
+  doc.setFontSize(12);
+  let y=42;
+  doc.setFont(undefined,'bold');doc.text('Dados do(a) cosplayer',15,y);doc.setFont(undefined,'normal');
+  y+=8;
+  doc.setFontSize(11);
+  doc.text(`Nome / Instagram: ${cosplayer.nome?cosplayer.nome+' — ':''}${cosplayer.username}`,15,y);y+=7;
+  doc.text(`Idade informada: ${cosplayer.idade} anos`,15,y);y+=7;
+  doc.text(`Email cadastrado: ${cosplayer.email||'-'}`,15,y);y+=12;
+
+  doc.setFontSize(12);
+  doc.setFont(undefined,'bold');doc.text('Dados do responsável',15,y);doc.setFont(undefined,'normal');
+  y+=8;
+  doc.setFontSize(11);
+  doc.text(`Nome: ${responsavel.nome}`,15,y);y+=7;
+  doc.text(`WhatsApp: ${responsavel.whats}`,15,y);y+=12;
+
+  doc.setFontSize(10.5);
+  const texto='Eu, responsável pelo(a) cosplayer acima identificado(a), autorizo sua participação na comunidade DiaDeCosplay, incluindo presença em encontros, publicação de fotos no site e, quando aplicável, contato de marcas parceiras exclusivamente através do meu WhatsApp informado acima — nunca diretamente com o(a) menor.';
+  const linhas=doc.splitTextToSize(texto,180);
+  doc.text(linhas,15,y);
+  y+=linhas.length*5+10;
+
+  doc.setFont(undefined,'bold');doc.setFontSize(12);doc.text('Assinatura do responsável',15,y);doc.setFont(undefined,'normal');
+  y+=4;
+  if(assinaturaImg){
+    doc.addImage(assinaturaImg,'PNG',15,y,90,30);
+  }
+  y+=36;
+  doc.setDrawColor(180,180,180);
+  doc.line(15,y,105,y);
+  doc.setFontSize(9);doc.setTextColor(120,120,120);
+  doc.text('Documento gerado eletronicamente em '+dataAgora+' pelo site DiaDeCosplay.',15,y+6);
+
+  return doc.output('datauristring'); // já sai como data URL, pronto pra embutir/guardar
 }
 
 function emailGate(){
@@ -2033,6 +2200,7 @@ function saveProfile(){
     return;
   }
   let responsavel=null;
+  let precisaGerarPdf=false;
   if(idadeVal<18){
     const respNome=document.getElementById('fRespNome').value.trim();
     const respWhats=document.getElementById('fRespWhats').value.trim();
@@ -2042,7 +2210,24 @@ function saveProfile(){
       document.getElementById('boxResponsavel').scrollIntoView({behavior:'smooth',block:'center'});
       return;
     }
-    responsavel={nome:respNome,whats:respWhats,autorizadoEm:new Date().toISOString()};
+
+    const jaTinhaTermo=c.responsavel&&c.responsavel.pdfTermo;
+    if(!jaTinhaTermo&&!assinaturaTemTraco){
+      // ✅ só OBRIGA assinar se ainda não existe nenhum termo assinado antes —
+      // editar outras coisas do perfil depois não força assinar de novo
+      toast('Falta o responsável desenhar a assinatura no quadro pra concluir','err');
+      document.getElementById('assinaturaCanvas').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+
+    if(assinaturaTemTraco){
+      // desenhou uma assinatura nova nessa sessão → gera um termo novo
+      precisaGerarPdf=true;
+      responsavel={nome:respNome,whats:respWhats,autorizadoEm:new Date().toISOString()};
+    }else{
+      // já tinha termo assinado e não mexeu na assinatura → mantém o PDF antigo
+      responsavel={...c.responsavel,nome:respNome,whats:respWhats};
+    }
   }
 
   const admin=document.documentElement.classList.contains('admin');
@@ -2094,7 +2279,19 @@ function saveProfile(){
   c.email=email;
   c.idade=idadeVal;
   c.menorDeIdade=idadeVal<18;
-  if(responsavel)c.responsavel=responsavel; // só existe/é atualizado se for menor
+  if(responsavel){
+    // ✅ só gera um PDF novo se o responsável desenhou uma assinatura nova
+    // nessa sessão — se só editou nome/whats, mantém o termo já assinado
+    if(precisaGerarPdf){
+      try{
+        const pdfDataUri=gerarPdfAutorizacao(c,responsavel);
+        if(pdfDataUri)responsavel.pdfTermo=pdfDataUri;
+      }catch(e){
+        console.warn('Não consegui gerar o PDF de autorização:',e.message);
+      }
+    }
+    c.responsavel=responsavel;
+  }
   c.tempoCosplay=document.getElementById('fTempoCosplay').value||'';
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
@@ -2690,11 +2887,14 @@ function applyConfig(){
 
 function admStats(){
   const d=db;
+  const menores=d.cosplayers.filter(c=>c.menorDeIdade);
+  const comTermo=menores.filter(c=>c.responsavel&&c.responsavel.pdfTermo);
   document.getElementById('admStats').innerHTML=
    `👤 <b>${d.cosplayers.length}</b> cosplayers · 📧 <b>${d.cosplayers.filter(c=>c.email).length}</b> com email · 📸 <b>${d.cosplayers.filter(c=>(c.photos&&c.photos.length)||c.photo).length}</b> com foto<br>
     👺 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosplay')).length}</b> Cosplay · 💇 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('wigmaker')).length}</b> WigMaker · 🛠️ <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('propmaker')).length}</b> PropMaker · 💄 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosmaker')).length}</b> CosMaker<br>
     🔗 <b>${d.cosplayers.filter(c=>postLive(c)).length}</b> postagens no ar · ⏰ <b>${d.cosplayers.filter(c=>c.schedule&&!postLive(c)).length}</b> agendadas<br>
-    📅 <b>${d.eventos.length}</b> eventos (${d.eventos.filter(e=>e.status==='pendente').length} aguardando) · 🙋 <b>${d.eventos.reduce((n,e)=>n+((e.presencas||[]).length),0)}</b> presenças · 💡 <b>${d.ideias.length}</b> ideias · 🎬 <b>${d.cenas.length}</b> cenas`;
+    📅 <b>${d.eventos.length}</b> eventos (${d.eventos.filter(e=>e.status==='pendente').length} aguardando) · 🙋 <b>${d.eventos.reduce((n,e)=>n+((e.presencas||[]).length),0)}</b> presenças · 💡 <b>${d.ideias.length}</b> ideias · 🎬 <b>${d.cenas.length}</b> cenas<br>
+    👨‍👩‍👧 <b>${menores.length}</b> cosplayers menores de idade · 📄 <b style="color:${comTermo.length<menores.length?'var(--warn)':'var(--success)'}">${comTermo.length}/${menores.length}</b> com termo assinado`;
 
   // ✅ AVISO PROATIVO: o Cloudflare KV aceita até 25MB por gravação. Avisa
   // o admin bem antes de chegar perto disso, com espaço de sobra pra agir
@@ -2739,20 +2939,32 @@ function admRenderCos(){
   if(!arr.length){el.innerHTML='<div class="adm-empty">Nenhum cosplayer</div>';return}
   el.innerHTML=arr.map(c=>{
     // ✅ Idade correta visível pro admin — com aviso claro quando falta
+    const temTermo=c.responsavel&&c.responsavel.pdfTermo;
     const idadeTag=c.idade
-      ? `🎂 ${c.idade} anos${c.menorDeIdade?(c.responsavel?' · 👨‍👩‍👧 responsável ok':' · ⚠️ menor sem responsável'):''}`
+      ? `🎂 ${c.idade} anos${c.menorDeIdade?(c.responsavel?(temTermo?' · 📄 termo assinado':' · ⚠️ sem PDF do termo'):' · ⚠️ menor sem responsável'):''}`
       : `⚠️ idade não informada`;
     return `<div class="adm-row">
     <div class="nome">${c.emoji||''} ${c.nome?c.nome+' ':''}${c.username}
-      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''} · <span style="color:${c.idade?(c.menorDeIdade&&!c.responsavel?'var(--error)':'var(--text2)'):'var(--warn)'}">${idadeTag}</span></div>
+      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''} · <span style="color:${c.idade?(c.menorDeIdade&&!temTermo?'var(--error)':'var(--text2)'):'var(--warn)'}">${idadeTag}</span></div>
     </div>
     <div class="acts">
+      ${temTermo?`<button class="adm-btn ok" onclick="verTermoPdf(${c.id})" title="Ver termo de autorização (PDF)"><i class="fas fa-file-pdf"></i></button>`:''}
       <button class="adm-btn" onclick="closeModal('mAdmin');openEdit(${c.id})" title="Editar perfil"><i class="fas fa-pen"></i></button>
       <button class="adm-btn dg" onclick="admDelCos(${c.id})" title="Remover"><i class="fas fa-trash"></i></button>
     </div>
   </div>`;
   }).join('');
 }
+
+function verTermoPdf(id){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c||!c.responsavel||!c.responsavel.pdfTermo){toast('Esse cosplayer não tem termo assinado','err');return}
+  const a=document.createElement('a');
+  a.href=c.responsavel.pdfTermo;
+  a.download=`termo-autorizacao-${c.username.replace('@','')}.pdf`;
+  a.click();
+}
+
 function admDelCos(id){
   const c=db.cosplayers.find(x=>x.id===id);
   if(!confirm(`Remover ${c.username} da lista?`))return;
