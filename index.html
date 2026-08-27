@@ -421,6 +421,7 @@ html.admin .admin-only{display:flex!important}
   </div>
   <div class="header-right">
     <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
+    <button class="admin-btn" id="btnAtualizarTudo" onclick="atualizarELancarTudo()" title="Atualizar e enviar minhas alterações" style="display:none;background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:8px;padding:.4rem .6rem;cursor:pointer;font-size:12px"><i class="fas fa-rotate" id="iconAtualizarTudo"></i></button>
     <div class="user-chip" id="userChip" onclick="openMyProfile()" style="display:none">
       <span class="dot"></span><span id="userChipText"></span>
     </div>
@@ -915,6 +916,15 @@ html.admin .admin-only{display:flex!important}
     <textarea class="ft" id="vDiferencial" placeholder="Se você começou recentemente, conte o que te destaca (dedicação, estilo, qualidade dos looks, engajamento, etc). Se já tem experiência, fale da sua qualidade técnica e do tipo de trabalho que busca."></textarea>
   </div>
 
+  <div class="fg">
+    <label class="fl">📸 Foto destacada (opcional)</label>
+    <div class="foto-slot" id="vFotoSlot" style="max-width:200px" onclick="document.getElementById('vFoto').click()">
+      <i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>
+    </div>
+    <input type="file" id="vFoto" accept="image/*" style="display:none" onchange="previewFotoVitrine(this)">
+    <span class="hint">Sua melhor foto de cosplay — é a primeira coisa que a marca vê.</span>
+  </div>
+
   <div id="vitrineAvisoMenor" style="display:none;background:rgba(255,193,7,.08);border:1px solid var(--warn);border-radius:10px;padding:.9rem;font-size:12.5px;color:var(--text2);margin-bottom:1.1rem">
     <i class="fas fa-shield-halved"></i> Como seu perfil está cadastrado como <b>menor de idade</b>, o contato de qualquer empresa interessada em você vai direto pro <b>email/WhatsApp do seu responsável</b> — nunca aparece seu contato pessoal aqui, e nenhuma empresa fala diretamente com você por aqui.
   </div>
@@ -1034,6 +1044,12 @@ html.admin .admin-only{display:flex!important}
     <div class="fg"><label class="fl">Idealizador (rodapé da Ajuda)</label><input type="text" class="fi" id="cfgCredito" placeholder="@ofcvictorcorreia"></div>
     <div id="admStats" class="adm-stats"></div>
     <div id="admTamanhoAviso" style="margin-bottom:1.1rem"></div>
+
+    <div class="fg" style="border:1px solid var(--primary);border-radius:12px;padding:1rem">
+      <label class="fl">🚀 Forçar todas as fotos e dados a aparecerem</label>
+      <span class="hint">Reenvia TUDO que está salvo neste aparelho pra nuvem agora mesmo — útil se alguém disse que a foto dela "sumiu" ou não apareceu pra mais ninguém. Não apaga nada, só garante que está tudo realmente sincronizado.</span>
+      <button class="btn" style="margin-top:.6rem" onclick="forcarSincronizacaoCompleta()"><i class="fas fa-rocket"></i> Forçar sincronização completa agora</button>
+    </div>
     <button class="btn" onclick="saveConfig()"><i class="fas fa-check"></i> Salvar configurações</button>
   </div>
 
@@ -1052,6 +1068,13 @@ html.admin .admin-only{display:flex!important}
         <button class="btn sec" onclick="copiarLinkGrupo()"><i class="fab fa-whatsapp"></i> Recado pro grupo</button>
       </div>
       <span class="hint">Gera o texto pronto pra colar no WhatsApp marcando quem ainda não cadastrou.</span>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem">
+      <label class="fl">🔍 Checar @ duplicados ou parecidos</label>
+      <span class="hint">Procura @ exatamente iguais (que não deveriam existir) e @ bem parecidos (que podem ser a mesma pessoa cadastrada duas vezes por engano).</span>
+      <button class="btn sec" style="margin-top:.6rem" onclick="checarDuplicados()"><i class="fas fa-magnifying-glass"></i> Checar agora</button>
+      <div id="listaDuplicados" style="margin-top:.7rem"></div>
     </div>
 
     <div class="fg">
@@ -1371,6 +1394,12 @@ function seed(){
     if(c.emoji===undefined){c.emoji='';changed=true}
     if(c.nome===undefined){c.nome='';changed=true}
     if(c.userTrocado===undefined){c.userTrocado=false;c.nomeTrocado=false;changed=true}
+    if(c.qtdTrocasUser===undefined){
+      // ✅ migração: quem já tinha usado a troca única antiga (userTrocado=true)
+      // entra contando como 1 troca já usada das 6 agora permitidas
+      c.qtdTrocasUser=c.userTrocado?1:0;
+      changed=true;
+    }
     if(!Array.isArray(c.photos)){
       c.photos=c.photo?[c.photo]:[];
       c.slideshow=true;changed=true;
@@ -1718,10 +1747,12 @@ function clearMe(){localStorage.removeItem(ME)}
 function renderMe(){
   const me=getMe();
   const chip=document.getElementById('userChip');
+  const btnAtualizar=document.getElementById('btnAtualizarTudo');
   const box=document.getElementById('welcomeBox');
   box.innerHTML='';
   if(me){
     chip.style.display='flex';
+    if(btnAtualizar)btnAtualizar.style.display='inline-flex';
     document.getElementById('userChipText').textContent=me.username;
 
     // ✅ Lembrete visível: informar a idade correta pra participar dos
@@ -1733,12 +1764,60 @@ function renderMe(){
     }
   }else{
     chip.style.display='none';
+    if(btnAtualizar)btnAtualizar.style.display='none';
   }
 }
+
+/* ✅ Botão visível pra QUALQUER pessoa logada (não só admin) — envia
+   qualquer coisa pendente e busca as novidades, tudo numa tacada só.
+   Existe justamente pra dar um jeito manual de "forçar aparecer" caso
+   a sincronização automática esteja demorando. */
+let atualizandoTudo=false;
+async function atualizarELancarTudo(){
+  if(atualizandoTudo)return;
+  atualizandoTudo=true;
+  const icone=document.getElementById('iconAtualizarTudo');
+  if(icone)icone.classList.add('fa-spin');
+  toast('🔄 Atualizando e enviando suas alterações...');
+
+  const enviouOk=await cloudPush(false);
+  const puxouOk=await cloudPull(false).then(()=>true).catch(()=>false);
+
+  if(icone)icone.classList.remove('fa-spin');
+  atualizandoTudo=false;
+  toast(enviouOk?'✅ Tudo atualizado e online!':'⚠️ Enviado localmente, mas ainda confirmando com a nuvem...',enviouOk?'ok':'err');
+}
+
 function signOut(){clearMe();renderMe();renderCos();renderGates();renderEvGate();renderEventos();toast('Sessão encerrada')}
 function openMyProfile(){const me=getMe();if(me)openEdit(me.id)}
 
 /* ===== RENDER COSPLAYERS ===== */
+/* ✅ Ordem prioritária pedida — quem está nessa lista aparece nessa ordem
+   exata (ignorando qualquer número/prefixo na frente do @, como "74-").
+   Quem não está na lista aparece depois, pela ordem de qualidade normal. */
+const ORDEM_PRIORITARIA=[
+  '@celipe.cosplay','@felixcos_','@heme.cos','@rogerio_peixotosw','@zel_coss',
+  '@freakybbs__','@zack_cosplayerr','@denjiro.cos','@inosukenatalense','@larii.olivra',
+  '@_ysii.dftl','@cos_alexs','@giovanna_fogassa','@vitor.chainsaw','@santxz_dzn',
+  '@cosplay_hinaa','@deadpool4parede','@guhmi._','@deadmaid99','@melanybastos_',
+  '@kon.cosplay','@y.bonnie_0','@moon_summy','@valdecirjunior99','@ninik.cos',
+  '@sakana.coss','@the_.cosplay','@elaquefez','@mah4swaran','@sawako.cos_',
+  '@ketsukai','@nohaka_desu','@mariteocos','@newdyelim','@siricuticos.dub',
+  '@yuyu.coss','@yukke.elaris','@nextevee','@joaovitorqzn','@weslley_pereir',
+  '@joaovictor.diniz.77','@alrakcosplay','@mar_cosplayy','@kamenridernordestino','@lunna_hime',
+  '@_postc0s','@ayane.coss','@k4zucos','@sunflowerbro.art_','@kura.cosp',
+  '@cosk1ng','@cosplay_delta','@ark.cosplayer','@_liam.h1a0','@raiju.cos',
+  '@etsukocosplay_','@kaian.emanoel','@retrowave_cosplay','@j0j00x','@naaayrin',
+  '@bibs.cos','@cos.celsius','@rackie.cos','@danielsantospenha','@lunarocosplayer',
+  '@kamui_dante','@7aramil','@j0estaryy.cos','@gabscosplayer','@drpes.te',
+  '@shadowzz_cos','@vampiho_cos','@_loreh.x','@teclamago'
+];
+function indicePrioridade(username){
+  const norm=normalizarHandle(username);
+  const i=ORDEM_PRIORITARIA.indexOf(norm);
+  return i===-1?Infinity:i;
+}
+
 function renderCos(){
   const g=document.getElementById('cosGrid');
   const me=getMe();
@@ -1754,6 +1833,8 @@ function renderCos(){
 
   arr.sort((a,b)=>{
     if(me){if(a.id===me.id)return -1;if(b.id===me.id)return 1}
+    const pa=indicePrioridade(a.username),pb=indicePrioridade(b.username);
+    if(pa!==pb)return pa-pb; // quem está na lista pedida vem na ordem certa
     const nf=c=>((c.photos&&c.photos.length)?c.photos.length:(c.photo?1:0));
     const sa=(postLive(a)?8:0)+(nf(a)?4:0)+(a.email?2:0)+((a.cats||[]).length?1:0);
     const sb=(postLive(b)?8:0)+(nf(b)?4:0)+(b.email?2:0)+((b.cats||[]).length?1:0);
@@ -1924,13 +2005,14 @@ function openEdit(id,focusPost){
     }
   },60);
 
-  // @ e nome só podem ser alterados uma vez
-  const travaU=c.userTrocado&&!admin, travaN=c.nomeTrocado&&!admin;
+  // @ pode ser alterado até 6 vezes; nome continua só uma vez
+  const trocasUsadas=c.qtdTrocasUser||0;
+  const travaU=trocasUsadas>=6&&!admin, travaN=c.nomeTrocado&&!admin;
   document.getElementById('fUser').readOnly=travaU;
   document.getElementById('fNome').readOnly=travaN;
   document.getElementById('hintUser').innerHTML=travaU
-    ? '<i class="fas fa-lock"></i> Você já usou sua alteração de @. Se precisar mudar de novo, fale com o admin.'
-    : 'Trocou de @? Pode corrigir — mas <b>só uma vez</b>, então confira antes de salvar.';
+    ? '<i class="fas fa-lock"></i> Você já usou as 6 trocas de @ permitidas. Se precisar mudar de novo, fale com o admin.'
+    : `Trocou de @? Pode corrigir — você já usou <b>${trocasUsadas} de 6</b> trocas permitidas.`;
   document.getElementById('hintNome').innerHTML=travaN
     ? '<i class="fas fa-lock"></i> Você já definiu seu nome. Para mudar de novo, fale com o admin.'
     : 'Aparece junto com seu @. Pode definir <b>uma vez</b>.';
@@ -2255,17 +2337,18 @@ function saveProfile(){
   const outro=db.cosplayers.find(x=>x.id!==c.id&&x.email&&x.email.toLowerCase()===email.toLowerCase());
   if(outro){toast(`Esse email já está vinculado a ${outro.username}`,'err');return}
 
-  // troca de @ (uma vez só)
+  // troca de @ (até 6 vezes)
   let novoUser=document.getElementById('fUser').value.trim();
   if(novoUser){
     if(!novoUser.startsWith('@'))novoUser='@'+novoUser;
     novoUser=novoUser.replace(/\s/g,'');
     if(novoUser.toLowerCase()!==c.username.toLowerCase()){
-      if(c.userTrocado&&!admin){toast('Você já usou sua alteração de @','err');return}
+      const trocasUsadas=c.qtdTrocasUser||0;
+      if(trocasUsadas>=6&&!admin){toast('Você já usou as 6 trocas de @ permitidas','err');return}
       const dup=db.cosplayers.find(x=>x.id!==c.id&&x.username.toLowerCase()===novoUser.toLowerCase());
-      if(dup){toast('Esse @ já está na lista','err');return}
+      if(dup){toast('Esse @ já está na lista — escolhe outro','err');return}
       c.username=novoUser;
-      if(!admin)c.userTrocado=true;
+      if(!admin){c.userTrocado=true;c.qtdTrocasUser=trocasUsadas+1}
     }
   }
 
@@ -2330,7 +2413,7 @@ function saveProfile(){
       }
       
       // Só salva se upload funcionou
-      save();
+      save(false); // grava local sem agendar - vamos enviar de verdade agora, na hora
       setMe(email);
       renderMe();
       renderCos();
@@ -2340,12 +2423,19 @@ function saveProfile(){
       renderColabs();
       renderVitrine();
       renderLojas();
+
+      // ✅ ESPERA DE VERDADE o envio terminar — antes disso o site dizia
+      // "online" mesmo sem ter confirmado o envio, só agendando pra depois.
+      // Se a pessoa fechasse a aba ou trocasse de app nesse meio tempo
+      // (muito comum no celular), a foto nunca chegava a sair do aparelho.
+      const enviouOk=await cloudPush(false);
       closeModal('mEdit');
-      
+
       const msg=(c.schedule&&new Date(c.schedule)>new Date())
         ? `✅ Salvo! Postagem agendada para ${schedLabel(c)}`
-        : '✅ Perfil salvo e ONLINE! Todos conseguem ver agora!';
-      toast(msg,'ok');
+        : (enviouOk?'✅ Perfil salvo e ONLINE! Todos conseguem ver agora!':'⚠️ Salvo neste aparelho, mas ainda não confirmei o envio — tentando de novo automaticamente.');
+      toast(msg,enviouOk?'ok':'err');
+      if(!enviouOk){pendente=true;agendarSync(500)}
       
     }catch(e){
       console.error('Erro crítico ao salvar:',e);
@@ -2408,24 +2498,28 @@ function tryAdd(kind){
   else{document.getElementById('cenaAuthor').innerHTML=authorHtml;openModal('mCena')}
 }
 
-function saveIdeia(){
+async function saveIdeia(){
   const me=getMe();if(!me)return;
   const t=document.getElementById('iTitle').value.trim();
   if(!t){toast('Coloque um título','err');return}
   db.ideias.unshift({id:Date.now(),title:t,desc:document.getElementById('iDesc').value.trim(),chars:document.getElementById('iChars').value.trim(),author:me.username,email:me.email,date:new Date().toISOString()});
-  save();renderIdeias();closeModal('mIdeia');
+  save(false);renderIdeias();closeModal('mIdeia');
   ['iTitle','iDesc','iChars'].forEach(i=>document.getElementById(i).value='');
-  toast('Ideia publicada!','ok');
+  const ok=await cloudPush(false);
+  toast(ok?'Ideia publicada!':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
-function saveCena(){
+async function saveCena(){
   const me=getMe();if(!me)return;
   const t=document.getElementById('cTitle').value.trim();
   if(!t){toast('Coloque um título','err');return}
   db.cenas.unshift({id:Date.now(),title:t,source:document.getElementById('cSource').value.trim(),desc:document.getElementById('cDesc').value.trim(),chars:document.getElementById('cChars').value.trim(),diff:document.getElementById('cDiff').value,author:me.username,email:me.email,date:new Date().toISOString()});
-  save();renderCenas();closeModal('mCena');
+  save(false);renderCenas();closeModal('mCena');
   ['cTitle','cSource','cDesc','cChars'].forEach(i=>document.getElementById(i).value='');
-  toast('Cena publicada!','ok');
+  const ok=await cloudPush(false);
+  toast(ok?'Cena publicada!':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function renderIdeias(){
@@ -2719,8 +2813,10 @@ function saveEvento(){
       db.eventos.push(data);
     }
     
-    save();renderEventos();renderEvGate();closeModal('mEvento');
-    toast(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!'),'ok');
+    save(false);renderEventos();renderEvGate();closeModal('mEvento');
+    const ok=await cloudPush(false);
+    toast(ok?(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!')):'Salvo aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+    if(!ok){pendente=true;agendarSync(500)}
   };
 
   const f=document.getElementById('eImg').files[0];
@@ -2965,9 +3061,86 @@ function verTermoPdf(id){
   a.click();
 }
 
+/* ✅ Normaliza um @ pra comparação: tira qualquer numeração/lixo na frente
+   (ex: "74-", "74)", "74. ") e deixa só o @handle de verdade, minúsculo. */
+function normalizarHandle(texto){
+  if(!texto)return '';
+  let t=texto.trim();
+  // remove prefixos tipo "74-", "74)", "74.", "74 -" antes do @
+  t=t.replace(/^[\d\s\-\).]+/,'');
+  if(!t.startsWith('@'))t='@'+t.replace(/^@?/,'');
+  return t.toLowerCase();
+}
+
+function distanciaLevenshtein(a,b){
+  const m=a.length,n=b.length;
+  const d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]);
+  for(let j=0;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+    d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:1+Math.min(d[i-1][j],d[i][j-1],d[i-1][j-1]);
+  }
+  return d[m][n];
+}
+
+function checarDuplicados(){
+  const el=document.getElementById('listaDuplicados');
+  const arr=db.cosplayers;
+  const grupos=[];
+  const usados=new Set();
+
+  // exatamente iguais (não deveria existir, mas confere)
+  const porNome={};
+  arr.forEach(c=>{
+    const norm=normalizarHandle(c.username);
+    (porNome[norm]=porNome[norm]||[]).push(c);
+  });
+  Object.values(porNome).filter(g=>g.length>1).forEach(g=>{
+    grupos.push({tipo:'exato',itens:g});
+    g.forEach(c=>usados.add(c.id));
+  });
+
+  // parecidos (distância curta, ainda não agrupados como exatos)
+  for(let i=0;i<arr.length;i++){
+    if(usados.has(arr[i].id))continue;
+    for(let j=i+1;j<arr.length;j++){
+      if(usados.has(arr[j].id))continue;
+      const a=normalizarHandle(arr[i].username).replace(/[._]/g,'');
+      const b=normalizarHandle(arr[j].username).replace(/[._]/g,'');
+      if(Math.abs(a.length-b.length)>3)continue; // otimização — pula pares muito diferentes em tamanho
+      const dist=distanciaLevenshtein(a,b);
+      if(dist>0&&dist<=2){
+        grupos.push({tipo:'parecido',itens:[arr[i],arr[j]]});
+        usados.add(arr[i].id);usados.add(arr[j].id);
+        break;
+      }
+    }
+  }
+
+  if(!grupos.length){
+    el.innerHTML=`<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Nenhum @ duplicado ou parecido encontrado!</span></div>`;
+    return;
+  }
+
+  el.innerHTML=grupos.map(g=>`
+    <div style="background:${g.tipo==='exato'?'rgba(220,53,69,.08)':'rgba(255,193,7,.08)'};border:1px solid ${g.tipo==='exato'?'var(--error)':'var(--warn)'};border-radius:10px;padding:.7rem;margin-bottom:.6rem">
+      <div style="font-size:11.5px;font-weight:800;color:${g.tipo==='exato'?'var(--error)':'var(--warn)'};margin-bottom:.4rem">${g.tipo==='exato'?'⚠️ @ EXATAMENTE IGUAIS (é seguro remover um)':'👀 @ PARECIDOS — CONFIRA COM CUIDADO, pode ser gente diferente!'}</div>
+      ${g.itens.map(c=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:.3rem 0">
+          <span style="font-size:12.5px">${c.username} ${c.nome?'('+c.nome+')':''} — ${c.email||'sem email'}</span>
+          ${g.tipo==='exato'
+            ?`<button class="adm-btn dg" onclick="admDelCos(${c.id});checarDuplicados()" title="Remover este"><i class="fas fa-trash"></i></button>`
+            :`<button class="adm-btn" onclick="closeModal('mAdmin');openEdit(${c.id})" title="Ver perfil antes de decidir"><i class="fas fa-eye"></i></button>`
+          }
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
 function admDelCos(id){
   const c=db.cosplayers.find(x=>x.id===id);
-  if(!confirm(`Remover ${c.username} da lista?`))return;
+  if(!c)return;
+  if(!confirm(`⚠️ Remover ${c.username}${c.nome?' ('+c.nome+')':''} da lista?\n\nIsso apaga o perfil inteiro (fotos, dados, tudo). Só confirma se tiver certeza de que é duplicata ou pediu pra sair — não tem volta fácil.`))return;
   db.cosplayers=db.cosplayers.filter(x=>x.id!==id);
   save();admRenderAll();renderCos();toast('Removido','ok');
 }
@@ -3160,6 +3333,20 @@ async function restaurarSnapshot(ts){
     toast('✅ Versão restaurada! Lembre de clicar em "Enviar agora" na aba Cloudflare pra atualizar todo mundo.','ok');
   }catch(e){
     toast('Não consegui restaurar essa versão','err');
+  }
+}
+
+/* ✅ Força reenviar TUDO pra nuvem, ignorando o debounce e a trava de
+   "temporariamente igual". Usado quando alguém suspeita que fotos/dados
+   ficaram só localmente e não apareceram pra mais ninguém. */
+async function forcarSincronizacaoCompleta(){
+  toast('🚀 Enviando tudo pra nuvem, aguenta aí...');
+  db.updatedAt=Date.now(); // garante que essa versão "vence" qualquer comparação de data
+  const ok=await cloudPush(false);
+  if(ok){
+    toast('✅ Tudo sincronizado! Fotos e dados de todo mundo estão online agora.','ok');
+  }else{
+    toast('⚠️ Não consegui confirmar o envio agora. Confere sua internet e tenta de novo.','err');
   }
 }
 
@@ -3668,7 +3855,7 @@ function openNovaColab(){
   openModal('mColab');
 }
 
-function saveColab(){
+async function saveColab(){
   const me=getMe();if(!me)return;
   const tipo=document.getElementById('cTipo').value.trim();
   const desc=document.getElementById('cDesc').value.trim();
@@ -3686,8 +3873,10 @@ function saveColab(){
     status:'aberta',
     date:new Date().toISOString()
   });
-  save();renderColabs();closeModal('mColab');
-  toast('Colaboração proposta! 👯','ok');
+  save(false);renderColabs();closeModal('mColab');
+  const ok=await cloudPush(false);
+  toast(ok?'Colaboração proposta! 👯':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function delColab(id){
@@ -3697,6 +3886,23 @@ function delColab(id){
 }
 
 /* ===== VITRINE PARA EMPRESAS ===== */
+let fotoVitrineTemp=null;
+
+function previewFotoVitrine(input){
+  const f=input.files[0];
+  if(!f)return;
+  const slot=document.getElementById('vFotoSlot');
+  slot.innerHTML=`<i class="fas fa-spinner fa-spin"></i>`;
+  comprimirImagem(f,1000,.8).then(dataUrl=>{
+    fotoVitrineTemp=dataUrl;
+    slot.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+  }).catch(()=>{
+    toast('Não consegui processar essa foto — tenta outra','err');
+    slot.innerHTML=`<i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>`;
+    fotoVitrineTemp=null;
+  });
+}
+
 function renderVitrine(){
   const me=getMe();
   const admin=document.documentElement.classList.contains('admin');
@@ -3720,8 +3926,6 @@ function renderVitrine(){
     const ehMenor=cos&&cos.menorDeIdade;
     const podeVerContato=admin||(me&&me.username===v.author);
 
-    // ✅ TRAVA DE SEGURANÇA: se for menor, o contato mostrado (pra quem pode ver)
-    // é sempre o do responsável, nunca o contato pessoal do cosplayer.
     let contatoHtml='';
     if(podeVerContato){
       if(ehMenor&&cos.responsavel){
@@ -3735,16 +3939,46 @@ function renderVitrine(){
       contatoHtml=`<p style="font-size:11px;color:var(--text2);margin-top:.5rem"><i class="fas fa-shield-halved"></i> Perfil de menor — contato só visível pro admin, que intermedia com o responsável.</p>`;
     }
 
+    const comentarios=v.comentarios||[];
+    const comentariosHtml=comentarios.map(cm=>`
+      <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
+        <b>${cm.author}:</b> ${cm.texto}
+      </div>`).join('');
+
     return `<div class="item">
+      ${v.foto?`<img src="${v.foto}" alt="Foto de ${v.author}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
       <h3>${v.author}</h3>
       <p style="font-size:12.5px"><b>📊 Seguidores:</b> ${v.seguidores}</p>
       <p style="font-size:12.5px"><b>🎭 Perfil:</b> ${v.perfil}</p>
       <p style="font-size:12.5px"><b>⏳ Tempo de cosplay:</b> ${v.tempo}</p>
       <p style="font-size:13px;margin-top:.4rem">${v.diferencial}</p>
       ${contatoHtml}
-      ${admin?`<div class="acts"><button class="bs del" onclick="delVitrine(${v.id})"><i class="fas fa-trash"></i></button></div>`:''}
+
+      <div style="margin-top:.7rem">
+        ${comentariosHtml}
+      </div>
+      <div style="display:flex;gap:.4rem;margin-top:.6rem">
+        <input type="text" class="fi" id="comentVitrine${v.id}" placeholder="Deixe um comentário..." style="font-size:12px;padding:.5rem .7rem" ${!me?'disabled':''}>
+        <button class="bs" style="flex:0 0 auto" onclick="comentarVitrine(${v.id})" ${!me?'disabled':''}><i class="fas fa-paper-plane"></i></button>
+      </div>
+
+      ${admin?`<div class="acts" style="margin-top:.6rem"><button class="bs del" onclick="delVitrine(${v.id})"><i class="fas fa-trash"></i></button></div>`:''}
     </div>`;
   }).join('');
+}
+
+function comentarVitrine(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra comentar','err');return}
+  const input=document.getElementById('comentVitrine'+id);
+  const texto=input.value.trim();
+  if(!texto)return;
+  const v=(db.vitrine||[]).find(x=>x.id===id);
+  if(!v)return;
+  if(!Array.isArray(v.comentarios))v.comentarios=[];
+  v.comentarios.push({author:me.username,texto,date:new Date().toISOString()});
+  save(false);renderVitrine();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
 }
 
 function openNovaVitrine(){
@@ -3759,6 +3993,9 @@ function openNovaVitrine(){
   document.getElementById('vPerfil').value='';
   document.getElementById('vTempo').value='';
   document.getElementById('vDiferencial').value='';
+  document.getElementById('vFotoSlot').innerHTML=`<i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>`;
+  document.getElementById('vFoto').value='';
+  fotoVitrineTemp=null;
   document.getElementById('vitrineAvisoMenor').style.display=ehMenor?'block':'none';
 
   if(ehMenor&&!cos.responsavel){
@@ -3768,7 +4005,7 @@ function openNovaVitrine(){
   openModal('mVitrine');
 }
 
-function saveVitrine(){
+async function saveVitrine(){
   const me=getMe();if(!me)return;
   const seguidores=document.getElementById('vSeguidores').value.trim();
   const perfil=document.getElementById('vPerfil').value.trim();
@@ -3778,10 +4015,13 @@ function saveVitrine(){
 
   if(!Array.isArray(db.vitrine))db.vitrine=[];
   db.vitrine=db.vitrine.filter(v=>v.author!==me.username);
-  db.vitrine.push({id:Date.now(),author:me.username,seguidores,perfil,tempo,diferencial});
+  db.vitrine.push({id:Date.now(),author:me.username,seguidores,perfil,tempo,diferencial,foto:fotoVitrineTemp,comentarios:[]});
 
-  save();renderVitrine();closeModal('mVitrine');
-  toast('Você entrou na vitrine!','ok');
+  save(false);renderVitrine();closeModal('mVitrine');
+  fotoVitrineTemp=null;
+  const ok=await cloudPush(false);
+  toast(ok?'Você entrou na vitrine!':'Salvo aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function delVitrine(id){
@@ -3875,6 +4115,12 @@ function renderLojas(){
       return `<button class="bs${ativa?' indo':''}" style="padding:.35rem .5rem;font-size:13px" onclick="reagirLoja(${l.id},'${emoji}')" ${!me?'disabled':''}>${emoji}${qtd?` ${qtd}`:''}</button>`;
     }).join('');
 
+    const comentarios=l.comentarios||[];
+    const comentariosHtml=comentarios.map(cm=>`
+      <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
+        <b>${cm.author}:</b> ${cm.texto}
+      </div>`).join('');
+
     return `<div class="item">
       ${l.foto?`<img src="${l.foto}" alt="Foto de ${l.nome}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
       <div style="display:flex;justify-content:space-between;align-items:start;gap:.6rem">
@@ -3890,8 +4136,28 @@ function renderLojas(){
         ${chipsReacao}
         ${(admin||(me&&me.username===l.author))?`<button class="bs del" style="margin-left:auto" onclick="delLoja(${l.id})"><i class="fas fa-trash"></i></button>`:''}
       </div>
+
+      <div style="margin-top:.6rem">${comentariosHtml}</div>
+      <div style="display:flex;gap:.4rem;margin-top:.5rem">
+        <input type="text" class="fi" id="comentLoja${l.id}" placeholder="Deixe um comentário..." style="font-size:12px;padding:.5rem .7rem" ${!me?'disabled':''}>
+        <button class="bs" style="flex:0 0 auto" onclick="comentarLoja(${l.id})" ${!me?'disabled':''}><i class="fas fa-paper-plane"></i></button>
+      </div>
     </div>`;
   }).join('');
+}
+
+function comentarLoja(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra comentar','err');return}
+  const input=document.getElementById('comentLoja'+id);
+  const texto=input.value.trim();
+  if(!texto)return;
+  const l=(db.lojas||[]).find(x=>x.id===id);
+  if(!l)return;
+  if(!Array.isArray(l.comentarios))l.comentarios=[];
+  l.comentarios.push({author:me.username,texto,date:new Date().toISOString()});
+  save(false);renderLojas();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
 }
 
 function openNovaLoja(){
@@ -3909,7 +4175,7 @@ function openNovaLoja(){
   openModal('mLoja');
 }
 
-function saveLoja(){
+async function saveLoja(){
   const me=getMe();if(!me)return;
   const nome=document.getElementById('lNome').value.trim();
   const link=document.getElementById('lLink').value.trim();
@@ -3926,10 +4192,12 @@ function saveLoja(){
   const jaExiste=db.lojas.some(l=>l.link.toLowerCase()===link.toLowerCase());
   if(jaExiste){toast('Essa loja já foi indicada — procura ela na lista pra reagir!','err');return}
 
-  db.lojas.push({id:Date.now(),nome,link,categoria,nota,foto:fotoLojaTemp,desc,author:me.username,reacoes:{}});
-  save();renderLojas();closeModal('mLoja');
+  db.lojas.push({id:Date.now(),nome,link,categoria,nota,foto:fotoLojaTemp,desc,author:me.username,reacoes:{},comentarios:[]});
+  save(false);renderLojas();closeModal('mLoja');
   fotoLojaTemp=null;
-  toast('Loja indicada! Obrigado por ajudar a comunidade 🎉','ok');
+  const ok=await cloudPush(false);
+  toast(ok?'Loja indicada! Obrigado por ajudar a comunidade 🎉':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function reagirLoja(id,emoji){
