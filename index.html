@@ -4,9 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DiaDeCosplay</title>
+<meta name="theme-color" content="#E4405F">
+<meta name="description" content="Diretório da comunidade de cosplay de Natal/RN — perfis, eventos, colabs e parcerias com marcas.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box;overflow-wrap:break-word}
 :root{
 --primary:#E4405F;--secondary:#7F77DD;--accent:#1D9E75;
 --bg:#0F0F12;--s1:#1a1a1e;--s2:#24242b;
@@ -39,11 +44,37 @@ html.admin .sync-badge{display:flex}
 .sync-badge:hover{background:var(--s2)}
 
 /* TABS */
-.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--s1);padding:0 1.5rem;overflow-x:auto;scrollbar-width:none}
+.tabs-wrap{position:relative;background:var(--s1);border-bottom:1px solid var(--border)}
+.tabs{display:flex;padding:0 1.5rem;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
 .tabs::-webkit-scrollbar{display:none}
-.tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px}
+/* ✅ Sombra nas bordas avisando que dá pra arrastar — só aparece quando
+   realmente tem mais abas escondidas pra aquele lado (controlado via JS) */
+.tabs-wrap::before,.tabs-wrap::after{content:'';position:absolute;top:0;bottom:0;width:28px;pointer-events:none;z-index:5;opacity:0;transition:opacity .2s}
+.tabs-wrap::before{left:0;background:linear-gradient(90deg,var(--s1),transparent)}
+.tabs-wrap::after{right:0;background:linear-gradient(270deg,var(--s1),transparent)}
+.tabs-wrap.scroll-left::before{opacity:1}
+.tabs-wrap.scroll-right::after{opacity:1}
+
+/* ✅ SETAS clicáveis — funcionam em qualquer dispositivo (PC sem touch
+   incluso), aparecem só quando tem mesmo pra onde rolar */
+.tabs-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:10;width:26px;height:26px;border-radius:50%;background:var(--s1);border:1px solid var(--border);color:var(--text2);display:none;align-items:center;justify-content:center;cursor:pointer;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.3);transition:.2s}
+.tabs-arrow:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tabs-arrow.left{left:4px}
+.tabs-arrow.right{right:4px}
+.tabs-wrap.scroll-left .tabs-arrow.left{display:flex}
+.tabs-wrap.scroll-right .tabs-arrow.right{display:flex}
+.tab-ic{font-size:14px;margin-right:.3rem;display:inline-block}
+.tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px;flex:0 0 auto}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab:hover{color:var(--text)}
+.tab:last-child{margin-right:1.2rem}
+@media(max-width:640px){
+  .tabs{padding:0 .6rem}
+  .tab{padding:.75rem .8rem;font-size:12.5px}
+  .tab-ic{font-size:13px;margin-right:.2rem}
+  .tab:last-child{margin-right:1.6rem}
+  .tabs-wrap::before,.tabs-wrap::after{width:20px}
+}
 
 /* LAYOUT */
 .content{padding:1.5rem;display:none}
@@ -64,6 +95,21 @@ html.admin .sync-badge{display:flex}
 .fbtn.active{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(228,64,95,.3)}
 .fbtn:hover:not(.active){background:var(--s1);color:var(--text)}
 .fsep{width:1px;background:var(--border);margin:.3rem .25rem;flex:0 0 auto}
+
+/* ✅ Menu "Mais filtros" — some a poluição visual, funciona como dropdown
+   ancorado no desktop e como "bandeja" subindo de baixo no celular
+   (jeito mais confortável de usar com o polegar em tela pequena) */
+.filtro-dropdown{position:relative;flex:0 0 auto}
+.filtro-panel{display:none;position:fixed;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:.5rem;min-width:210px;z-index:60;flex-direction:column;gap:.2rem;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.filtro-panel.active{display:flex}
+.filtro-panel .fbtn{width:100%;justify-content:flex-start}
+.filtro-panel .fsep-h{height:1px;background:var(--border);margin:.35rem .3rem}
+.filtro-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55}
+.filtro-backdrop.active{display:block}
+@media(max-width:640px){
+  .filtro-panel{position:fixed;top:auto;bottom:0;left:0;right:0;border-radius:16px 16px 0 0;max-height:65vh;overflow-y:auto;padding:.8rem;box-shadow:0 -10px 30px rgba(0,0,0,.4)}
+  .filtro-panel .fbtn{padding:.75rem .9rem;font-size:13.5px}
+}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:1rem;flex-wrap:wrap}
 .count{font-size:13px;color:var(--text2);font-weight:700}
@@ -97,6 +143,7 @@ html.admin .sync-badge{display:flex}
 
 .card-img{width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,var(--primary),var(--secondary));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ph{font-size:40px;opacity:.35;color:#fff}
+.avatar-fallback{position:absolute;inset:0;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#fff;background:linear-gradient(135deg,#833AB4,#E4405F);text-shadow:0 2px 8px rgba(0,0,0,.25)}
 
 /* GALERIA — até 3 fotos que se alternam */
 .card-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s,filter .4s,opacity .7s}
@@ -157,12 +204,21 @@ html.admin .sync-badge{display:flex}
 .badge-stack .badge{position:static}
 .badge-timer{background:rgba(255,184,77,.92);color:#1a1a1e}
 
+/* ✅ MEDALHA DE TEMPO DE COSPLAY — quanto mais tempo, mais brilhante */
+.medalha{position:absolute;top:8px;left:8px;z-index:4;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:15px;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.medalha-bronze{background:linear-gradient(135deg,#8a5a3a,#5c3a20);border:1px solid rgba(255,255,255,.15)}
+.medalha-prata{background:linear-gradient(135deg,#b8bec4,#7c8288);border:1px solid rgba(255,255,255,.25)}
+.medalha-ouro{background:linear-gradient(135deg,#f5c542,#c9910e);border:1px solid rgba(255,255,255,.35);box-shadow:0 0 10px rgba(245,197,66,.35)}
+.medalha-diamante{background:linear-gradient(135deg,#7ee8fa,#5c72d6);border:1px solid rgba(255,255,255,.5);box-shadow:0 0 14px rgba(126,232,250,.5)}
+.medalha-lendaria{background:linear-gradient(135deg,#ff6ec7,#845ec2,#ffd93d);background-size:200% 200%;border:1px solid rgba(255,255,255,.6);box-shadow:0 0 18px rgba(255,110,199,.55);animation:medalhaBrilho 3s ease infinite}
+@keyframes medalhaBrilho{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
 /* SELETOR DE EMOJI */
 .emoji-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:.4rem;max-height:180px;overflow-y:auto;padding:.6rem;background:var(--s2);border:1px solid var(--border);border-radius:10px}
 .emoji-pick{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:21px;background:var(--s1);border:2px solid transparent;border-radius:9px;cursor:pointer;transition:.15s}
 .emoji-pick:hover{transform:scale(1.15);background:var(--bg)}
 .emoji-pick.sel{border-color:var(--primary);background:rgba(228,64,95,.15)}
-.badge-me{position:absolute;top:8px;left:8px;background:var(--success);padding:.3rem .6rem;border-radius:20px;font-size:10px;font-weight:800;color:#fff;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.badge-me{display:inline-block;width:9px;height:9px;background:var(--success);border-radius:50%;margin-left:.4rem;vertical-align:middle;box-shadow:0 0 0 2px rgba(255,255,255,.15)}
 .card-body{padding:.9rem;display:flex;flex-direction:column;gap:.5rem;flex:1}
 .card-mail{font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-mail.private{color:var(--success);font-weight:700}
@@ -178,10 +234,10 @@ html.admin .sync-badge{display:flex}
 .chip input:disabled+label{opacity:.45;cursor:not-allowed}
 .card-nomail{font-size:11px;color:var(--warn);font-style:italic}
 .card-btns{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:auto}
-.bs{padding:.55rem .5rem;background:var(--s1);border:1px solid var(--border);color:var(--text);border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;transition:.25s;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.35rem;white-space:nowrap}
+.bs{padding:.55rem .5rem;background:var(--s1);border:1px solid var(--border);color:var(--text);border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;transition:.25s;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:.35rem;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .bs:hover{background:var(--primary);border-color:var(--primary);color:#fff}
 .bs.full{grid-column:1/-1}
-.bs-row{grid-column:1/-1;display:flex;gap:.4rem}
+.bs-row{grid-column:1/-1;display:flex;gap:.4rem;flex-wrap:wrap}
 .bs-row .bs.post{flex:1}
 .bs-icon{flex:0 0 36px;padding:.55rem 0}
 .bs.msg{background:rgba(127,119,221,.12);border-color:var(--secondary);color:var(--secondary)}
@@ -191,7 +247,7 @@ html.admin .sync-badge{display:flex}
 .bs.vou{background:rgba(29,158,117,.12);border-color:var(--accent);color:var(--accent)}
 .bs.vou:hover{background:var(--accent);color:#fff}
 .bs.indo{background:var(--accent);border-color:var(--accent);color:#fff}
-.pres-bar{display:flex;gap:.5rem;padding:0 1.1rem .8rem}
+.pres-bar{display:flex;gap:.5rem;padding:0 1.1rem .8rem;flex-wrap:wrap}
 .pres-bar .bs:first-child{flex:1}
 .card.destaque{animation:pisca 1.6s ease-out 2}
 @keyframes pisca{0%,100%{box-shadow:0 0 0 0 rgba(228,64,95,0)}50%{box-shadow:0 0 0 5px rgba(228,64,95,.45)}}
@@ -229,7 +285,7 @@ html.admin .admin-only{display:flex!important}
 .ev-meta{display:flex;flex-direction:column;gap:.15rem;font-size:12px;color:var(--text2)}
 .ev-tags{padding:0 1.1rem .5rem;display:flex;flex-wrap:wrap;gap:.3rem}
 .ev-item p{padding:0 1.1rem;font-size:13px;margin-bottom:.6rem}
-.ev-actions{display:flex;gap:.5rem;padding:.8rem 1.1rem;border-top:1px solid var(--border);margin-top:auto;background:var(--s1)}
+.ev-actions{display:flex;gap:.5rem;padding:.8rem 1.1rem;border-top:1px solid var(--border);margin-top:auto;background:var(--s1);flex-wrap:wrap}
 .ev-actions .bs{flex:1}
 .ev-actions .bs.del{flex:0 0 42px}
 .tag-hot{background:var(--primary);border-color:var(--primary);color:#fff}
@@ -240,6 +296,10 @@ html.admin .admin-only{display:flex!important}
 .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:1rem;animation:fade .25s}
 .modal.active{display:flex}
 .mbox{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:1.8rem;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:up .3s}
+@media(max-width:480px){
+  .modal{padding:0;align-items:flex-end}
+  .mbox{border-radius:16px 16px 0 0;max-height:92vh;padding:1.3rem 1.1rem;max-width:100%}
+}
 .mclose{position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:26px;cursor:pointer;color:var(--text2);line-height:1}
 .mclose:hover{color:var(--text)}
 .mtitle{font-size:21px;font-weight:800;margin-bottom:1.3rem;padding-right:2rem}
@@ -280,6 +340,7 @@ html.admin .admin-only{display:flex!important}
 
 /* HELP */
 .help-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.2rem}
+@media(max-width:400px){.help-grid{grid-template-columns:1fr}}
 .help-card{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1.4rem}
 .help-card i{font-size:26px;color:var(--primary);margin-bottom:.7rem;display:block}
 .help-card h4{font-size:15px;font-weight:800;margin-bottom:.4rem}
@@ -320,14 +381,42 @@ html.admin .admin-only{display:flex!important}
 .guia-step:last-child{margin-bottom:0}
 .guia code,.codebox code{background:var(--s1);padding:.1rem .35rem;border-radius:4px;font-size:11.5px;color:var(--primary)}
 .codebox{background:#0d0d10;border:1px solid var(--border);border-radius:10px;padding:.9rem;font-size:11px;line-height:1.6;overflow-x:auto;margin-top:.7rem;color:#c8c8d0;white-space:pre;max-height:230px;overflow-y:auto}
+
+/* ===== TELA DE BOAS-VINDAS ===== */
+#splash{position:fixed;inset:0;z-index:2000;background:radial-gradient(circle at 30% 20%,#3a1a4a,#0F0F12 65%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.2rem;opacity:0;pointer-events:none;transition:opacity .35s}
+#splash.active{opacity:1;pointer-events:all}
+.splash-title{font-size:clamp(24px,5vw,38px);font-weight:900;text-align:center;background:linear-gradient(135deg,#E4405F,#833AB4,#7F77DD);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:.4rem;line-height:1.25}
+.splash-sub{color:var(--text2);text-align:center;font-size:14px;margin-bottom:2rem}
+.splash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;max-width:900px;width:100%}
+.splash-card{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:3/4;cursor:pointer;border:1px solid rgba(255,255,255,.12);transition:transform .25s,border-color .25s;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+.splash-card:hover{transform:translateY(-6px) scale(1.02);border-color:rgba(255,255,255,.4)}
+.splash-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.splash-card .sc-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.85) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:.9rem;text-align:left}
+.splash-card .sc-icon{font-size:30px;margin-bottom:.3rem}
+.splash-card .sc-titulo{font-weight:800;font-size:15px;color:#fff}
+.splash-card .sc-desc{font-size:11px;color:rgba(255,255,255,.75);margin-top:.15rem}
+.splash-skip{margin-top:2rem;color:var(--text2);font-size:12.5px;cursor:pointer;text-decoration:underline;background:none;border:none}
+.splash-skip:hover{color:var(--text)}
+@media(max-width:640px){
+  .splash-grid{grid-template-columns:repeat(2,1fr)}
+  .splash-card{aspect-ratio:1/1}
+}
 </style>
 </head>
 <body>
 
+<!-- ✅ TELA DE BOAS-VINDAS: primeira coisa que a pessoa vê ao entrar -->
+<div id="splash">
+  <div class="splash-title">E aí, bora de Dia do Cosplay? 🎭</div>
+  <div class="splash-sub">Escolhe por onde quer começar:</div>
+  <div class="splash-grid" id="splashGrid"></div>
+  <button class="splash-skip" onclick="fecharSplash()">Pular e ver tudo</button>
+</div>
+
 <div class="header">
   <div class="header-left">
     <div class="logo"><i class="fas fa-masks-theater"></i> <span id="siteName">DiaDeCosplay</span></div>
-    <a id="waLink" class="wa-link" target="_blank"><i class="fab fa-whatsapp"></i> Grupo WhatsApp</a>
+    <a id="waLink" class="wa-link" target="_blank"><i class="fab fa-whatsapp"></i> Participe da Comunidade</a>
   </div>
   <div class="header-right">
     <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
@@ -338,13 +427,25 @@ html.admin .admin-only{display:flex!important}
   </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" data-tab="cosplayers"><i class="fas fa-masks-theater"></i> Cosplayers</div>
-  <div class="tab" data-tab="eventos"><i class="fas fa-calendar-days"></i> Eventos</div>
-  <div class="tab" data-tab="ideias"><i class="fas fa-lightbulb"></i> Ideias</div>
-  <div class="tab" data-tab="cenas"><i class="fas fa-film"></i> Cenas</div>
-  <div class="tab" data-tab="colabs"><i class="fas fa-people-group"></i> Colabs</div>
-  <div class="tab" data-tab="ajuda"><i class="fas fa-circle-question"></i> Ajuda</div>
+<!-- ✅ Banner só pro ADMIN logado — visitantes nunca veem isso.
+     Controlado via JS em syncBadge(), sempre começa escondido. -->
+<div id="bannerOffline" style="display:none;background:rgba(255,193,7,.12);border-bottom:1px solid var(--warn);padding:.6rem 1.2rem;font-size:12.5px;text-align:center;color:var(--text2)">
+  <i class="fas fa-wifi"></i> <b>[Admin]</b> Sem conexão com a nuvem no momento — mostrando os últimos dados salvos neste aparelho. Assim que a conexão voltar, atualiza sozinho.
+</div>
+
+<div class="tabs-wrap" id="tabsWrap">
+  <button class="tabs-arrow left" id="tabsArrowLeft" onclick="rolarTabs('tabsBar',-1)" aria-label="Rolar pra esquerda"><i class="fas fa-chevron-left"></i></button>
+  <div class="tabs" id="tabsBar">
+    <div class="tab active" data-tab="cosplayers"><span class="tab-ic">🎭</span> Cosplayers</div>
+    <div class="tab" data-tab="eventos"><span class="tab-ic">📅</span> Eventos</div>
+    <div class="tab" data-tab="ideias"><span class="tab-ic">💡</span> Ideias</div>
+    <div class="tab" data-tab="cenas"><span class="tab-ic">🎬</span> Cenas</div>
+    <div class="tab" data-tab="colabs"><span class="tab-ic">👯</span> Colabs</div>
+    <div class="tab" data-tab="empresas"><span class="tab-ic">💼</span> Marcas</div>
+    <div class="tab" data-tab="lojas"><span class="tab-ic">🛍️</span> Lojas</div>
+    <div class="tab" data-tab="ajuda"><span class="tab-ic">❓</span> Ajuda</div>
+  </div>
+  <button class="tabs-arrow right" id="tabsArrowRight" onclick="rolarTabs('tabsBar',1)" aria-label="Rolar pra direita"><i class="fas fa-chevron-right"></i></button>
 </div>
 
 <!-- COSPLAYERS -->
@@ -355,15 +456,22 @@ html.admin .admin-only{display:flex!important}
   </div>
   <div class="filters">
     <button class="fbtn active" data-f="todos">Todos</button>
-    <div class="fsep"></div>
     <button class="fbtn" data-f="cosplay">👺 Cosplay</button>
-    <button class="fbtn" data-f="wigmaker">💇 WigMaker</button>
-    <button class="fbtn" data-f="propmaker">🛠️ PropMaker</button>
-    <button class="fbtn" data-f="cosmaker">💄 CosMaker</button>
-    <div class="fsep"></div>
-    <button class="fbtn" data-f="post">🆕 Com postagem</button>
-    <button class="fbtn" data-f="semcat">❔ Sem categoria</button>
+    <div class="filtro-dropdown">
+      <button class="fbtn" id="btnMaisFiltrosCos" onclick="toggleFiltroPanel('filtroPanelCos',event)">
+        <i class="fas fa-sliders"></i> Mais filtros <span id="tagFiltroCos"></span>
+      </button>
+      <div class="filtro-panel" id="filtroPanelCos">
+        <button class="fbtn" data-f="wigmaker">💇 WigMaker</button>
+        <button class="fbtn" data-f="propmaker">🛠️ PropMaker</button>
+        <button class="fbtn" data-f="cosmaker">💄 CosMaker</button>
+        <div class="fsep-h"></div>
+        <button class="fbtn" data-f="post">🆕 Com postagem</button>
+        <button class="fbtn" data-f="semcat">❔ Sem categoria</button>
+      </div>
+    </div>
   </div>
+  <div class="filtro-backdrop" id="filtroBackdrop" onclick="fecharTodosFiltroPanel()"></div>
   <div class="toolbar">
     <div class="count" id="count">0 cosplayers</div>
     <div class="views">
@@ -378,7 +486,10 @@ html.admin .admin-only{display:flex!important}
 <div id="eventos" class="content"><div class="wrapper">
   <div class="section-head">
     <h2><i class="fas fa-calendar-days"></i> Eventos</h2>
-    <button class="btn btn-inline" onclick="newEvento()"><i class="fas fa-plus"></i> <span id="evBtnLabel">Sugerir Evento</span></button>
+    <div style="display:flex;gap:.5rem">
+      <button class="btn sec btn-inline" onclick="atualizarEventosAgora()" title="Buscar eventos novos agora"><i class="fas fa-rotate" id="iconAtualizarEv"></i></button>
+      <button class="btn btn-inline" onclick="newEvento()"><i class="fas fa-plus"></i> <span id="evBtnLabel">Sugerir Evento</span></button>
+    </div>
   </div>
   <div id="evGate"></div>
   <div class="filters">
@@ -429,8 +540,57 @@ html.admin .admin-only{display:flex!important}
   <div id="colabList" class="list"></div>
 </div></div>
 
+<!-- EMPRESAS: cosplayers em busca de parcerias/colab com marcas -->
+<div id="empresas" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-briefcase"></i> Procurando Marcas</h2>
+    <button class="btn btn-inline" onclick="openNovaVitrine()"><i class="fas fa-plus"></i> Entrar na vitrine</button>
+  </div>
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.2rem;font-size:13px;color:var(--text2)">
+    <b>Como funciona:</b> aqui os cosplayers se mostram pra marcas que buscam parceria. Preencha seus seguidores, tempo de cosplay e o que te diferencia. <b>Se você for menor de idade, o contato de qualquer marca interessada cai direto pro seu responsável cadastrado — nunca é feito com você diretamente</b>, por segurança.
+  </div>
+  <div id="vitrineGate"></div>
+  <div id="vitrineList" class="cos-grid"></div>
+</div></div>
+
+<!-- LOJAS: indicação de lojas pra montar cosplay, com like/dislike da comunidade -->
+<div id="lojas" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-store"></i> Monte seu Cosplay — Lojas indicadas</h2>
+    <button class="btn btn-inline" onclick="openNovaLoja()"><i class="fas fa-plus"></i> Indicar Loja</button>
+  </div>
+  <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1.2rem;font-size:13px;color:var(--text2)">
+    <b>Como funciona:</b> indique lojas que você já comprou pra montar seus cosplays (tecido, perucas, props, sapatos, etc). A comunidade vota com 👍 ou 👎 pra ajudar todo mundo a saber se vale a pena comprar lá.
+  </div>
+  <div id="lojaGate"></div>
+  <div class="filters" style="margin-bottom:1rem">
+    <button class="fbtn active" data-lf="melhores">⭐ Mais bem avaliadas</button>
+    <button class="fbtn" data-lf="recentes">🆕 Mais recentes</button>
+    <div class="fsep"></div>
+    <button class="fbtn active" data-lc="todas">Todas</button>
+    <button class="fbtn" data-lc="tecido">🧵 Tecido</button>
+    <button class="fbtn" data-lc="props">🛠️ Props/Armas</button>
+    <button class="fbtn" data-lc="peruca">💇 Perucas</button>
+    <button class="fbtn" data-lc="calcado">👟 Calçados/Acessórios</button>
+    <button class="fbtn" data-lc="geral">📦 Geral</button>
+  </div>
+  <div id="lojaList" class="list"></div>
+</div></div>
+
 <!-- AJUDA -->
 <div id="ajuda" class="content"><div class="wrapper">
+  <div style="background:linear-gradient(135deg,#833AB4,#E4405F);border-radius:14px;padding:1.4rem;margin-bottom:1.5rem">
+    <h2 style="font-size:19px;font-weight:800;margin-bottom:.7rem"><i class="fas fa-masks-theater"></i> Sobre a comunidade DiaDeCosplay</h2>
+    <p style="font-size:13.5px;line-height:1.6;opacity:.95">
+      O DiaDeCosplay nasceu pra unir cosplayers de Natal/RN (e além) num só lugar: pra encontrar gente pra colaborações,
+      divulgar eventos, trocar ideias de personagens e criar uma rede de apoio de verdade entre quem vive dessa arte.
+      Aqui você mostra seu trabalho, monta duos e grupos, fica sabendo dos próximos encontros e, se quiser, se conecta
+      com marcas em busca de parceria. A ideia é simples: <b>crescer junto, com respeito e segurança pra todo mundo</b>,
+      especialmente pros membros mais novos da comunidade — por isso perfis de menores de idade têm proteções extras
+      em qualquer contato com terceiros.
+    </p>
+  </div>
+
   <h2 style="font-size:20px;font-weight:800;margin-bottom:1.2rem"><i class="fas fa-circle-question"></i> Como funciona</h2>
   <div class="help-grid" id="helpGrid"></div>
   <div class="credit" id="creditBox"></div>
@@ -459,6 +619,36 @@ html.admin .admin-only{display:flex!important}
     <label class="fl">🙋 Seu nome</label>
     <input type="text" class="fi" id="fNome" placeholder="Como você quer ser chamado(a)">
     <span class="hint" id="hintNome">Aparece junto com seu @. Pode definir <b>uma vez</b>.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🎂 Sua idade <span style="color:var(--error)">*</span></label>
+    <input type="number" class="fi" id="fIdade" placeholder="Ex: 17" min="10" max="99" oninput="checarIdade()">
+    <span class="hint">Usamos só pra saber se você precisa de autorização de um responsável. Sua idade <b>não aparece publicamente</b> no seu perfil.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🏅 Há quanto tempo você é cosplayer?</label>
+    <select class="fs" id="fTempoCosplay">
+      <option value="">Prefiro não informar</option>
+      <option value="0">Comecei agora (menos de 1 ano)</option>
+      <option value="1">1 a 2 anos</option>
+      <option value="3">3 a 5 anos</option>
+      <option value="6">6 a 9 anos</option>
+      <option value="10">10 anos ou mais</option>
+    </select>
+    <span class="hint">Aparece como uma medalha no seu perfil — quanto mais tempo, mais brilhante ela fica! ✨</span>
+  </div>
+
+  <div class="fg" id="boxResponsavel" style="display:none;border:1px solid var(--warn);border-radius:12px;padding:1rem;background:rgba(255,193,7,.06)">
+    <label class="fl">👨‍👩‍👧 Autorização de responsável <span style="color:var(--error)">*</span></label>
+    <span class="hint" style="display:block;margin-bottom:.7rem">Como você é menor de 18 anos, um pai/mãe/responsável precisa autorizar sua participação na comunidade. Isso é só pra garantir que ele saiba que você está aqui — o contato dele fica privado e só é usado se alguma marca/empresa quiser propor uma colaboração com você (nesse caso, <b>a empresa fala com o responsável, nunca diretamente com você</b>).</span>
+    <input type="text" class="fi" id="fRespNome" placeholder="Nome do responsável" style="margin-bottom:.6rem">
+    <input type="text" class="fi" id="fRespWhats" placeholder="WhatsApp do responsável (com DDD)" style="margin-bottom:.6rem">
+    <div class="chip" style="width:fit-content">
+      <input type="checkbox" id="cRespConfirma">
+      <label for="cRespConfirma"><span class="ci">✅</span>Confirmo que sou o responsável e autorizo essa participação</label>
+    </div>
   </div>
 
   <div class="fg" id="boxTrocaEmail" style="display:none">
@@ -687,6 +877,104 @@ html.admin .admin-only{display:flex!important}
   </div>
 </div></div>
 
+<!-- MODAL: VITRINE PARA EMPRESAS -->
+<div id="mVitrine" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mVitrine')">&times;</button>
+  <div class="mtitle">💼 Entrar na Vitrine de Marcas</div>
+  <div id="vitrineAuthor"></div>
+
+  <div class="fg">
+    <label class="fl">📊 Quantos seguidores você tem? <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="vSeguidores" placeholder="Ex: 2.500">
+  </div>
+
+  <div class="fg">
+    <label class="fl">🎭 Qual seu perfil de cosplay? <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="vPerfil" placeholder="Ex: animes shounen, jogos, closet cosplay...">
+  </div>
+
+  <div class="fg">
+    <label class="fl">⏳ Há quanto tempo você é cosplayer? <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="vTempo" placeholder="Ex: 2 anos">
+  </div>
+
+  <div class="fg">
+    <label class="fl">✨ O que te diferencia? <span style="color:var(--error)">*</span></label>
+    <textarea class="ft" id="vDiferencial" placeholder="Se você começou recentemente, conte o que te destaca (dedicação, estilo, qualidade dos looks, engajamento, etc). Se já tem experiência, fale da sua qualidade técnica e do tipo de trabalho que busca."></textarea>
+  </div>
+
+  <div id="vitrineAvisoMenor" style="display:none;background:rgba(255,193,7,.08);border:1px solid var(--warn);border-radius:10px;padding:.9rem;font-size:12.5px;color:var(--text2);margin-bottom:1.1rem">
+    <i class="fas fa-shield-halved"></i> Como seu perfil está cadastrado como <b>menor de idade</b>, o contato de qualquer empresa interessada em você vai direto pro <b>email/WhatsApp do seu responsável</b> — nunca aparece seu contato pessoal aqui, e nenhuma empresa fala diretamente com você por aqui.
+  </div>
+
+  <div class="bgrp">
+    <button class="btn" onclick="saveVitrine()"><i class="fas fa-paper-plane"></i> Publicar na vitrine</button>
+    <button class="btn sec" onclick="closeModal('mVitrine')">Cancelar</button>
+  </div>
+</div></div>
+
+<!-- MODAL: INDICAR LOJA -->
+<div id="mLoja" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mLoja')">&times;</button>
+  <div class="mtitle">🛍️ Indicar Loja</div>
+  <div id="lojaAuthor"></div>
+
+  <div class="fg">
+    <label class="fl">🏪 Nome da loja <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="lNome" placeholder="Ex: Tecidos da Maria">
+  </div>
+
+  <div class="fg">
+    <label class="fl">🔗 Link (site, Instagram ou WhatsApp) <span style="color:var(--error)">*</span></label>
+    <input type="url" class="fi" id="lLink" placeholder="https://instagram.com/...">
+  </div>
+
+  <div class="fg">
+    <label class="fl">🏷️ Categoria <span style="color:var(--error)">*</span></label>
+    <select class="fs" id="lCategoria">
+      <option value="">Escolha...</option>
+      <option value="tecido">🧵 Tecido</option>
+      <option value="props">🛠️ Props/Armas</option>
+      <option value="peruca">💇 Perucas</option>
+      <option value="calcado">👟 Calçados/Acessórios</option>
+      <option value="geral">📦 Geral</option>
+    </select>
+  </div>
+
+  <div class="fg">
+    <label class="fl">⭐ Sua nota pra essa loja <span style="color:var(--error)">*</span></label>
+    <select class="fs" id="lNota">
+      <option value="">Escolha...</option>
+      <option value="5">⭐⭐⭐⭐⭐ 5.0 — Perfeito, recomendo muito</option>
+      <option value="4.5">⭐⭐⭐⭐✨ 4.5 — Muito bom</option>
+      <option value="4">⭐⭐⭐⭐ 4.0 — Bom</option>
+      <option value="3.5">⭐⭐⭐✨ 3.5 — Ok, com ressalvas</option>
+      <option value="3">⭐⭐⭐ 3.0 — Mediano</option>
+      <option value="2">⭐⭐ 2.0 — Não recomendo muito</option>
+      <option value="1">⭐ 1.0 — Não recomendo</option>
+    </select>
+  </div>
+
+  <div class="fg">
+    <label class="fl">📸 Foto do produto que comprou (opcional)</label>
+    <div class="foto-slot" id="lFotoSlot" style="max-width:160px" onclick="document.getElementById('lFoto').click()">
+      <i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>
+    </div>
+    <input type="file" id="lFoto" accept="image/*" style="display:none" onchange="previewFotoLoja(this)">
+    <span class="hint">Mostra pra galera o que você recebeu — ajuda muito mais que só nota e texto.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">💬 Sua experiência (opcional)</label>
+    <textarea class="ft" id="lDesc" placeholder="Ex: Comprei tecido lycra lá, chegou rápido e a qualidade foi ótima"></textarea>
+  </div>
+
+  <div class="bgrp">
+    <button class="btn" onclick="saveLoja()"><i class="fas fa-paper-plane"></i> Indicar</button>
+    <button class="btn sec" onclick="closeModal('mLoja')">Cancelar</button>
+  </div>
+</div></div>
+
 <div id="mLogin" class="modal"><div class="mbox" style="max-width:400px">
   <button class="mclose" onclick="closeModal('mLogin')">&times;</button>
   <div class="mtitle">⭐ Acesso Admin</div>
@@ -696,18 +984,34 @@ html.admin .admin-only{display:flex!important}
 </div></div>
 
 <!-- MODAL: PAINEL ADMIN -->
+<!-- MODAL: PRÉVIA DE IMPORTAÇÃO — mostra o que tem no JSON antes de aplicar de verdade -->
+<div id="mImportPreview" class="modal"><div class="mbox" style="max-width:480px">
+  <button class="mclose" onclick="cancelarImportPendente()">&times;</button>
+  <div class="mtitle">🔍 Confira antes de aplicar</div>
+  <div id="importPreviewBody"></div>
+  <div class="bgrp">
+    <button class="btn" id="btnConfirmarImport" onclick="confirmarImportPendente()"><i class="fas fa-check"></i> Aplicar</button>
+    <button class="btn sec" onclick="cancelarImportPendente()">Cancelar</button>
+  </div>
+</div></div>
+
 <div id="mAdmin" class="modal"><div class="mbox adminbox">
   <button class="mclose" onclick="closeModal('mAdmin')">&times;</button>
   <div class="mtitle">⚙️ Painel Admin</div>
 
-  <div class="adm-tabs">
-    <button class="adm-tab active" data-at="geral"><i class="fas fa-sliders"></i> Geral</button>
-    <button class="adm-tab" data-at="cosplayers"><i class="fas fa-users"></i> Cosplayers</button>
-    <button class="adm-tab" data-at="eventos"><i class="fas fa-calendar"></i> Eventos</button>
-    <button class="adm-tab" data-at="conteudo"><i class="fas fa-comments"></i> Ideias e Cenas</button>
-    <button class="adm-tab" data-at="ajuda"><i class="fas fa-circle-question"></i> Ajuda</button>
-    <button class="adm-tab" data-at="dados"><i class="fas fa-database"></i> Dados</button>
-    <button class="adm-tab" data-at="cloud"><i class="fas fa-cloud"></i> Cloudflare</button>
+  <div class="tabs-wrap" id="admTabsWrap" style="background:transparent;border-bottom:none;border-radius:10px;margin-bottom:1.3rem">
+    <button class="tabs-arrow left" id="admTabsArrowLeft" onclick="rolarTabs('admTabsBar',-1)" aria-label="Rolar pra esquerda"><i class="fas fa-chevron-left"></i></button>
+    <div class="adm-tabs" id="admTabsBar">
+      <button class="adm-tab active" data-at="geral"><span class="tab-ic">⚙️</span> Geral</button>
+      <button class="adm-tab" data-at="cosplayers"><span class="tab-ic">🎭</span> Cosplayers</button>
+      <button class="adm-tab" data-at="eventos"><span class="tab-ic">📅</span> Eventos</button>
+      <button class="adm-tab" data-at="conteudo"><span class="tab-ic">💬</span> Ideias e Cenas</button>
+      <button class="adm-tab" data-at="lojas"><span class="tab-ic">🛍️</span> Lojas</button>
+      <button class="adm-tab" data-at="ajuda"><span class="tab-ic">❓</span> Ajuda</button>
+      <button class="adm-tab" data-at="dados"><span class="tab-ic">💾</span> Dados</button>
+      <button class="adm-tab" data-at="cloud"><span class="tab-ic">☁️</span> Cloudflare</button>
+    </div>
+    <button class="tabs-arrow right" id="admTabsArrowRight" onclick="rolarTabs('admTabsBar',1)" aria-label="Rolar pra direita"><i class="fas fa-chevron-right"></i></button>
   </div>
 
   <!-- GERAL -->
@@ -717,6 +1021,7 @@ html.admin .admin-only{display:flex!important}
     <div class="fg"><label class="fl">Aviso no topo da página</label><textarea class="ft" id="cfgAviso" placeholder="Ex: Encontro dia 06/09 depois do almoço!"></textarea><span class="hint">Aparece pra todo mundo na aba Cosplayers. Vazio = nada aparece.</span></div>
     <div class="fg"><label class="fl">Idealizador (rodapé da Ajuda)</label><input type="text" class="fi" id="cfgCredito" placeholder="@ofcvictorcorreia"></div>
     <div id="admStats" class="adm-stats"></div>
+    <div id="admTamanhoAviso" style="margin-bottom:1.1rem"></div>
     <button class="btn" onclick="saveConfig()"><i class="fas fa-check"></i> Salvar configurações</button>
   </div>
 
@@ -751,6 +1056,11 @@ html.admin .admin-only{display:flex!important}
       <label class="fl">📅 Eventos cadastrados</label>
       <div class="adm-list" id="admEvList"></div>
     </div>
+    <div class="fg" style="border:1px solid var(--error);border-radius:12px;padding:1rem;margin-top:1rem">
+      <label class="fl" style="color:var(--error)">⚠️ Resetar eventos</label>
+      <span class="hint">Apaga <b>TODOS</b> os eventos cadastrados (inclusive presenças confirmadas). Não afeta cosplayers, ideias ou lojas. Não tem volta — faz um backup antes se não tiver certeza.</span>
+      <button class="btn sec" onclick="resetarEventos()" style="border-color:var(--error);color:var(--error);margin-top:.6rem"><i class="fas fa-trash"></i> Resetar todos os eventos</button>
+    </div>
   </div>
 
   <!-- IDEIAS E CENAS -->
@@ -764,6 +1074,25 @@ html.admin .admin-only{display:flex!important}
       <div class="adm-list" id="admCenaList"></div>
     </div>
     <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Como admin você pode apagar qualquer ideia ou cena, mesmo as de outras pessoas.</span></div>
+    <div class="fg" style="border:1px solid var(--error);border-radius:12px;padding:1rem;margin-top:1rem">
+      <label class="fl" style="color:var(--error)">⚠️ Resetar ideias e cenas</label>
+      <span class="hint">Apaga <b>TODAS</b> as ideias e cenas sugeridas de uma vez. Não afeta cosplayers, eventos ou lojas. Não tem volta.</span>
+      <button class="btn sec" onclick="resetarIdeiasCenas()" style="border-color:var(--error);color:var(--error);margin-top:.6rem"><i class="fas fa-trash"></i> Resetar ideias e cenas</button>
+    </div>
+  </div>
+
+  <!-- LOJAS -->
+  <div class="adm-pane" id="at-lojas">
+    <button class="btn" onclick="closeModal('mAdmin');switchTab('lojas');openNovaLoja()"><i class="fas fa-plus"></i> Indicar nova loja</button>
+    <div class="fg" style="margin-top:1.2rem">
+      <label class="fl">🛍️ Lojas indicadas</label>
+      <div class="adm-list" id="admLojaList"></div>
+    </div>
+    <div class="fg" style="border:1px solid var(--error);border-radius:12px;padding:1rem;margin-top:1rem">
+      <label class="fl" style="color:var(--error)">⚠️ Resetar lojas</label>
+      <span class="hint">Apaga <b>TODAS</b> as lojas indicadas e os votos (👍👎) de todo mundo. Não afeta cosplayers, eventos ou ideias. Não tem volta.</span>
+      <button class="btn sec" onclick="resetarLojas()" style="border-color:var(--error);color:var(--error);margin-top:.6rem"><i class="fas fa-trash"></i> Resetar todas as lojas</button>
+    </div>
   </div>
 
   <!-- AJUDA -->
@@ -777,6 +1106,55 @@ html.admin .admin-only{display:flex!important}
   <!-- DADOS -->
   <div class="adm-pane" id="at-dados">
     <div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>Os dados ficam salvos <b>só neste navegador</b>. Se limpar o histórico, some tudo. Faça backup com frequência — ou use a aba Cloudflare para guardar online.</span></div>
+
+    <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem;background:var(--s2)">
+      <label class="fl">📲 App instalável (PWA)</label>
+      <span class="hint">O site pode ser instalado como app no celular e funcionar até sem internet. Pra isso, 3 arquivos precisam estar na <b>raiz do seu repositório</b> (junto do index.html, fora de qualquer pasta):</span>
+      <div id="statusPWA" style="margin-top:.8rem;display:grid;gap:.5rem"></div>
+      <button class="btn sec" onclick="checarPWA()" style="margin-top:.7rem"><i class="fas fa-rotate"></i> Checar agora</button>
+      <span class="hint" style="display:block;margin-top:.6rem">Se algum aparecer em vermelho, baixa o arquivo (foi te enviado no chat) e sobe ele na raiz do repositório junto com o index.html, depois clica em "Checar agora" de novo.</span>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem;background:var(--s2)">
+      <label class="fl">💳 Passo a passo — upgrade do plano Cloudflare (Free → Paid)</label>
+      <span class="hint">Só faça isso se estiver batendo no limite de gravações do plano gratuito (aparece como "erro 500" ou "limit exceeded" ao salvar). Custa <b>US$ 5/mês</b> e resolve o limite de vez.</span>
+      <div style="display:grid;gap:.6rem;margin-top:.7rem;font-size:12.5px;color:var(--text2)">
+        <div><b style="color:var(--text)">1.</b> Acessa <code>dash.cloudflare.com</code> e faz login</div>
+        <div><b style="color:var(--text)">2.</b> No menu esquerdo, clica em <b>"Workers & Pages"</b></div>
+        <div><b style="color:var(--text)">3.</b> Clica no seu Worker (ex: <code>diadecosplay-api</code>)</div>
+        <div><b style="color:var(--text)">4.</b> Vai na aba <b>"Settings"</b> (Configurações) dele</div>
+        <div><b style="color:var(--text)">5.</b> Procura a seção <b>"Plan"</b> ou vai direto em <b>Billing</b> (Faturamento) no menu lateral da conta</div>
+        <div><b style="color:var(--text)">6.</b> Escolhe <b>"Workers Paid"</b> e confirma o cartão de pagamento</div>
+        <div><b style="color:var(--text)">7.</b> Pronto — o limite de gravações sobe de 1.000/dia pra praticamente ilimitado no uso de um site como esse</div>
+      </div>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem;background:var(--s2)">
+      <label class="fl">🔄 Alternativas, caso o Cloudflare não agrade</label>
+      <span class="hint">Se algum dia quiser trocar de serviço de nuvem, essas são opções conhecidas e também têm plano gratuito pra começar:</span>
+      <div style="display:grid;gap:.6rem;margin-top:.7rem;font-size:12.5px;color:var(--text2)">
+        <div><b style="color:var(--text)">🔥 Firebase (Google)</b> — banco de dados online fácil de configurar, plano gratuito generoso, boa opção pra quem já usa produtos Google.</div>
+        <div><b style="color:var(--text)">⚡ Supabase</b> — parecido com o Firebase, mas de código aberto, plano gratuito bom, interface bem amigável.</div>
+        <div><b style="color:var(--text)">▲ Vercel + Vercel KV</b> — outra opção de hospedagem com banco de dados simples embutido.</div>
+        <div style="color:var(--warn)"><i class="fas fa-triangle-exclamation"></i> Trocar de serviço exige reescrever o "Worker" (o código que conversa com o banco de dados) — não é só trocar uma configuração. Se chegar nesse ponto, é melhor pedir ajuda de novo aqui no chat explicando qual serviço você escolheu.</div>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">🕰️ Versões automáticas (recuperação rápida)</label>
+      <span class="hint">O site guarda sozinho as últimas cópias de segurança, separadas do backup manual. Se algo der errado, restaura em 1 clique — sem precisar de arquivo nenhum.</span>
+      <div id="listaSnapshots" style="margin-top:.7rem"></div>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem;background:var(--s2)">
+      <label class="fl">📖 Passo a passo — como usar o JSON</label>
+      <div style="display:grid;gap:.7rem;margin-top:.6rem;font-size:12.5px;color:var(--text2)">
+        <div><b style="color:var(--text)">1. Pra guardar uma cópia de segurança:</b><br>Clica em "Baixar backup (JSON)" logo abaixo. Um arquivo é baixado no seu celular/computador — guarda ele em algum lugar seguro (Google Drive, por exemplo).</div>
+        <div><b style="color:var(--text)">2. Pra restaurar depois de um problema:</b><br>Clica em "Escolher arquivo", seleciona o backup que você baixou, e depois clica em <b>Substituir</b> (se quiser trocar tudo pelo backup) ou <b>Juntar</b> (se quiser só completar o que falta sem apagar nada).</div>
+        <div><b style="color:var(--text)">3. Pra colar um JSON direto (sem arquivo):</b><br>Se alguém te mandou um texto JSON (por WhatsApp, por exemplo), cola ele na caixa de texto mais abaixo e clica em "Importar do texto".</div>
+        <div><i class="fas fa-circle-info"></i> <b>Dica:</b> sempre que for mexer em "Substituir" ou "Apagar todos os dados", faz um backup novo antes — é rapidinho e evita sustos.</div>
+      </div>
+    </div>
 
     <div class="fg">
       <label class="fl">💾 Backup</label>
@@ -886,6 +1264,24 @@ function save(auto=true){
     db.updatedAt=Date.now();
     localStorage.setItem(KEY,JSON.stringify(db));
     if(auto){pendente=true;agendarSync()}
+
+    // ✅ BACKUP AUTOMÁTICO: a cada 15 salvamentos, baixa um JSON sozinho
+    // no navegador de quem é admin. Isso garante que sempre existe uma
+    // cópia recente em algum lugar, mesmo se a nuvem falhar de novo.
+    if(document.documentElement.classList.contains('admin')){
+      const contador=parseInt(localStorage.getItem('dc_backup_counter')||'0',10)+1;
+      localStorage.setItem('dc_backup_counter',String(contador));
+
+      // versão automática (IndexedDB) a cada 5 salvamentos — mais frequente
+      // e silenciosa, pra restaurar rapidinho sem precisar de arquivo
+      if(contador%5===0)salvarSnapshotAuto();
+
+      if(contador%15===0){
+        exportData();
+        toast('📦 Backup automático baixado (a cada 15 salvamentos)','ok');
+      }
+    }
+
     return true;
   }catch(e){
     toast('O navegador ficou sem espaço. Faça backup no painel admin.','err');
@@ -926,16 +1322,25 @@ function flushSync(){
   }catch(e){}
 }
 
+let ultimoEstadoSync='on';
 function syncBadge(estado,texto){
+  ultimoEstadoSync=estado;
   const el=document.getElementById('syncBadge');
-  if(!el)return;
-  el.className='sync-badge '+estado;
-  el.innerHTML={
-    on:'<i class="fas fa-cloud-arrow-up"></i>',
-    up:'<i class="fas fa-arrows-rotate fa-spin"></i>',
-    off:'<i class="fas fa-cloud-slash"></i>'
-  }[estado]||'';
-  el.title=texto||'';
+  if(el){
+    el.className='sync-badge '+estado;
+    el.innerHTML={
+      on:'<i class="fas fa-cloud-arrow-up"></i>',
+      up:'<i class="fas fa-arrows-rotate fa-spin"></i>',
+      off:'<i class="fas fa-cloud-slash"></i>'
+    }[estado]||'';
+    el.title=texto||'';
+  }
+
+  // ✅ Banner só aparece pro ADMIN logado — visitantes nunca veem esse aviso,
+  // pra manter a experiência limpa pra quem só está navegando no site.
+  const banner=document.getElementById('bannerOffline');
+  const ehAdmin=document.documentElement.classList.contains('admin');
+  if(banner)banner.style.display=(estado==='off'&&ehAdmin)?'block':'none';
 }
 function seed(){
   if(!Array.isArray(db.cosplayers))db.cosplayers=[];
@@ -973,6 +1378,8 @@ function seed(){
   if(changed)save();
   db.eventos.forEach(e=>{if(!Array.isArray(e.presencas))e.presencas=[]});
   if(!Array.isArray(db.colabs))db.colabs=[];
+  if(!Array.isArray(db.vitrine))db.vitrine=[];
+  if(!Array.isArray(db.lojas))db.lojas=[];
 
   // ✅ LIMPEZA DE DUPLICATAS: remove itens repetidos com o mesmo ID
   const dedupPorId=(arr)=>{
@@ -991,6 +1398,8 @@ function seed(){
   db.ideias=dedupPorId(db.ideias);
   db.cenas=dedupPorId(db.cenas);
   db.colabs=dedupPorId(db.colabs);
+  db.vitrine=dedupPorId(db.vitrine);
+  db.lojas=dedupPorId(db.lojas);
   if(db.eventos.length!==antes){
     console.warn('⚠️ Duplicatas removidas:',antes-db.eventos.length);
     save();
@@ -1200,6 +1609,18 @@ function getPickedEmoji(){
 }
 
 /* TIER: quanto mais completo o perfil, mais "rara" a carta */
+/* ✅ Medalha de tempo de cosplay — quanto mais tempo, mais brilhante */
+function medalhaTempoCosplay(valor){
+  const MAPA={
+    '0':{cls:'medalha-bronze',emoji:'🥉',label:'Novato(a)',titulo:'Cosplayer há menos de 1 ano'},
+    '1':{cls:'medalha-prata',emoji:'🥈',label:'1-2 anos',titulo:'Cosplayer há 1 a 2 anos'},
+    '3':{cls:'medalha-ouro',emoji:'🥇',label:'3-5 anos',titulo:'Cosplayer há 3 a 5 anos'},
+    '6':{cls:'medalha-diamante',emoji:'💎',label:'6-9 anos',titulo:'Cosplayer há 6 a 9 anos'},
+    '10':{cls:'medalha-lendaria',emoji:'🌟',label:'Lendário(a)',titulo:'Cosplayer há 10 anos ou mais!'}
+  };
+  return MAPA[valor]||null;
+}
+
 function tierOf(c){
   let p=0;
   if(c.email)p++;
@@ -1236,9 +1657,24 @@ function comprimirImagem(file,maxLado=1280,qualidade=.82){
         const ctx=cv.getContext('2d');
         ctx.imageSmoothingQuality='high';
         ctx.drawImage(img,0,0,w,h);
+
+        // ✅ JPEG universal: funciona em 100% dos navegadores/dispositivos,
+        // sem exceção. WebP é menor mas alguns navegadores conseguem GERAR
+        // sem conseguir EXIBIR de volta em certos casos — isso é justamente
+        // o tipo de coisa que faz foto "sumir" só pra alguns visitantes,
+        // de um jeito difícil de perceber. Prioridade aqui é confiabilidade,
+        // não economia de alguns KB.
         let q=qualidade,out=cv.toDataURL('image/jpeg',q);
-        while(out.length>900000&&q>.4){q-=.12;out=cv.toDataURL('image/jpeg',q)}
-        resolve(out);
+        while(out.length>700000&&q>.35){q-=.12;out=cv.toDataURL('image/jpeg',q)}
+
+        // ✅ PROVA REAL: antes de aceitar, tenta carregar a imagem comprimida
+        // de volta como se fosse exibir ela. Se não conseguir decodificar,
+        // NUNCA deixa essa foto ser salva — evita foto quebrada indo pra nuvem
+        // e aparecendo "sumida" pra quem visita o site depois.
+        const teste=new Image();
+        teste.onload=()=>resolve(out);
+        teste.onerror=()=>reject(new Error('A foto comprimida saiu corrompida — tenta outra imagem'));
+        teste.src=out;
       };
       img.src=e.target.result;
     };
@@ -1275,6 +1711,14 @@ function renderMe(){
   if(me){
     chip.style.display='flex';
     document.getElementById('userChipText').textContent=me.username;
+
+    // ✅ Lembrete visível: informar a idade correta pra participar dos
+    // encontros sem restrição nenhuma (necessário pra saber se precisa
+    // de autorização de responsável)
+    const meuPerfil=db.cosplayers.find(c=>c.username===me.username);
+    if(meuPerfil&&!meuPerfil.idade){
+      box.innerHTML=`<div class="alert a-warn" style="margin-bottom:1rem"><i class="fas fa-cake-candles"></i><span><b>Falta um passo:</b> informe sua idade correta no seu perfil pra participar dos encontros sem restrição nenhuma. <button class="btn sec" style="padding:.3rem .8rem;font-size:11.5px;margin-left:.5rem" onclick="openMyProfile()">Completar agora</button></span></div>`;
+    }
   }else{
     chip.style.display='none';
   }
@@ -1335,11 +1779,18 @@ function renderCos(){
     if(pending&&mine)badges.push(`<div class="badge badge-timer"><i class="fas fa-clock"></i> ${schedLabel(c)}</div>`);
 
     const t=tierOf(c);
+    const medalha=medalhaTempoCosplay(c.tempoCosplay);
+
+    // ✅ Fallback visual: se a foto falhar ao carregar, mostra um avatar
+    // com a inicial do @ em vez de deixar vazio/quebrado — o visitante
+    // sempre vê algo intencional, nunca "nada".
+    const inicial=(c.username||'?').replace('@','').charAt(0).toUpperCase();
+    const avatarFallback=`<div class="avatar-fallback" style="display:none">${inicial}</div>`;
 
     const imgsHtml=fotos.length
       ? (fotos.length>1
-          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" onerror="this.style.display='none'">`).join('')
-          : `<img src="${fotos[0]}" alt="${c.username}" onerror="this.style.display='none'">`)
+          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`).join('')+avatarFallback
+          : `<img src="${fotos[0]}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`+avatarFallback)
       : `<i class="fab fa-instagram ph"></i>`;
 
     return `<div class="card ${t.cls} ${temPreview?'has-preview':''}">
@@ -1348,14 +1799,14 @@ function renderCos(){
         ${preview}
         ${fotos.length>1?`<div class="dots">${fotos.map((_,i)=>`<div class="dot-i${i===0?' on':''}"></div>`).join('')}</div>`:''}
         ${badges.length?`<div class="badge-stack">${badges.join('')}</div>`:''}
-        ${isMe?`<div class="badge-me">VOCÊ</div>`:''}
+        ${medalha?`<div class="medalha ${medalha.cls}" title="${medalha.titulo}">${medalha.emoji}</div>`:''}
         ${idChips.length?`<div class="id-bar">${idChips.join('')}</div>`:''}
         ${temPreview?`<div class="peek-hint"><i class="fas fa-play"></i></div>`:''}
       </div>
       <div class="card-body">
         ${c.nome
-          ? `<div><div class="card-name">${c.nome}</div><a href="${ig}" target="_blank" class="card-user">${c.username}</a></div>`
-          : `<a href="${ig}" target="_blank" class="card-user solo">${c.username}</a>`}
+          ? `<div><div class="card-name">${c.nome}</div><a href="${ig}" target="_blank" class="card-user">${c.username}${isMe?'<span class="badge-me" title="Esse é você"></span>':''}</a></div>`
+          : `<a href="${ig}" target="_blank" class="card-user solo">${c.username}${isMe?'<span class="badge-me" title="Esse é você"></span>':''}</a>`}
         ${(c.tiktok||c.twitter||c.youtube)?`<div class="socials">
           ${c.tiktok?`<a href="https://tiktok.com/@${c.tiktok.replace('@','')}" target="_blank" title="TikTok"><i class="fab fa-tiktok"></i></a>`:''}
           ${c.twitter?`<a href="https://x.com/${c.twitter.replace('@','')}" target="_blank" title="Twitter"><i class="fab fa-x-twitter"></i></a>`:''}
@@ -1431,6 +1882,20 @@ function openEdit(id,focusPost){
   document.getElementById('fConfirma').value='';
   document.getElementById('boxTrocaEmail').style.display='none';
 
+  // ✅ idade + responsável (só o dono/admin vê preenchido, é dado sensível)
+  document.getElementById('fIdade').value=(souDono||admin)?(c.idade||''):'';
+  document.getElementById('fTempoCosplay').value=c.tempoCosplay||'';
+  if((souDono||admin)&&c.responsavel){
+    document.getElementById('fRespNome').value=c.responsavel.nome||'';
+    document.getElementById('fRespWhats').value=c.responsavel.whats||'';
+    document.getElementById('cRespConfirma').checked=true;
+  }else{
+    document.getElementById('fRespNome').value='';
+    document.getElementById('fRespWhats').value='';
+    document.getElementById('cRespConfirma').checked=false;
+  }
+  checarIdade();
+
   // @ e nome só podem ser alterados uma vez
   const travaU=c.userTrocado&&!admin, travaN=c.nomeTrocado&&!admin;
   document.getElementById('fUser').readOnly=travaU;
@@ -1484,6 +1949,16 @@ function mascararEmail(email){
   const pontos='•'.repeat(Math.max(3,local.length-3));
   const dom=dominio?dominio[0]+'•'.repeat(Math.max(2,dominio.length-1)):'';
   return `${ini}${pontos}@${dom}`;
+}
+
+function checarIdade(){
+  const idade=parseInt(document.getElementById('fIdade').value,10);
+  const box=document.getElementById('boxResponsavel');
+  if(!isNaN(idade)&&idade>0&&idade<18){
+    box.style.display='block';
+  }else{
+    box.style.display='none';
+  }
 }
 
 function emailGate(){
@@ -1550,6 +2025,26 @@ function saveProfile(){
   const email=document.getElementById('fEmail').value.trim();
   if(!email||!email.includes('@')||!email.includes('.')){toast('Coloque um email válido','err');return}
 
+  // ✅ VALIDAÇÃO DE IDADE + RESPONSÁVEL
+  const idadeVal=parseInt(document.getElementById('fIdade').value,10);
+  if(isNaN(idadeVal)||idadeVal<=0){
+    toast('Preencha sua idade pra continuar','err');
+    document.getElementById('fIdade').focus();
+    return;
+  }
+  let responsavel=null;
+  if(idadeVal<18){
+    const respNome=document.getElementById('fRespNome').value.trim();
+    const respWhats=document.getElementById('fRespWhats').value.trim();
+    const respConfirma=document.getElementById('cRespConfirma').checked;
+    if(!respNome||!respWhats||!respConfirma){
+      toast('Como você é menor de 18, um responsável precisa preencher e confirmar a autorização','err');
+      document.getElementById('boxResponsavel').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    responsavel={nome:respNome,whats:respWhats,autorizadoEm:new Date().toISOString()};
+  }
+
   const admin=document.documentElement.classList.contains('admin');
   const emailAntigo=(c.email||'').toLowerCase();
   const trocandoEmail=emailAntigo&&email.toLowerCase()!==emailAntigo;
@@ -1597,6 +2092,10 @@ function saveProfile(){
   }
 
   c.email=email;
+  c.idade=idadeVal;
+  c.menorDeIdade=idadeVal<18;
+  if(responsavel)c.responsavel=responsavel; // só existe/é atualizado se for menor
+  c.tempoCosplay=document.getElementById('fTempoCosplay').value||'';
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
   c.photos=[...fotosTemp];
@@ -1642,6 +2141,8 @@ function saveProfile(){
       renderEvGate();
       renderEventos();
       renderColabs();
+      renderVitrine();
+      renderLojas();
       closeModal('mEdit');
       
       const msg=(c.schedule&&new Date(c.schedule)>new Date())
@@ -1774,6 +2275,17 @@ function delCena(id){db.cenas=db.cenas.filter(c=>c.id!==id);save();renderCenas()
 function togglePresenca(id){
   const me=getMe();
   if(!me){toast('Cadastre seu email na aba Cosplayers para confirmar presença','err');switchTab('cosplayers');return}
+
+  // ✅ Avisa pra informar a idade correta antes de confirmar presença —
+  // sem isso não dá pra saber se a pessoa precisa de autorização de responsável
+  const meuPerfil=db.cosplayers.find(c=>c.username===me.username);
+  if(meuPerfil&&!meuPerfil.idade){
+    toast('📋 Informe sua idade correta no seu perfil pra participar do encontro sem restrição nenhuma!','err');
+    openEdit(meuPerfil.id);
+    setTimeout(()=>document.getElementById('fIdade')?.focus(),400);
+    return;
+  }
+
   const e=db.eventos.find(x=>x.id===id);if(!e)return;
   e.presencas=e.presencas||[];
   const i=e.presencas.findIndex(p=>p.email===me.email);
@@ -1806,17 +2318,21 @@ function verPresencas(id){
 }
 
 function copiarFaltantes(){
-  const faltam=db.cosplayers.filter(c=>!c.email);
+  // ✅ "Atualizado de verdade" agora exige email E idade preenchidos —
+  // antes só considerava o email, então quem cadastrou email mas esqueceu
+  // a idade aparecia como "pronto" sem estar. Isso evita cobrar quem já
+  // fez a parte dele e deixar passar quem só fez pela metade.
+  const faltam=db.cosplayers.filter(c=>!c.email||!c.idade);
   if(!faltam.length){toast('Todo mundo já cadastrou! 🎉','ok');return}
-  const txt=`Faltam ${faltam.length} cadastrar no DiaDeCosplay:\n\n`+faltam.map(c=>c.username).join(' ');
+  const txt=`Faltam ${faltam.length} completar o cadastro no DiaDeCosplay:\n\n`+faltam.map(c=>c.username).join(' ');
   navigator.clipboard.writeText(txt).then(()=>toast(`${faltam.length} @ copiados`,'ok'));
 }
 
 function copiarLinkGrupo(){
-  const prontos=db.cosplayers.filter(c=>c.email).length;
+  const prontos=db.cosplayers.filter(c=>c.email&&c.idade).length;
   const total=db.cosplayers.length;
   const link=location.origin+location.pathname;
-  const txt=`🎭 *DiaDeCosplay* já está no ar!\n\n${prontos} de ${total} já montaram a carta. Falta a sua!\n\n👉 Entre no link, ache seu @, clique em *Editar* e coloque seu email. Depois é só escolher suas fotos, seu emoji e o que você faz (Cosplay, WigMaker, PropMaker ou CosMaker).\n\n${link}`;
+  const txt=`🎭 *DiaDeCosplay* já está no ar!\n\n${prontos} de ${total} já montaram a carta completa. Falta a sua!\n\n👉 Entre no link, ache seu @, clique em *Editar* e coloque seu email e sua idade. Depois é só escolher suas fotos, seu emoji e o que você faz (Cosplay, WigMaker, PropMaker ou CosMaker).\n\n${link}`;
   navigator.clipboard.writeText(txt).then(()=>toast('Recado copiado! Cole no grupo.','ok'));
 }
 
@@ -2031,16 +2547,19 @@ function renderEventos(){
   const admin=document.documentElement.classList.contains('admin');
   const me=getMe();
 
-  // ✅ TRAVA FINAL ANTI-DUPLICATA: nunca mostra 2 eventos com mesmo id
-  // ou mesmo título+data (mesmo se a nuvem ainda tiver cópias residuais)
+  // ✅ TRAVA ANTI-DUPLICATA: só por ID (todo evento sempre tem um ID único
+  // de verdade — Date.now() ao criar, ou o ID fixo do evento padrão). Usar
+  // só o ID, e não título+data, evita mesclar por engano dois eventos
+  // diferentes que por coincidência tenham o mesmo nome e data.
   const vistos=new Set();
   const semDuplicata=db.eventos.filter(e=>{
-    const chave=e.id!==undefined?('id:'+e.id):('td:'+e.title+'|'+e.date+'|'+e.time);
-    if(vistos.has(chave))return false;
-    vistos.add(chave);
+    if(!e||e.id===undefined||e.id===null)return false; // descarta lixo sem id
+    if(vistos.has(e.id))return false;
+    vistos.add(e.id);
     return true;
   });
   if(semDuplicata.length!==db.eventos.length){
+    console.warn(`🧹 Removidas ${db.eventos.length-semDuplicata.length} duplicata(s) de evento`);
     db.eventos=semDuplicata;
     save();
     setTimeout(()=>cloudPush(true),800); // reenvia já limpo, some de vez da nuvem
@@ -2176,9 +2695,23 @@ function admStats(){
     👺 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosplay')).length}</b> Cosplay · 💇 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('wigmaker')).length}</b> WigMaker · 🛠️ <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('propmaker')).length}</b> PropMaker · 💄 <b>${d.cosplayers.filter(c=>(c.cats||[]).includes('cosmaker')).length}</b> CosMaker<br>
     🔗 <b>${d.cosplayers.filter(c=>postLive(c)).length}</b> postagens no ar · ⏰ <b>${d.cosplayers.filter(c=>c.schedule&&!postLive(c)).length}</b> agendadas<br>
     📅 <b>${d.eventos.length}</b> eventos (${d.eventos.filter(e=>e.status==='pendente').length} aguardando) · 🙋 <b>${d.eventos.reduce((n,e)=>n+((e.presencas||[]).length),0)}</b> presenças · 💡 <b>${d.ideias.length}</b> ideias · 🎬 <b>${d.cenas.length}</b> cenas`;
+
+  // ✅ AVISO PROATIVO: o Cloudflare KV aceita até 25MB por gravação. Avisa
+  // o admin bem antes de chegar perto disso, com espaço de sobra pra agir
+  // (apagar fotos antigas, pedir pra recomprimir, etc) sem virar um susto.
+  const tamanhoBytes=new Blob([JSON.stringify(db)]).size;
+  const tamanhoMB=(tamanhoBytes/1024/1024).toFixed(1);
+  const elTamanho=document.getElementById('admTamanhoAviso');
+  if(elTamanho){
+    if(tamanhoBytes>15*1024*1024){
+      elTamanho.innerHTML=`<div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span><b>Atenção:</b> os dados já somam ${tamanhoMB}MB (o limite do Cloudflare é 25MB). Se muita gente adicionar fotos, pode começar a dar erro ao salvar. Considere pedir pra quem tem fotos grandes trocar por uma foto menor.</span></div>`;
+    }else{
+      elTamanho.innerHTML=`<span class="hint"><i class="fas fa-database"></i> Tamanho total dos dados: ${tamanhoMB}MB de 25MB (limite do Cloudflare)</span>`;
+    }
+  }
 }
 
-function admRenderAll(){admStats();admRenderCos();admRenderEv();admRenderConteudo();admRenderAjuda()}
+function admRenderAll(){admStats();admRenderCos();admRenderEv();admRenderConteudo();admRenderLojas();admRenderAjuda();renderSnapshots();checarPWA();setTimeout(recalcularSombrasTabs,100)}
 
 /* --- COSPLAYERS --- */
 function admAddCos(){
@@ -2204,15 +2737,21 @@ function admRenderCos(){
   const arr=db.cosplayers.filter(c=>c.username.toLowerCase().includes(q));
   const el=document.getElementById('admCosList');
   if(!arr.length){el.innerHTML='<div class="adm-empty">Nenhum cosplayer</div>';return}
-  el.innerHTML=arr.map(c=>`<div class="adm-row">
+  el.innerHTML=arr.map(c=>{
+    // ✅ Idade correta visível pro admin — com aviso claro quando falta
+    const idadeTag=c.idade
+      ? `🎂 ${c.idade} anos${c.menorDeIdade?(c.responsavel?' · 👨‍👩‍👧 responsável ok':' · ⚠️ menor sem responsável'):''}`
+      : `⚠️ idade não informada`;
+    return `<div class="adm-row">
     <div class="nome">${c.emoji||''} ${c.nome?c.nome+' ':''}${c.username}
-      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''}</div>
+      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''} · <span style="color:${c.idade?(c.menorDeIdade&&!c.responsavel?'var(--error)':'var(--text2)'):'var(--warn)'}">${idadeTag}</span></div>
     </div>
     <div class="acts">
       <button class="adm-btn" onclick="closeModal('mAdmin');openEdit(${c.id})" title="Editar perfil"><i class="fas fa-pen"></i></button>
       <button class="adm-btn dg" onclick="admDelCos(${c.id})" title="Remover"><i class="fas fa-trash"></i></button>
     </div>
-  </div>`).join('');
+  </div>`;
+  }).join('');
 }
 function admDelCos(id){
   const c=db.cosplayers.find(x=>x.id===id);
@@ -2222,6 +2761,27 @@ function admDelCos(id){
 }
 
 /* --- EVENTOS --- */
+/* --- LOJAS (admin) --- */
+function admRenderLojas(){
+  const el=document.getElementById('admLojaList');
+  if(!el)return;
+  const arr=[...(db.lojas||[])].sort((a,b)=>b.id-a.id);
+  if(!arr.length){el.innerHTML='<div class="adm-empty">Nenhuma loja indicada</div>';return}
+  const CAT_LABEL={tecido:'🧵 Tecido',props:'🛠️ Props/Armas',peruca:'💇 Perucas',calcado:'👟 Calçados/Acessórios',geral:'📦 Geral'};
+  el.innerHTML=arr.map(l=>{
+    const totalReacoes=Object.values(l.reacoes||{}).reduce((n,arr)=>n+arr.length,0);
+    return `<div class="adm-row">
+      <div class="nome">${l.foto?'📷 ':''}${l.nome} <span style="font-weight:400;color:var(--text2)">(${CAT_LABEL[l.categoria]||l.categoria})</span>
+        <div class="sub">${l.nota?`⭐ ${l.nota.toFixed(1)}`:'sem nota'} · ${totalReacoes} reações · por ${l.author}</div>
+      </div>
+      <div class="acts">
+        <a class="adm-btn" href="${l.link}" target="_blank" title="Abrir link"><i class="fas fa-link"></i></a>
+        <button class="adm-btn dg" onclick="delLoja(${l.id});admRenderAll()" title="Remover"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function admRenderEv(){
   const el=document.getElementById('admEvList');
   if(!db.eventos.length){el.innerHTML='<div class="adm-empty">Nenhum evento</div>';return}
@@ -2280,16 +2840,176 @@ function renderAjuda(){
 }
 
 /* --- IMPORTAR / EXPORTAR --- */
+/* ===== VERSÕES AUTOMÁTICAS (IndexedDB — não usa o espaço do localStorage) =====
+   Guarda as últimas 3 cópias completas dos dados, separado do resto, pra
+   dar pra restaurar em 1 clique se algo salvar errado. Roda em segundo
+   plano e nunca trava o site se o navegador não suportar IndexedDB. */
+const MAX_SNAPSHOTS=3;
+
+function idbAbrir(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){reject(new Error('sem-indexeddb'));return}
+    const req=indexedDB.open('dc_snapshots_db',1);
+    req.onupgradeneeded=()=>{
+      if(!req.result.objectStoreNames.contains('snapshots')){
+        req.result.createObjectStore('snapshots',{keyPath:'ts'});
+      }
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function salvarSnapshotAuto(){
+  try{
+    const idb=await idbAbrir();
+    const tx=idb.transaction('snapshots','readwrite');
+    const store=tx.objectStore('snapshots');
+    store.put({ts:Date.now(),cosplayers:db.cosplayers.length,dados:JSON.stringify(db)});
+
+    // mantém só os MAX_SNAPSHOTS mais recentes
+    const todos=await new Promise((res)=>{const r=store.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])});
+    if(todos.length>MAX_SNAPSHOTS){
+      todos.sort((a,b)=>a.ts-b.ts);
+      const antigos=todos.slice(0,todos.length-MAX_SNAPSHOTS);
+      antigos.forEach(s=>store.delete(s.ts));
+    }
+  }catch(e){/* sem IndexedDB disponível — não é crítico, segue o jogo */}
+}
+
+/* ===== CHECAGEM DO PWA (manifest.json / sw.js / icon.svg) =====
+   Testa se cada arquivo realmente responde no mesmo domínio do site.
+   Isso evita o admin achar que configurou certo quando na verdade
+   esqueceu de subir algum arquivo na raiz do repositório. */
+async function checarPWA(){
+  const el=document.getElementById('statusPWA');
+  if(!el)return;
+  el.innerHTML=`<span class="hint"><i class="fas fa-spinner fa-spin"></i> Checando...</span>`;
+
+  const arquivos=[
+    {nome:'manifest.json',desc:'Nome do app, ícone e cores'},
+    {nome:'sw.js',desc:'Deixa o site funcionar offline'},
+    {nome:'icon.svg',desc:'Ícone do app'}
+  ];
+
+  const resultados=await Promise.all(arquivos.map(async(a)=>{
+    try{
+      const r=await fetch('./'+a.nome+'?t='+Date.now(),{cache:'no-store'});
+      return {...a,ok:r.ok};
+    }catch(e){
+      return {...a,ok:false};
+    }
+  }));
+
+  el.innerHTML=resultados.map(r=>`
+    <div style="display:flex;align-items:center;gap:.6rem;font-size:12.5px;background:${r.ok?'rgba(40,167,69,.1)':'rgba(220,53,69,.1)'};border:1px solid ${r.ok?'var(--ok)':'var(--error)'};border-radius:8px;padding:.5rem .7rem">
+      <i class="fas ${r.ok?'fa-circle-check':'fa-circle-xmark'}" style="color:${r.ok?'var(--ok)':'var(--error)'}"></i>
+      <div><b>${r.nome}</b> — ${r.ok?'encontrado ✓':'não encontrado, falta subir'} <span style="color:var(--text2)">(${r.desc})</span></div>
+    </div>
+  `).join('');
+}
+
+async function renderSnapshots(){
+  const el=document.getElementById('listaSnapshots');
+  if(!el)return;
+  try{
+    const idb=await idbAbrir();
+    const tx=idb.transaction('snapshots','readonly');
+    const store=tx.objectStore('snapshots');
+    const todos=await new Promise((res)=>{const r=store.getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([])});
+    todos.sort((a,b)=>b.ts-a.ts);
+    if(!todos.length){
+      el.innerHTML=`<span class="hint">Ainda não tem versão automática guardada. Vai aparecer sozinha conforme você usa o site.</span>`;
+      return;
+    }
+    el.innerHTML=todos.map(s=>{
+      const data=new Date(s.ts).toLocaleString('pt-BR');
+      return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;margin-bottom:.5rem;font-size:12.5px">
+        <span><i class="fas fa-clock"></i> ${data} · ${s.cosplayers} cosplayers</span>
+        <button class="btn sec" style="padding:.3rem .7rem;font-size:11.5px" onclick="restaurarSnapshot(${s.ts})"><i class="fas fa-rotate-left"></i> Restaurar</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    el.innerHTML=`<span class="hint">Versões automáticas não disponíveis neste navegador.</span>`;
+  }
+}
+
+async function restaurarSnapshot(ts){
+  if(!confirm('Isso substitui os dados atuais por essa versão salva. Continuar?'))return;
+  try{
+    const idb=await idbAbrir();
+    const tx=idb.transaction('snapshots','readonly');
+    const store=tx.objectStore('snapshots');
+    const registro=await new Promise((res,rej)=>{const r=store.get(ts);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+    if(!registro){toast('Versão não encontrada','err');return}
+    db=JSON.parse(registro.dados);
+    save();seed();applyConfig();admRenderAll();
+    renderCos();renderEventos();renderIdeias();renderCenas();renderAjuda();renderColabs();renderVitrine();renderLojas();
+    toast('✅ Versão restaurada! Lembre de clicar em "Enviar agora" na aba Cloudflare pra atualizar todo mundo.','ok');
+  }catch(e){
+    toast('Não consegui restaurar essa versão','err');
+  }
+}
+
 function exportData(){
   const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
   const u=URL.createObjectURL(b);const a=document.createElement('a');
   a.href=u;a.download=`diadecosplay-${new Date().toISOString().slice(0,10)}.json`;a.click();
   toast('Backup baixado','ok');
 }
+/* ✅ PRÉVIA DE IMPORTAÇÃO: nunca aplica um JSON direto — sempre mostra
+   antes o que tem dentro (contagens, tamanho) pra o admin confirmar,
+   evitando importar algo errado sem perceber. */
+let importPendente=null;
+
+function prepararPreviewImport(obj,substituir){
+  if(!obj||typeof obj!=='object'||Array.isArray(obj)){
+    toast('❌ JSON inválido — não é um objeto de dados reconhecível','err');
+    return;
+  }
+  const cont=(arr)=>Array.isArray(arr)?arr.length:0;
+  const tamanhoMB=(new Blob([JSON.stringify(obj)]).size/1024/1024).toFixed(2);
+
+  importPendente={obj,substituir};
+
+  document.getElementById('importPreviewBody').innerHTML=`
+    <div class="alert ${substituir?'a-warn':'a-info'}" style="margin-bottom:1rem">
+      <i class="fas ${substituir?'fa-triangle-exclamation':'fa-circle-info'}"></i>
+      <span>${substituir?'<b>Isso vai SUBSTITUIR</b> tudo que já está salvo pelo conteúdo desse arquivo.':'Isso vai <b>juntar</b> com o que já existe, sem apagar nada.'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;font-size:13px">
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.cosplayers)}</b> cosplayers</div>
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.eventos)}</b> eventos</div>
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.ideias)}</b> ideias</div>
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.cenas)}</b> cenas</div>
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.colabs)}</b> colabs</div>
+      <div style="background:var(--s2);border-radius:8px;padding:.7rem"><b>${cont(obj.lojas)}</b> lojas</div>
+    </div>
+    <p class="hint" style="margin-top:.8rem">📦 Tamanho: ${tamanhoMB}MB</p>
+    ${!cont(obj.cosplayers)&&!cont(obj.eventos)?'<div class="alert a-warn" style="margin-top:.6rem"><i class="fas fa-triangle-exclamation"></i><span>Esse arquivo parece vazio — confere se é o backup certo antes de continuar.</span></div>':''}
+  `;
+  openModal('mImportPreview');
+}
+
+function confirmarImportPendente(){
+  if(!importPendente)return;
+  aplicarImport(importPendente.obj,importPendente.substituir);
+  importPendente=null;
+  closeModal('mImportPreview');
+  const caixa=document.getElementById('admJsonPaste');
+  if(caixa)caixa.value='';
+}
+
+function cancelarImportPendente(){
+  importPendente=null;
+  closeModal('mImportPreview');
+  toast('Importação cancelada — nada foi alterado');
+}
+
 function aplicarImport(obj,substituir){
   if(!obj||typeof obj!=='object'){toast('Arquivo inválido','err');return}
   if(substituir){
-    if(!confirm('Isso apaga tudo que está aqui e usa só o arquivo. Continuar?'))return;
+    // ✅ confirmação já foi feita na tela de prévia — não pergunta de novo
     db={...db,...obj};
   }else{
     ['cosplayers','eventos','ideias','cenas'].forEach(k=>{
@@ -2313,19 +3033,48 @@ function importData(substituir){
   const f=document.getElementById('admImport').files[0];
   if(!f){toast('Escolha um arquivo primeiro','err');return}
   const r=new FileReader();
-  r.onload=e=>{try{aplicarImport(JSON.parse(e.target.result),substituir)}catch(x){toast('JSON inválido','err')}};
+  r.onload=e=>{try{prepararPreviewImport(JSON.parse(e.target.result),substituir)}catch(x){toast('❌ Esse arquivo não é um JSON válido','err')}};
   r.readAsText(f);
 }
 function importPasted(){
   const t=document.getElementById('admJsonPaste').value.trim();
   if(!t){toast('Cole o JSON primeiro','err');return}
-  try{aplicarImport(JSON.parse(t),false);document.getElementById('admJsonPaste').value=''}
-  catch(x){toast('JSON inválido','err')}
+  try{prepararPreviewImport(JSON.parse(t),false)}
+  catch(x){toast('❌ Esse texto não é um JSON válido','err')}
 }
 function wipe(){
   if(!confirm('Apagar TODOS os dados deste navegador? Não tem volta.'))return;
   if(!confirm('Tem certeza mesmo? Faça o backup antes se ainda não fez.'))return;
   localStorage.removeItem(KEY);localStorage.removeItem(ME);location.reload();
+}
+
+/* ✅ RESETS PARCIAIS — apagam só uma categoria, sem mexer no resto */
+function resetarEventos(){
+  if(!db.eventos.length){toast('Já não tem nenhum evento cadastrado','ok');return}
+  if(!confirm(`Apagar TODOS os ${db.eventos.length} eventos (com presenças confirmadas)? Não tem volta.`))return;
+  if(!confirm('Tem certeza mesmo? Considere baixar um backup antes (aba Dados).'))return;
+  db.eventos=[];
+  save();admRenderAll();renderEventos();renderEvGate();
+  toast('✅ Eventos resetados','ok');
+}
+
+function resetarIdeiasCenas(){
+  const total=db.ideias.length+db.cenas.length;
+  if(!total){toast('Já não tem ideias nem cenas cadastradas','ok');return}
+  if(!confirm(`Apagar TODAS as ${db.ideias.length} ideias e ${db.cenas.length} cenas? Não tem volta.`))return;
+  if(!confirm('Tem certeza mesmo? Considere baixar um backup antes (aba Dados).'))return;
+  db.ideias=[];db.cenas=[];
+  save();admRenderAll();renderIdeias();renderCenas();
+  toast('✅ Ideias e cenas resetadas','ok');
+}
+
+function resetarLojas(){
+  if(!(db.lojas||[]).length){toast('Já não tem nenhuma loja indicada','ok');return}
+  if(!confirm(`Apagar TODAS as ${db.lojas.length} lojas indicadas e os votos de todo mundo? Não tem volta.`))return;
+  if(!confirm('Tem certeza mesmo? Considere baixar um backup antes (aba Dados).'))return;
+  db.lojas=[];
+  save();admRenderAll();renderLojas();
+  toast('✅ Lojas resetadas','ok');
 }
 
 /* --- CLOUDFLARE --- */
@@ -2495,15 +3244,48 @@ async function cloudPush(auto=false){
   }
 }
 
+/* ✅ Primeiro carregamento com nova tentativa automática. A leitura no
+   Cloudflare KV escala bem mesmo com muita gente acessando ao mesmo tempo
+   — isso não costuma ser o problema. O que pode acontecer é uma falha de
+   rede pontual (conexão do visitante, timeout, Worker "esfriado"). Em vez
+   de desistir na primeira falha e deixar a pessoa sem ver nenhuma foto,
+   tenta de novo até 3 vezes com espera crescente antes de aceitar que
+   ficou só com os dados salvos localmente. */
+async function carregarComRetry(tentativa=1){
+  const sucesso=await cloudPull(true);
+  if(sucesso===false&&tentativa<3){
+    setTimeout(()=>carregarComRetry(tentativa+1),1500*tentativa);
+  }
+}
+
+/* ✅ Puxador de eventos melhorado: qualquer visitante pode forçar buscar
+   eventos novos na hora, sem esperar o ciclo automático de 12s. Dá
+   feedback visual claro (ícone girando + mensagem) e nunca deixa clicar
+   de novo enquanto já está buscando. */
+let atualizandoEventos=false;
+async function atualizarEventosAgora(){
+  if(atualizandoEventos)return;
+  atualizandoEventos=true;
+  const icone=document.getElementById('iconAtualizarEv');
+  if(icone)icone.classList.add('fa-spin');
+  toast('🔄 Buscando eventos novos...');
+
+  const sucesso=await cloudPull(true);
+
+  if(icone)icone.classList.remove('fa-spin');
+  atualizandoEventos=false;
+  toast(sucesso!==false?'✅ Eventos atualizados!':'⚠️ Não consegui buscar agora — tenta de novo em instantes',sucesso!==false?'ok':'err');
+}
+
 async function cloudPull(auto=false){
   const c=db.config||{};
   if(!c.workerUrl){
     if(!auto)toast('Conexão não configurada','err');
-    return;
+    return true; // não é falha de rede, é falta de configuração — não adianta tentar de novo
   }
   // nunca puxa por cima de algo que ainda não subiu
-  if(auto&&(pendente||syncing))return;
-  if(!auto&&!confirm('Isso traz os dados da nuvem e substitui os deste navegador. Continuar?'))return;
+  if(auto&&(pendente||syncing))return true;
+  if(!auto&&!confirm('Isso traz os dados da nuvem e substitui os deste navegador. Continuar?'))return true;
   if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Buscando...</span></div>`);
   
   try{
@@ -2516,23 +3298,38 @@ async function cloudPull(auto=false){
       if(r.status===409){
         console.warn('⚠️ Worker: 409 (binding não configurado)');
         syncBadge('on','Local apenas (Worker 409)');
-        return;
+        return true; // conectou, só falta o binding — não é falha de rede
       }
       throw new Error(`Worker respondeu ${r.status}`);
     }
     
     const obj=await r.json();
-    if(!obj||!obj.cosplayers){
+
+    // ✅ VALIDAÇÃO DE ESQUEMA: confere se o que veio da nuvem tem o formato
+    // esperado antes de aceitar qualquer coisa. Se vier malformado (por bug,
+    // erro de rede pela metade, etc), NUNCA aplica — mantém o que já está
+    // bom aqui, e tenta de novo depois.
+    const formatoValido=obj&&typeof obj==='object'&&!Array.isArray(obj)
+      &&Array.isArray(obj.cosplayers)
+      &&obj.cosplayers.every(c=>c&&typeof c==='object'&&typeof c.id!=='undefined'&&typeof c.username==='string');
+    if(!formatoValido){
+      console.error('🛑 Dados da nuvem em formato inesperado — ignorando pra não corromper o que já está salvo aqui');
+      if(!auto)toast('Os dados da nuvem vieram num formato estranho — mantive o que já estava aqui por segurança','err');
+      syncBadge('off','Dados da nuvem inválidos, ignorados');
+      return false; // isso sim vale a pena tentar de novo — pode ter sido uma resposta cortada pela metade
+    }
+
+    if(!obj.cosplayers.length){
       if(auto){
         pendente=true;
         agendarSync(300);
-        return;
+        return true;
       }
       throw new Error('Nada salvo na nuvem — clique em Enviar primeiro');
     }
     if(auto&&(db.updatedAt||0)>=(obj.updatedAt||0)){
       syncBadge('on','Tudo em dia');
-      return;
+      return true;
     }
 
     // TRAVA ANTI-PERDA: não aceita nuvem com menos gente ou menos fotos que aqui
@@ -2543,7 +3340,7 @@ async function cloudPull(auto=false){
       pendente=true;
       agendarSync(300);
       syncBadge('up','Restaurando dados...');
-      return;
+      return true;
     }
 
     const conf=db.config;
@@ -2574,6 +3371,8 @@ async function cloudPull(auto=false){
       renderEvGate();
       renderColabs();
       renderColabGate();
+      renderVitrine();
+      renderLojas();
       if(document.documentElement.classList.contains('admin'))admRenderAll();
     }
     
@@ -2582,12 +3381,14 @@ async function cloudPull(auto=false){
       cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados atualizados da nuvem.</span></div>`);
       toast('Dados sincronizados','ok');
     }
+    return true;
   }catch(e){
     console.error('❌ Erro pull:',e.message);
     syncBadge('off',e.message);
     if(!auto){
       cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados locais continuam seguros!</small></span></div>`);
     }
+    return false; // falha real de rede/servidor — essa sim vale tentar de novo
   }
 }
 
@@ -2600,9 +3401,18 @@ function doLogin(){
     document.getElementById('aUser').value='';
     document.getElementById('aPass').value='';
     closeModal('mLogin');renderCos();renderEventos();renderEvGate();toast('Acesso liberado','ok');openAdmin();
+    syncBadge(ultimoEstadoSync); // reaplica o banner offline caso já estivesse assim antes do login
+    setTimeout(recalcularSombrasTabs,150);
   }else toast('Usuário ou senha incorretos','err');
 }
-function logout(){document.documentElement.classList.remove('admin');sessionStorage.removeItem('dc_admin');closeModal('mAdmin');renderCos();renderEventos();renderEvGate();toast('Você saiu do admin')}
+function logout(){
+  document.documentElement.classList.remove('admin');
+  sessionStorage.removeItem('dc_admin');
+  closeModal('mAdmin');
+  renderCos();renderEventos();renderEvGate();
+  toast('Você saiu do admin');
+  syncBadge(ultimoEstadoSync); // esconde o banner na hora, já que visitante não pode ver
+}
 
 /* ===== COLABORAÇÕES ===== */
 function renderColabs(){
@@ -2674,7 +3484,392 @@ function delColab(id){
   save();renderColabs();toast('Removido','ok');
 }
 
+/* ===== VITRINE PARA EMPRESAS ===== */
+function renderVitrine(){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const el=document.getElementById('vitrineList');
+  const gate=document.getElementById('vitrineGate');
+
+  if(!me){
+    gate.innerHTML=`<div class="alert a-info"><i class="fas fa-lock"></i><span>Cadastre seu email primeiro (aba Cosplayers → Editar) pra ver os contatos e entrar na vitrine.</span></div>`;
+  }else{
+    gate.innerHTML='';
+  }
+
+  const arr=(db.vitrine||[]);
+  if(!arr.length){
+    el.innerHTML=`<div class="empty"><i class="fas fa-briefcase"></i><b>Ninguém na vitrine ainda</b>Seja o primeiro a se mostrar pras marcas!</div>`;
+    return;
+  }
+
+  el.innerHTML=arr.map(v=>{
+    const cos=db.cosplayers.find(x=>x.username===v.author);
+    const ehMenor=cos&&cos.menorDeIdade;
+    const podeVerContato=admin||(me&&me.username===v.author);
+
+    // ✅ TRAVA DE SEGURANÇA: se for menor, o contato mostrado (pra quem pode ver)
+    // é sempre o do responsável, nunca o contato pessoal do cosplayer.
+    let contatoHtml='';
+    if(podeVerContato){
+      if(ehMenor&&cos.responsavel){
+        contatoHtml=`<div class="alert a-warn" style="margin-top:.6rem;font-size:11.5px"><i class="fas fa-shield-halved"></i> Perfil de menor — contato do responsável (${cos.responsavel.nome}): <i class="fab fa-whatsapp"></i> ${cos.responsavel.whats}</div>`;
+      }else if(ehMenor&&!cos.responsavel){
+        contatoHtml=`<div class="alert a-warn" style="margin-top:.6rem;font-size:11.5px"><i class="fas fa-triangle-exclamation"></i> Perfil de menor sem responsável cadastrado — contato bloqueado até regularizar o cadastro.</div>`;
+      }else{
+        contatoHtml=`<p style="font-size:11px;margin-top:.5rem"><i class="fas fa-envelope"></i> ${cos?.email||''}</p>`;
+      }
+    }else if(ehMenor){
+      contatoHtml=`<p style="font-size:11px;color:var(--text2);margin-top:.5rem"><i class="fas fa-shield-halved"></i> Perfil de menor — contato só visível pro admin, que intermedia com o responsável.</p>`;
+    }
+
+    return `<div class="item">
+      <h3>${v.author}</h3>
+      <p style="font-size:12.5px"><b>📊 Seguidores:</b> ${v.seguidores}</p>
+      <p style="font-size:12.5px"><b>🎭 Perfil:</b> ${v.perfil}</p>
+      <p style="font-size:12.5px"><b>⏳ Tempo de cosplay:</b> ${v.tempo}</p>
+      <p style="font-size:13px;margin-top:.4rem">${v.diferencial}</p>
+      ${contatoHtml}
+      ${admin?`<div class="acts"><button class="bs del" onclick="delVitrine(${v.id})"><i class="fas fa-trash"></i></button></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openNovaVitrine(){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
+  const cos=db.cosplayers.find(x=>x.username===me.username);
+  const ehMenor=cos&&cos.menorDeIdade;
+
+  const authorHtml=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Publicando como <b>${me.username}</b>.</span></div>`;
+  document.getElementById('vitrineAuthor').innerHTML=authorHtml;
+  document.getElementById('vSeguidores').value='';
+  document.getElementById('vPerfil').value='';
+  document.getElementById('vTempo').value='';
+  document.getElementById('vDiferencial').value='';
+  document.getElementById('vitrineAvisoMenor').style.display=ehMenor?'block':'none';
+
+  if(ehMenor&&!cos.responsavel){
+    toast('Seu perfil é de menor e ainda não tem responsável cadastrado. Complete isso em "Editar Perfil" antes de entrar na vitrine.','err');
+    return;
+  }
+  openModal('mVitrine');
+}
+
+function saveVitrine(){
+  const me=getMe();if(!me)return;
+  const seguidores=document.getElementById('vSeguidores').value.trim();
+  const perfil=document.getElementById('vPerfil').value.trim();
+  const tempo=document.getElementById('vTempo').value.trim();
+  const diferencial=document.getElementById('vDiferencial').value.trim();
+  if(!seguidores||!perfil||!tempo||!diferencial){toast('Preencha todos os campos','err');return}
+
+  if(!Array.isArray(db.vitrine))db.vitrine=[];
+  db.vitrine=db.vitrine.filter(v=>v.author!==me.username);
+  db.vitrine.push({id:Date.now(),author:me.username,seguidores,perfil,tempo,diferencial});
+
+  save();renderVitrine();closeModal('mVitrine');
+  toast('Você entrou na vitrine!','ok');
+}
+
+function delVitrine(id){
+  if(!confirm('Remover da vitrine?'))return;
+  db.vitrine=(db.vitrine||[]).filter(v=>v.id!==id);
+  save();renderVitrine();toast('Removido','ok');
+}
+
+/* ===== LOJAS: indicação com like/dislike da comunidade ===== */
+let lojaFiltroOrdem='melhores', lojaFiltroCat='todas';
+let fotoLojaTemp=null; // guarda a foto do produto comprimida, antes de salvar
+
+// ✅ Cor da estrela varia de laranja (nota baixa) até amarelo-ouro (nota 5.0)
+function corEstrela(nota){
+  const n=Math.max(1,Math.min(5,nota||1));
+  const t=(n-1)/4; // 0 (nota 1) até 1 (nota 5)
+  const r=255;
+  const g=Math.round(140+(215-140)*t); // 140 (laranja) → 215 (amarelo)
+  const b=Math.round(0+(0)*t);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ✅ Monta os 5 ícones de estrela, preenchidos conforme a nota, na cor certa
+function estrelasHtml(nota){
+  if(!nota)return `<span style="color:var(--text2);font-size:11.5px">Ainda sem avaliação</span>`;
+  const cor=corEstrela(nota);
+  const cheias=Math.floor(nota);
+  const meia=(nota-cheias)>=0.4&&(nota-cheias)<0.9;
+  let html=`<span style="color:${cor};font-size:14px;letter-spacing:1px">`;
+  for(let i=0;i<cheias;i++)html+='★';
+  if(meia)html+='✦';
+  const vazias=5-cheias-(meia?1:0);
+  html+=`</span><span style="color:var(--border);font-size:14px;letter-spacing:1px">`;
+  for(let i=0;i<vazias;i++)html+='★';
+  html+=`</span>`;
+  return `${html} <b style="color:${cor};font-size:12.5px">${nota.toFixed(1)}</b>`;
+}
+
+function previewFotoLoja(input){
+  const f=input.files[0];
+  if(!f)return;
+  const slot=document.getElementById('lFotoSlot');
+  slot.innerHTML=`<i class="fas fa-spinner fa-spin"></i>`;
+  comprimirImagem(f,1000,.8).then(dataUrl=>{
+    fotoLojaTemp=dataUrl;
+    slot.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+  }).catch(()=>{
+    toast('Não consegui processar essa foto — tenta outra','err');
+    slot.innerHTML=`<i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>`;
+    fotoLojaTemp=null;
+  });
+}
+
+const REACOES_DISPONIVEIS=['👍','❤️','😂','😮','👎'];
+
+function renderLojas(){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const el=document.getElementById('lojaList');
+  const gate=document.getElementById('lojaGate');
+
+  if(!me){
+    gate.innerHTML=`<div class="alert a-info"><i class="fas fa-lock"></i><span>Cadastre seu email primeiro (aba Cosplayers → Editar) pra poder reagir e indicar lojas.</span></div>`;
+  }else{
+    gate.innerHTML='';
+  }
+
+  let arr=[...(db.lojas||[])];
+  if(lojaFiltroCat!=='todas')arr=arr.filter(l=>l.categoria===lojaFiltroCat);
+
+  if(lojaFiltroOrdem==='melhores'){
+    arr.sort((a,b)=>(b.nota||0)-(a.nota||0));
+  }else{
+    arr.sort((a,b)=>b.id-a.id);
+  }
+
+  if(!arr.length){
+    el.innerHTML=`<div class="empty"><i class="fas fa-store"></i><b>Nenhuma loja indicada ainda</b>Seja o primeiro a indicar uma!</div>`;
+    return;
+  }
+
+  const CAT_LABEL={tecido:'🧵 Tecido',props:'🛠️ Props/Armas',peruca:'💇 Perucas',calcado:'👟 Calçados/Acessórios',geral:'📦 Geral'};
+
+  el.innerHTML=arr.map(l=>{
+    const reacoes=l.reacoes||{};
+    const minhaReacao=me&&Object.keys(reacoes).find(emoji=>(reacoes[emoji]||[]).includes(me.username));
+
+    const chipsReacao=REACOES_DISPONIVEIS.map(emoji=>{
+      const qtd=(reacoes[emoji]||[]).length;
+      const ativa=minhaReacao===emoji;
+      return `<button class="bs${ativa?' indo':''}" style="padding:.35rem .5rem;font-size:13px" onclick="reagirLoja(${l.id},'${emoji}')" ${!me?'disabled':''}>${emoji}${qtd?` ${qtd}`:''}</button>`;
+    }).join('');
+
+    return `<div class="item">
+      ${l.foto?`<img src="${l.foto}" alt="Foto de ${l.nome}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:.6rem">
+        <h3 style="margin-bottom:.2rem">${l.nome}</h3>
+      </div>
+      <div style="margin-bottom:.4rem">${estrelasHtml(l.nota)}</div>
+      <div style="margin-bottom:.5rem"><span class="tag">${CAT_LABEL[l.categoria]||l.categoria}</span></div>
+      <a href="${l.link}" target="_blank" rel="noopener" style="font-size:12.5px;color:var(--primary);word-break:break-all"><i class="fas fa-link"></i> ${l.link}</a>
+      ${l.desc?`<p style="margin-top:.5rem">${l.desc}</p>`:''}
+      <p style="font-size:11px;color:var(--text2);margin-top:.5rem"><i class="fas fa-user"></i> Avaliado por ${l.author}</p>
+
+      <div style="display:flex;gap:.4rem;margin-top:.7rem;align-items:center;flex-wrap:wrap">
+        ${chipsReacao}
+        ${(admin||(me&&me.username===l.author))?`<button class="bs del" style="margin-left:auto" onclick="delLoja(${l.id})"><i class="fas fa-trash"></i></button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openNovaLoja(){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
+  document.getElementById('lojaAuthor').innerHTML=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Indicando como <b>${me.username}</b>.</span></div>`;
+  document.getElementById('lNome').value='';
+  document.getElementById('lLink').value='';
+  document.getElementById('lCategoria').value='';
+  document.getElementById('lNota').value='';
+  document.getElementById('lDesc').value='';
+  document.getElementById('lFotoSlot').innerHTML=`<i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>`;
+  document.getElementById('lFoto').value='';
+  fotoLojaTemp=null;
+  openModal('mLoja');
+}
+
+function saveLoja(){
+  const me=getMe();if(!me)return;
+  const nome=document.getElementById('lNome').value.trim();
+  const link=document.getElementById('lLink').value.trim();
+  const categoria=document.getElementById('lCategoria').value;
+  const nota=parseFloat(document.getElementById('lNota').value);
+  const desc=document.getElementById('lDesc').value.trim();
+  if(!nome||!link||!categoria){toast('Preencha nome, link e categoria','err');return}
+  if(!nota){toast('Escolha uma nota pra loja','err');return}
+  if(!link.startsWith('http')){toast('O link precisa começar com http:// ou https://','err');return}
+
+  if(!Array.isArray(db.lojas))db.lojas=[];
+
+  // evita indicar a mesma loja (mesmo link) duas vezes
+  const jaExiste=db.lojas.some(l=>l.link.toLowerCase()===link.toLowerCase());
+  if(jaExiste){toast('Essa loja já foi indicada — procura ela na lista pra reagir!','err');return}
+
+  db.lojas.push({id:Date.now(),nome,link,categoria,nota,foto:fotoLojaTemp,desc,author:me.username,reacoes:{}});
+  save();renderLojas();closeModal('mLoja');
+  fotoLojaTemp=null;
+  toast('Loja indicada! Obrigado por ajudar a comunidade 🎉','ok');
+}
+
+function reagirLoja(id,emoji){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra reagir','err');return}
+  const l=(db.lojas||[]).find(x=>x.id===id);
+  if(!l)return;
+  if(!l.reacoes)l.reacoes={};
+
+  // ✅ uma reação por pessoa por loja: clicar no mesmo emoji tira a reação,
+  // clicar em outro emoji troca automaticamente
+  REACOES_DISPONIVEIS.forEach(e=>{
+    if(!l.reacoes[e])l.reacoes[e]=[];
+    const i=l.reacoes[e].indexOf(me.username);
+    if(i>=0)l.reacoes[e].splice(i,1);
+  });
+  const jaEstava=(l.reacoes[emoji]||[]).includes(me.username);
+  if(!jaEstava){
+    l.reacoes[emoji]=l.reacoes[emoji]||[];
+    l.reacoes[emoji].push(me.username);
+  }
+  save();renderLojas();
+}
+
+function delLoja(id){
+  if(!confirm('Remover essa indicação?'))return;
+  db.lojas=(db.lojas||[]).filter(l=>l.id!==id);
+  save();renderLojas();toast('Removido','ok');
+}
+
+/* ===== MENU "MAIS FILTROS" (dropdown no desktop, bandeja no celular) ===== */
+function toggleFiltroPanel(painelId,event){
+  if(event)event.stopPropagation();
+  const painel=document.getElementById(painelId);
+  const backdrop=document.getElementById('filtroBackdrop');
+  const jaAberto=painel.classList.contains('active');
+  fecharTodosFiltroPanel();
+  if(!jaAberto){
+    const ehMobile=window.innerWidth<=640;
+    if(ehMobile){
+      // No celular: limpa qualquer posição fixa calculada antes, pra a
+      // regra de "bandeja subindo de baixo" (definida no CSS mobile) assumir
+      painel.style.top='';painel.style.left='';painel.style.right='';painel.style.bottom='';
+    }else{
+      // No desktop: calcula a posição exata colada embaixo do botão clicado
+      const btn=event&&event.currentTarget;
+      if(btn){
+        const rect=btn.getBoundingClientRect();
+        painel.style.top=(rect.bottom+6)+'px';
+        painel.style.left='';
+        painel.style.right=(window.innerWidth-rect.right)+'px';
+        painel.style.bottom='';
+      }
+    }
+    painel.classList.add('active');
+    if(backdrop)backdrop.classList.add('active');
+  }
+}
+function fecharTodosFiltroPanel(){
+  document.querySelectorAll('.filtro-panel').forEach(p=>p.classList.remove('active'));
+  const backdrop=document.getElementById('filtroBackdrop');
+  if(backdrop)backdrop.classList.remove('active');
+}
+// fecha se clicar fora do painel (fora do botão/dropdown também)
+document.addEventListener('click',(e)=>{
+  if(!e.target.closest('.filtro-dropdown'))fecharTodosFiltroPanel();
+});
+// mostra uma "tag" no botão "Mais filtros" quando o filtro ativo é um dos escondidos
+function atualizarTagFiltro(...args){
+  const tagId=args[args.length-1];
+  const visiveis=args.slice(0,-2);
+  const ativo=args[args.length-2];
+  const tag=document.getElementById(tagId);
+  if(!tag)return;
+  tag.textContent=visiveis.includes(ativo)?'':'• 1';
+}
+
 /* ===== UI ===== */
+/* ===== TELA DE BOAS-VINDAS ===== */
+function fotoAleatoriaCosplayer(){
+  const comFoto=db.cosplayers.filter(c=>(c.photos&&c.photos.length)||c.photo);
+  if(!comFoto.length)return null;
+  const c=comFoto[Math.floor(Math.random()*comFoto.length)];
+  return (c.photos&&c.photos[0])||c.photo;
+}
+function fotoAleatoriaEvento(){
+  const comFoto=db.eventos.filter(e=>e.status!=='pendente'&&e.img);
+  if(!comFoto.length)return null;
+  return comFoto[Math.floor(Math.random()*comFoto.length)].img;
+}
+
+function construirSplash(){
+  const grid=document.getElementById('splashGrid');
+  if(!grid)return;
+
+  const cards=[
+    {tab:'cosplayers',icone:'🎭',titulo:'Cosplayers',desc:'Veja a galera e seus personagens',foto:fotoAleatoriaCosplayer()},
+    {tab:'eventos',icone:'📅',titulo:'Eventos',desc:'Próximos encontros da comunidade',foto:fotoAleatoriaEvento()},
+    {tab:'ideias',icone:'💡',titulo:'Ideias',desc:'Sugestões de personagens pra recriar',foto:null},
+    {tab:'colabs',icone:'👯',titulo:'Colabs',desc:'Monte duo, trio ou grupo',foto:null},
+    {tab:'empresas',icone:'💼',titulo:'Marcas',desc:'Parcerias e patrocínios',foto:null},
+    {tab:'lojas',icone:'🛍️',titulo:'Lojas',desc:'Onde comprar pra montar seu cosplay',foto:null},
+  ];
+
+  grid.innerHTML=cards.map(c=>`
+    <div class="splash-card" onclick="fecharSplash('${c.tab}')">
+      ${c.foto?`<img src="${c.foto}" alt="${c.titulo}" onerror="this.remove()">`:''}
+      <div class="sc-overlay">
+        <span class="sc-icon">${c.icone}</span>
+        <div class="sc-titulo">${c.titulo}</div>
+        <div class="sc-desc">${c.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function abrirSplash(){
+  // aparece 1x por sessão (cada vez que a pessoa abre o site de novo, some
+  // e volta a aparecer — não fica se repetindo enquanto navega dentro dela)
+  if(sessionStorage.getItem('dc_splash_visto'))return;
+  construirSplash();
+  document.getElementById('splash').classList.add('active');
+}
+
+function fecharSplash(tab){
+  document.getElementById('splash').classList.remove('active');
+  sessionStorage.setItem('dc_splash_visto','1');
+  if(tab)switchTab(tab);
+}
+
+/* ✅ Recalcula a sombra de "tem mais abas pra esse lado" nas duas barras
+   (navegação principal e painel admin) — chamável de qualquer lugar,
+   sempre que o conteúdo ou a visibilidade delas pode ter mudado. */
+/* ✅ Rola a barra de abas ao clicar nas setas — funciona em qualquer
+   dispositivo, inclusive PC sem tela de toque */
+function rolarTabs(barId,direcao){
+  const bar=document.getElementById(barId);
+  if(!bar)return;
+  bar.scrollBy({left:direcao*160,behavior:'smooth'});
+}
+
+function recalcularSombrasTabs(){
+  const folga=4;
+  [['tabsBar','tabsWrap'],['admTabsBar','admTabsWrap']].forEach(([barId,wrapId])=>{
+    const bar=document.getElementById(barId);
+    const wrap=document.getElementById(wrapId);
+    if(!bar||!wrap)return;
+    wrap.classList.toggle('scroll-left',bar.scrollLeft>folga);
+    wrap.classList.toggle('scroll-right',bar.scrollLeft<bar.scrollWidth-bar.clientWidth-folga);
+  });
+}
+
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.content').forEach(c=>c.classList.toggle('active',c.id===name));
@@ -2691,16 +3886,50 @@ function init(){
   load();seed();
   if(sessionStorage.getItem('dc_admin'))document.documentElement.classList.add('admin');
 
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+  // ✅ Tela de boas-vindas — usa os dados já salvos localmente (não espera
+  // a nuvem responder, aparece na hora)
+  abrirSplash();
+
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+    switchTab(t.dataset.tab);
+    // ✅ garante que a aba clicada sempre fica totalmente visível,
+    // "empurrando" a barra pra revelar as próximas se preciso
+    t.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
+  });
+
+  // ✅ Indicador visual de scroll nas barras de abas: mostra sombra dos lados
+  // que realmente têm mais conteúdo escondido — assim fica claro (em
+  // qualquer celular ou navegador) que dá pra arrastar pros lados.
+  // Também liga a rodinha do mouse (funciona sem precisar de touch nem
+  // segurar Shift) e centraliza a aba clicada na tela.
+  [['tabsBar','tabsWrap'],['admTabsBar','admTabsWrap']].forEach(([barId,wrapId])=>{
+    const bar=document.getElementById(barId);
+    if(!bar)return;
+    bar.addEventListener('scroll',recalcularSombrasTabs);
+    bar.addEventListener('wheel',(e)=>{
+      // só assume o scroll da rodinha se realmente tiver conteúdo horizontal
+      // pra rolar — senão deixa a rolagem vertical normal da página acontecer
+      if(bar.scrollWidth<=bar.clientWidth)return;
+      e.preventDefault();
+      bar.scrollLeft+=e.deltaY;
+    },{passive:false});
+  });
+  window.addEventListener('resize',recalcularSombrasTabs);
+  setTimeout(recalcularSombrasTabs,100); // espera renderizar pra medir certo
+  document.querySelector('.admin-star')?.addEventListener('click',()=>setTimeout(recalcularSombrasTabs,150));
+
   document.querySelectorAll('.adm-tab').forEach(t=>t.onclick=()=>{
     document.querySelectorAll('.adm-tab').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.adm-pane').forEach(p=>p.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('at-'+t.dataset.at).classList.add('active');
+    t.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
   });
   document.querySelectorAll('.fbtn[data-f]').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.fbtn[data-f]').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');filter=b.dataset.f;renderCos();
+    atualizarTagFiltro('todos','cosplay',filter,'tagFiltroCos');
+    fecharTodosFiltroPanel();
   });
   document.querySelectorAll('.fbtn[data-ef]').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.fbtn[data-ef]').forEach(x=>x.classList.remove('active'));
@@ -2709,6 +3938,14 @@ function init(){
   document.querySelectorAll('.fbtn[data-ecf]').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.fbtn[data-ecf]').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');renderColabs();
+  });
+  document.querySelectorAll('.fbtn[data-lf]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fbtn[data-lf]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');lojaFiltroOrdem=b.dataset.lf;renderLojas();
+  });
+  document.querySelectorAll('.fbtn[data-lc]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.fbtn[data-lc]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');lojaFiltroCat=b.dataset.lc;renderLojas();
   });
   document.querySelectorAll('.vbtn').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('active'));
@@ -2720,7 +3957,7 @@ function init(){
   document.getElementById('fSchedule').oninput=schedInfo;
   document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active')});
 
-  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();
+  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();
 
   // RELÓGIO: publica automaticamente as postagens agendadas quando chega a hora
   setInterval(()=>{
@@ -2734,7 +3971,7 @@ function init(){
 
   // NUVEM: busca ao abrir e mantém tudo em dia
   syncBadge('up','Conectando...');
-  cloudPull(true);
+  carregarComRetry(); // primeira busca com nova tentativa automática (ver função abaixo)
   setInterval(()=>cloudPull(true),12000);          // confere novidades a cada 12s
   // ❌ REMOVIDO DE PROPÓSITO: NUNCA fazer push automático em intervalo.
   // Isso causava perda de dados quando uma aba carregava antes do pull
@@ -2754,6 +3991,14 @@ function init(){
   });
 }
 window.addEventListener('DOMContentLoaded',init);
+
+// ✅ PWA: registra o service worker pra o site funcionar mesmo offline
+// (dados e fotos já carregados no navegador continuam acessíveis)
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{/* offline não é crítico, ignora silenciosamente */});
+  });
+}
 </script>
 </body>
 </html>

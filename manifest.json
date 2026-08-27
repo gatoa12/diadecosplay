@@ -1,0 +1,18 @@
+{
+  "name": "DiaDeCosplay",
+  "short_name": "DiaDeCosplay",
+  "description": "Diretório da comunidade de cosplay de Natal/RN — perfis, eventos, colabs e parcerias com marcas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#E4405F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
