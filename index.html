@@ -1448,6 +1448,140 @@ function seed(){
     setTimeout(()=>cloudPush(true),1000);
   }
 
+  // ✅ CONSERTO AUTOMÁTICO: corrige @ que ficaram com número/lixo colado na
+  // frente (ex: "@1 - @celipe.cosplay") — isso acontecia quando alguém
+  // colava uma lista numerada na caixa de "Adicionar cosplayers em lote".
+  // Se já existe uma versão limpa do mesmo @ (com dados de verdade
+  // preenchidos), mantém a boa e remove a "fantasma"; senão, só limpa
+  // o nome do próprio perfil, sem apagar nada.
+  const pareceLixo=(u)=>/^@\d/.test(u)||/^@[\s\-\).]/.test(u); // começa com @seguido de número, espaço, hífen ou parênteses
+  let corrigidos=0;
+  const cosplayersLimpos=[];
+  const vistosLimpos=new Map(); // @ limpo (minúsculo) -> índice no array final
+
+  db.cosplayers.forEach(c=>{
+    if(!pareceLixo(c.username)){
+      const chave=c.username.toLowerCase();
+      if(vistosLimpos.has(chave)){
+        // já existe uma entrada limpa igual — mantém a com mais dados preenchidos
+        const iExistente=vistosLimpos.get(chave);
+        const pontosNovo=(c.email?2:0)+((c.photos||[]).length);
+        const pontosExistente=(cosplayersLimpos[iExistente].email?2:0)+((cosplayersLimpos[iExistente].photos||[]).length);
+        if(pontosNovo>pontosExistente)cosplayersLimpos[iExistente]=c;
+        corrigidos++;
+      }else{
+        vistosLimpos.set(chave,cosplayersLimpos.length);
+        cosplayersLimpos.push(c);
+      }
+      return;
+    }
+    // é um "fantasma" com lixo na frente — limpa o @ dele
+    const limpo=limparPrefixoNumerico(c.username.replace(/^@/,''));
+    const chave=limpo.toLowerCase();
+    corrigidos++;
+    if(vistosLimpos.has(chave)){
+      // já existe uma versão limpa de verdade — mantém a que tiver mais dados
+      const iExistente=vistosLimpos.get(chave);
+      const pontosFantasma=(c.email?2:0)+((c.photos||[]).length);
+      const pontosExistente=(cosplayersLimpos[iExistente].email?2:0)+((cosplayersLimpos[iExistente].photos||[]).length);
+      if(pontosFantasma>pontosExistente){
+        c.username=limpo;
+        cosplayersLimpos[iExistente]=c;
+      }
+      // senão, simplesmente descarta o fantasma (a boa já está na lista)
+    }else{
+      c.username=limpo;
+      vistosLimpos.set(chave,cosplayersLimpos.length);
+      cosplayersLimpos.push(c);
+    }
+  });
+  if(corrigidos>0){
+    console.warn(`🧹 ${corrigidos} @ corrigido(s)/fantasma(s) removido(s)`);
+    db.cosplayers=cosplayersLimpos;
+    save();
+    setTimeout(()=>cloudPush(true),1200);
+  }
+
+  // ✅ CAMADA DE INTEGRIDADE GERAL: roda toda vez que o site carrega.
+  // Regra fixa: nada se duplica, nunca — eventos, fotos, lojas, tudo.
+  let integridadeMexeu=false;
+
+  // 1) Fotos duplicadas dentro do MESMO perfil (a pessoa subiu a mesma
+  //    imagem 2x sem perceber, ou uma sincronização bugada duplicou)
+  db.cosplayers.forEach(c=>{
+    if(Array.isArray(c.photos)&&c.photos.length>1){
+      const unicas=[...new Set(c.photos)];
+      if(unicas.length!==c.photos.length){
+        c.photos=unicas;
+        c.photo=unicas[0]||null;
+        integridadeMexeu=true;
+      }
+    }
+  });
+
+  // 2) Eventos com o MESMO título+data+hora mas IDs diferentes (cobre o
+  //    caso raro de duas pessoas criarem "o mesmo" evento ao mesmo tempo)
+  {
+    const vistosEv=new Set();
+    const eventosLimpos=db.eventos.filter(e=>{
+      const chave=`${(e.title||'').toLowerCase().trim()}|${e.date}|${e.time||''}`;
+      if(vistosEv.has(chave))return false;
+      vistosEv.add(chave);
+      return true;
+    });
+    if(eventosLimpos.length!==db.eventos.length){
+      db.eventos=eventosLimpos;
+      integridadeMexeu=true;
+    }
+  }
+
+  // 3) Lojas com o MESMO link (a trava existe ao indicar, mas confere
+  //    de novo aqui — cobre dados antigos de antes dessa trava existir)
+  if(Array.isArray(db.lojas)&&db.lojas.length>1){
+    const vistosLoja=new Map();
+    const lojasLimpas=[];
+    db.lojas.forEach(l=>{
+      const chave=(l.link||'').toLowerCase().trim();
+      if(!chave){lojasLimpas.push(l);return}
+      if(vistosLoja.has(chave)){
+        // mantém a que tiver mais informação (foto, comentários, reações)
+        const i=vistosLoja.get(chave);
+        const pontosNova=(l.foto?2:0)+((l.comentarios||[]).length)+Object.values(l.reacoes||{}).reduce((n,a)=>n+a.length,0);
+        const pontosAtual=(lojasLimpas[i].foto?2:0)+((lojasLimpas[i].comentarios||[]).length)+Object.values(lojasLimpas[i].reacoes||{}).reduce((n,a)=>n+a.length,0);
+        if(pontosNova>pontosAtual)lojasLimpas[i]=l;
+      }else{
+        vistosLoja.set(chave,lojasLimpas.length);
+        lojasLimpas.push(l);
+      }
+    });
+    if(lojasLimpas.length!==db.lojas.length){
+      db.lojas=lojasLimpas;
+      integridadeMexeu=true;
+    }
+  }
+
+  // 4) Vitrine: só 1 entrada por pessoa (mantém a mais recente)
+  if(Array.isArray(db.vitrine)&&db.vitrine.length>1){
+    const vistosVit=new Map();
+    db.vitrine.forEach(v=>{
+      const chave=(v.author||'').toLowerCase();
+      if(!vistosVit.has(chave)||v.id>db.vitrine[vistosVit.get(chave)].id){
+        vistosVit.set(chave,db.vitrine.indexOf(v));
+      }
+    });
+    const vitrineLimpa=[...vistosVit.values()].map(i=>db.vitrine[i]);
+    if(vitrineLimpa.length!==db.vitrine.length){
+      db.vitrine=vitrineLimpa;
+      integridadeMexeu=true;
+    }
+  }
+
+  if(integridadeMexeu){
+    console.warn('🧹 Camada de integridade removeu duplicatas (fotos/eventos/lojas/vitrine)');
+    save();
+    setTimeout(()=>cloudPush(true),1400);
+  }
+
   seedEvento();
   seedAjuda();
 }
@@ -3010,22 +3144,34 @@ function admStats(){
 function admRenderAll(){admStats();admRenderCos();admRenderEv();admRenderConteudo();admRenderLojas();admRenderAjuda();renderSnapshots();checarPWA();setTimeout(recalcularSombrasTabs,100)}
 
 /* --- COSPLAYERS --- */
+/* ✅ Limpa "1 - ", "74-", "74) " etc que vêm coladas antes do @ quando a
+   pessoa cola uma lista numerada — sem mexer em maiúsculas/minúsculas do
+   @ de verdade (diferente de normalizarHandle, que só serve pra COMPARAR). */
+function limparPrefixoNumerico(raw){
+  let t=raw.trim();
+  t=t.replace(/^[\d\s\-\).]+/,''); // remove qualquer número/hífen/parêntese/ponto no começo
+  if(!t.startsWith('@'))t='@'+t;
+  return t;
+}
+
 function admAddCos(){
   const txt=document.getElementById('admNovosCos').value.trim();
   if(!txt){toast('Cole pelo menos um @','err');return}
-  const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(s=>s.startsWith('@')?s:'@'+s);
+  const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(limparPrefixoNumerico);
   const existentes=db.cosplayers.map(c=>c.username.toLowerCase());
   let maxId=db.cosplayers.reduce((m,c)=>Math.max(m,c.id),0);
-  let add=0;
+  let add=0,ignorados=0;
   nomes.forEach(u=>{
     if(!existentes.includes(u.toLowerCase())){
-      db.cosplayers.push({id:++maxId,username:u,nome:'',email:'',cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',userTrocado:false,nomeTrocado:false});
+      db.cosplayers.push({id:++maxId,username:u,nome:'',email:'',cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',userTrocado:false,qtdTrocasUser:0,nomeTrocado:false});
       existentes.push(u.toLowerCase());add++;
+    }else{
+      ignorados++;
     }
   });
   save();document.getElementById('admNovosCos').value='';
   admRenderAll();renderCos();
-  toast(add?`${add} adicionado(s)`:'Todos já estavam na lista','ok');
+  toast(add?`${add} adicionado(s)${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'Todos já estavam na lista','ok');
 }
 
 function admRenderCos(){
