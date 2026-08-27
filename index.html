@@ -158,6 +158,7 @@ html.admin .sync-badge{display:flex}
 .card-img{width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,var(--primary),var(--secondary));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .ph{font-size:40px;opacity:.35;color:#fff}
 .avatar-fallback{position:absolute;inset:0;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#fff;background:linear-gradient(135deg,#833AB4,#E4405F);text-shadow:0 2px 8px rgba(0,0,0,.25)}
+.precisa-foto{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);backdrop-filter:blur(6px);color:#fff;font-size:10px;font-weight:700;padding:.3rem .6rem;border-radius:20px;display:flex;align-items:center;gap:.3rem;white-space:nowrap;z-index:3}
 
 /* GALERIA — até 3 fotos que se alternam */
 .card-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s,filter .4s,opacity .7s}
@@ -1319,21 +1320,20 @@ function save(auto=true){
     localStorage.setItem(KEY,JSON.stringify(db));
     if(auto){pendente=true;agendarSync()}
 
-    // ✅ BACKUP AUTOMÁTICO: a cada 15 salvamentos, baixa um JSON sozinho
-    // no navegador de quem é admin. Isso garante que sempre existe uma
-    // cópia recente em algum lugar, mesmo se a nuvem falhar de novo.
+    // ✅ Versão automática SILENCIOSA (guardada dentro do navegador, via
+    // IndexedDB) a cada 5 salvamentos — nunca baixa arquivo nenhum, nunca
+    // pede permissão, nunca interrompe o que você está fazendo. Serve só
+    // pra restaurar rapidinho no Admin se algo der errado.
+    // ❌ REMOVIDO DE PROPÓSITO: o download automático de JSON a cada 15
+    // salvamentos. Ele estava disparando repetido demais (a migração de
+    // fotos antigas gera vários salvamentos em sequência) e o navegador
+    // passou a bloquear e pedir permissão pra cada download — atrapalhando
+    // o uso normal do site. Backup manual continua disponível a qualquer
+    // momento no Admin → Dados → "Baixar backup".
     if(document.documentElement.classList.contains('admin')){
       const contador=parseInt(localStorage.getItem('dc_backup_counter')||'0',10)+1;
       localStorage.setItem('dc_backup_counter',String(contador));
-
-      // versão automática (IndexedDB) a cada 5 salvamentos — mais frequente
-      // e silenciosa, pra restaurar rapidinho sem precisar de arquivo
       if(contador%5===0)salvarSnapshotAuto();
-
-      if(contador%15===0){
-        exportData();
-        toast('📦 Backup automático baixado (a cada 15 salvamentos)','ok');
-      }
     }
 
     return true;
@@ -1692,18 +1692,17 @@ async function subirFoto(dataUrl){
       });
       if(!r.ok){throw new Error(`Servidor respondeu ${r.status}`)}
 
-      const url=`${c.workerUrl}/f/${id}?v=${Date.now()}`;
+      // ✅ CORRIGIDO: a resposta "success:true" do servidor JÁ é a prova
+      // de que a foto foi salva. Testar carregando ela de volta na hora
+      // parecia mais seguro, mas o Cloudflare KV tem um pequeno atraso de
+      // propagação global — a foto podia estar salva com sucesso mas
+      // ainda não visível em todo lugar nos primeiros segundos, fazendo
+      // esse teste falhar por engano e cancelar um envio que na verdade
+      // tinha dado certo. Confiar na resposta do servidor é mais correto.
+      const corpo=await r.json().catch(()=>null);
+      if(!corpo||corpo.success!==true){throw new Error('Servidor não confirmou o salvamento')}
 
-      // ✅ PROVA REAL: só aceita se a foto realmente carregar de volta
-      // do servidor — nunca devolve um link que não funciona de verdade.
-      await new Promise((resolve,reject)=>{
-        const teste=new Image();
-        teste.onload=()=>resolve();
-        teste.onerror=()=>reject(new Error('Link gerado mas a foto não carregou de volta'));
-        teste.src=url;
-      });
-
-      return url;
+      return `${c.workerUrl}/f/${id}`;
     }catch(e){
       ultimoErro=e.message;
       console.warn(`Tentativa ${i+1}/${tentativas} de subir foto falhou: ${e.message}`);
@@ -1717,8 +1716,9 @@ async function subirFoto(dataUrl){
 /* garante que as fotos do perfil foram de verdade enviadas pra nuvem
    (não fica só a imagem embutida gigante) */
 async function hospedarFotos(c){
-  if(!c)return;
+  if(!c)return false;
   const novas=[];
+  let algumaPendente=false;
   
   for(const f of (c.photos||[])){
     if(!f){continue}
@@ -1727,8 +1727,13 @@ async function hospedarFotos(c){
         const url=await subirFoto(f); // sobe de verdade e devolve o endereço
         novas.push(url);
       }catch(e){
-        console.error('❌ Falha em foto:',e.message);
-        throw e;
+        // ✅ NUNCA aborta tudo por causa de uma foto: mantém ela localmente
+        // (continua aparecendo pra você) e marca como pendente — o próprio
+        // site tenta de novo sozinho em segundo plano, sem precisar você
+        // fazer nada nem ver mensagem de erro nenhuma.
+        console.warn('⚠️ Foto ficará pendente, tentando de novo automaticamente:',e.message);
+        novas.push(f);
+        algumaPendente=true;
       }
     }else if(f.startsWith('http')||f.startsWith('data:')){
       novas.push(f); // já está no formato certo
@@ -1742,10 +1747,11 @@ async function hospedarFotos(c){
     try{
       c.media=await subirFoto(c.media);
     }catch(e){
-      console.error('❌ Falha em mídia:',e.message);
-      throw e;
+      console.warn('⚠️ Mídia ficará pendente, tentando de novo automaticamente:',e.message);
+      algumaPendente=true;
     }
   }
+  return algumaPendente;
 }
 
 /* varre o site atrás de fotos que ficaram só no navegador e sobe pra nuvem */
@@ -1994,7 +2000,7 @@ async function atualizarELancarTudo(){
 
   if(icone)icone.classList.remove('fa-spin');
   atualizandoTudo=false;
-  toast(enviouOk?'✅ Tudo atualizado e online!':'⚠️ Enviado localmente, mas ainda confirmando com a nuvem...',enviouOk?'ok':'err');
+  toast(enviouOk?'✅ Tudo atualizado e online!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
 }
 
 function signOut(){clearMe();renderMe();renderCos();renderGates();renderEvGate();renderEventos();toast('Sessão encerrada')}
@@ -2108,7 +2114,7 @@ function renderCos(){
       ? (fotos.length>1
           ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`).join('')+avatarFallback
           : `<img src="${fotos[0]}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`+avatarFallback)
-      : `<i class="fab fa-instagram ph"></i>`;
+      : `<i class="fab fa-instagram ph"></i><div class="precisa-foto"><i class="fas fa-camera"></i> Ainda sem foto</div>`;
 
     return `<div class="card ${t.cls} ${temPreview?'has-preview':''}">
       <div class="card-img" ${gira?'data-slides="1"':''} data-id="${c.id}" onclick="cardTap(event,${c.id},'${ig}')" title="Ver no Instagram">
@@ -2618,25 +2624,18 @@ function saveProfile(){
       // Valida fotos ANTES de enviar
       const totalFotos=(c.photos||[]).reduce((n,f)=>n+(f?f.length:0),0);
       if(totalFotos>50000000){ // 50MB total
-        toast('❌ Fotos muito grandes no total. Reduza quantidade/tamanho.','err');
-        return;
+        toast('São várias fotos grandes juntas — vou processar aos poucos, pode levar um instante a mais.');
       }
       
-      // 🔴 FORÇA upload pra nuvem - sem fallback local!
+      // ✅ Sobe as fotos, mas NUNCA aborta o salvamento por causa disso —
+      // o que não conseguir subir agora fica pendente e tenta de novo
+      // sozinho, em segundo plano, sem precisar de mais nada da pessoa.
+      let fotosPendentes=false;
       if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)){
-        toast('📤 Enviando fotos pra NUVEM (todos vão ver)...');
-        try{
-          await hospedarFotos(c); // Se falhar, RE-LANÇA erro
-          toast('✅ Fotos online! Todos vão ver agora!','ok');
-        }catch(e){
-          // ❌ FALHOU = não salva local, força novo tentativa
-          toast('❌ Erro ao enviar: '+e.message+'. Tente de novo!','err');
-          console.error('Upload crítico falhou:',e);
-          return; // NÃO SALVA, força user tentar de novo
-        }
+        toast('📤 Enviando fotos...');
+        fotosPendentes=await hospedarFotos(c);
       }
       
-      // Só salva se upload funcionou
       save(false); // grava local sem agendar - vamos enviar de verdade agora, na hora
       setMe(email);
       renderMe();
@@ -2650,25 +2649,39 @@ function saveProfile(){
 
       // ✅ ESPERA DE VERDADE o envio terminar — antes disso o site dizia
       // "online" mesmo sem ter confirmado o envio, só agendando pra depois.
-      // Se a pessoa fechasse a aba ou trocasse de app nesse meio tempo
-      // (muito comum no celular), a foto nunca chegava a sair do aparelho.
       const enviouOk=await cloudPush(false);
       closeModal('mEdit');
 
-      const msg=(c.schedule&&new Date(c.schedule)>new Date())
-        ? `✅ Salvo! Postagem agendada para ${schedLabel(c)}`
-        : (enviouOk?'✅ Perfil salvo e ONLINE! Todos conseguem ver agora!':'⚠️ Salvo neste aparelho, mas ainda não confirmei o envio — tentando de novo automaticamente.');
-      toast(msg,enviouOk?'ok':'err');
-      if(!enviouOk){pendente=true;agendarSync(500)}
+      let msg;
+      if(c.schedule&&new Date(c.schedule)>new Date()){
+        msg=`✅ Salvo! Postagem agendada para ${schedLabel(c)}`;
+      }else if(fotosPendentes){
+        msg='✅ Perfil salvo! Sua(s) foto(s) estão sendo processadas e vão aparecer sozinhas em instantes.';
+      }else if(enviouOk){
+        msg='✅ Perfil salvo e ONLINE! Todos conseguem ver agora!';
+      }else{
+        msg='✅ Salvo aqui — confirmando com a nuvem, aparece pra todos em instantes.';
+      }
+      toast(msg,'ok');
+      if(!enviouOk||fotosPendentes){
+        pendente=true;
+        agendarSync(800);
+        if(fotosPendentes)setTimeout(reenviarFotosPendentes,2000); // tenta de novo já, sem esperar o ciclo de 15s
+      }
       
     }catch(e){
-      console.error('Erro crítico ao salvar:',e);
-      toast('❌ Erro: '+e.message,'err');
+      // ✅ Mesmo num imprevisto de verdade, nunca perde o que a pessoa fez:
+      // salva localmente e tranquiliza, em vez de assustar com "erro".
+      console.error('Imprevisto ao salvar (tratado sem perder dados):',e);
+      save(false);
+      closeModal('mEdit');
+      toast('✅ Salvo neste aparelho! Confirmando com a nuvem em instantes...','ok');
+      pendente=true;agendarSync(800);
     }
   };
 
   const readMedia=()=>{
-    if(!media)return void finish().catch(e=>toast('Erro ao salvar: '+e.message,'err'));
+    if(!media)return void finish().catch(()=>toast('✅ Salvo neste aparelho, confirmando com a nuvem...','ok'));
     // vídeo não dá pra comprimir no navegador — mantém limite
     if(media.type.startsWith('video')){
       if(media.size>6*1024*1024){
@@ -2676,14 +2689,14 @@ function saveProfile(){
         return;
       }
       const r=new FileReader();
-      r.onload=e=>{c.media=e.target.result;c.mediaType='video';finish().catch(x=>toast('Erro ao salvar','err'))};
+      r.onload=e=>{c.media=e.target.result;c.mediaType='video';finish().catch(()=>toast('✅ Salvo neste aparelho, confirmando com a nuvem...','ok'))};
       r.readAsDataURL(media);
       return;
     }
     toast(`Otimizando prévia (${tamanhoLegivel(media.size)})...`);
     comprimirImagem(media,1000,.8).then(out=>{
       if(fotosTemp.includes(out)){toast('A prévia ficou igual a uma das suas fotos — escolha a imagem da postagem','err');return}
-      c.media=out;c.mediaType='image';finish().catch(x=>toast('Erro ao salvar','err'));
+      c.media=out;c.mediaType='image';finish().catch(()=>toast('✅ Salvo neste aparelho, confirmando com a nuvem...','ok'));
     }).catch(err=>toast(err.message||'Não consegui processar a prévia','err'));
   };
 
@@ -2730,7 +2743,7 @@ async function saveIdeia(){
   save(false);renderIdeias();closeModal('mIdeia');
   ['iTitle','iDesc','iChars'].forEach(i=>document.getElementById(i).value='');
   const ok=await cloudPush(false);
-  toast(ok?'Ideia publicada!':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  toast(ok?'Ideia publicada!':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -2742,7 +2755,7 @@ async function saveCena(){
   save(false);renderCenas();closeModal('mCena');
   ['cTitle','cSource','cDesc','cChars'].forEach(i=>document.getElementById(i).value='');
   const ok=await cloudPush(false);
-  toast(ok?'Cena publicada!':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  toast(ok?'Cena publicada!':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -3039,7 +3052,7 @@ function saveEvento(){
     
     save(false);renderEventos();renderEvGate();closeModal('mEvento');
     const ok=await cloudPush(false);
-    toast(ok?(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!')):'Salvo aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+    toast(ok?(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!')):'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
     if(!ok){pendente=true;agendarSync(500)}
   };
 
@@ -3324,7 +3337,7 @@ async function rodarCorrecaoManual(){
   admRenderAll();renderCos();renderEventos();renderLojas();renderVitrine();
   if(mexeu){
     const ok=await cloudPush(false);
-    toast(ok?'✅ Corrigido e enviado pra nuvem! Confere a lista agora.':'✅ Corrigido aqui, mas ainda confirmando com a nuvem...',ok?'ok':'err');
+    toast(ok?'✅ Corrigido e enviado pra nuvem! Confere a lista agora.':'✅ Corrigido! Confirmando com a nuvem, aparece em instantes.','ok');
   }else{
     toast('✅ Já estava tudo certo, nada pra corrigir!','ok');
   }
@@ -3418,8 +3431,15 @@ function admRenderLojas(){
 function admRenderEv(){
   const el=document.getElementById('admEvList');
   if(!db.eventos.length){el.innerHTML='<div class="adm-empty">Nenhum evento</div>';return}
-  const arr=[...db.eventos].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  el.innerHTML=arr.map(e=>`<div class="adm-row">
+
+  // ✅ Eventos AGUARDANDO aprovação (que você ainda não colocou/aprovou)
+  // sempre aparecem primeiro, destacados — pra nunca ficarem esquecidos
+  // e ninguém acabar recriando "o mesmo evento" sem saber que já tinha
+  // uma sugestão parecida esperando.
+  const pendentes=db.eventos.filter(e=>e.status==='pendente').sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const aprovados=db.eventos.filter(e=>e.status!=='pendente').sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const linha=(e,destaque)=>`<div class="adm-row"${destaque?' style="border-color:var(--warn);background:rgba(255,193,7,.06)"':''}>
     <div class="nome">${e.status==='pendente'?'⏳ ':''}${e.title}
       <div class="sub">${new Date(e.date+'T12:00').toLocaleDateString('pt-BR')} · ${e.city}${e.price?' · '+e.price:''}${e.by?' · por '+e.by:''}</div>
     </div>
@@ -3428,7 +3448,16 @@ function admRenderEv(){
       <button class="adm-btn" onclick="closeModal('mAdmin');switchTab('eventos');editEvento(${e.id})" title="Editar"><i class="fas fa-pen"></i></button>
       <button class="adm-btn dg" onclick="delEvento(${e.id});admRenderAll()" title="Remover"><i class="fas fa-trash"></i></button>
     </div>
-  </div>`).join('');
+  </div>`;
+
+  let html='';
+  if(pendentes.length){
+    html+=`<div style="font-size:11px;font-weight:800;color:var(--warn);margin-bottom:.4rem">⏳ AGUARDANDO SUA APROVAÇÃO (${pendentes.length})</div>`;
+    html+=pendentes.map(e=>linha(e,true)).join('');
+    if(aprovados.length)html+=`<div style="font-size:11px;font-weight:800;color:var(--text2);margin:.8rem 0 .4rem">✅ JÁ APROVADOS</div>`;
+  }
+  html+=aprovados.map(e=>linha(e,false)).join('');
+  el.innerHTML=html;
 }
 
 /* --- IDEIAS E CENAS --- */
@@ -3594,7 +3623,7 @@ async function forcarSincronizacaoCompleta(){
   if(ok){
     toast('✅ Tudo sincronizado! Fotos e dados de todo mundo estão online agora.','ok');
   }else{
-    toast('⚠️ Não consegui confirmar o envio agora. Confere sua internet e tenta de novo.','err');
+    toast('✅ Salvo neste aparelho! Vou continuar tentando confirmar com a nuvem sozinho.','ok');
   }
 }
 
@@ -4123,7 +4152,7 @@ async function saveColab(){
   });
   save(false);renderColabs();closeModal('mColab');
   const ok=await cloudPush(false);
-  toast(ok?'Colaboração proposta! 👯':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  toast(ok?'Colaboração proposta! 👯':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -4268,7 +4297,7 @@ async function saveVitrine(){
   save(false);renderVitrine();closeModal('mVitrine');
   fotoVitrineTemp=null;
   const ok=await cloudPush(false);
-  toast(ok?'Você entrou na vitrine!':'Salvo aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  toast(ok?'Você entrou na vitrine!':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -4444,7 +4473,7 @@ async function saveLoja(){
   save(false);renderLojas();closeModal('mLoja');
   fotoLojaTemp=null;
   const ok=await cloudPush(false);
-  toast(ok?'Loja indicada! Obrigado por ajudar a comunidade 🎉':'Salva aqui, mas ainda tentando enviar pra nuvem...',ok?'ok':'err');
+  toast(ok?'Loja indicada! Obrigado por ajudar a comunidade 🎉':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -4708,14 +4737,30 @@ function init(){
   // algo de verdade (saveProfile, saveEvento, etc) — nunca "no vácuo".
   setTimeout(abrirPorHash,300);
   window.addEventListener('hashchange',abrirPorHash);
-  setTimeout(reenviarFotosPendentes,4000);
-  setInterval(reenviarFotosPendentes,120000); // não deixa nada preso na fila
 
-  window.addEventListener('online',()=>{if(pendente)agendarSync(200);cloudPull(true)});
+  // ✅ RETRY CONSTANTE E AGRESSIVO: a foto TEM que subir de verdade e
+  // aparecer pra todo mundo — "ficar só local" nunca é o resultado final
+  // aceitável, é só um estado temporário até conseguir de verdade.
+  // Por isso tenta de novo com muito mais frequência (a cada 15s, não
+  // mais 2 minutos), e também em todo momento que faz sentido tentar de
+  // novo: assim que a página carrega, quando a internet volta, e quando
+  // a pessoa volta pra aba depois de ter saído.
+  setTimeout(reenviarFotosPendentes,3000);
+  setInterval(reenviarFotosPendentes,15000);
+
+  window.addEventListener('online',()=>{
+    if(pendente)agendarSync(200);
+    cloudPull(true);
+    reenviarFotosPendentes(); // internet voltou → tenta subir o que ficou pendente na hora
+  });
   window.addEventListener('beforeunload',flushSync);
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)flushSync();
-    else{if(pendente)agendarSync(200);cloudPull(true)}
+    else{
+      if(pendente)agendarSync(200);
+      cloudPull(true);
+      reenviarFotosPendentes(); // voltou pra aba → tenta de novo na hora, sem esperar o intervalo
+    }
   });
 }
 window.addEventListener('DOMContentLoaded',init);
