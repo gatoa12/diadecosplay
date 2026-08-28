@@ -94,6 +94,8 @@ html.admin .sync-badge{display:flex}
 .tabs-wrap.scroll-left .tabs-arrow.left{display:flex}
 .tabs-wrap.scroll-right .tabs-arrow.right{display:flex}
 .tab-ic{font-size:14px;margin-right:.3rem;display:inline-block}
+.tab-badge{display:none;min-width:16px;height:16px;padding:0 4px;background:var(--primary);color:#fff;font-size:10px;font-weight:800;border-radius:20px;align-items:center;justify-content:center;margin-left:.35rem;vertical-align:middle;box-shadow:0 0 0 2px var(--s1)}
+.tab-badge.on{display:inline-flex}
 .tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px;flex:0 0 auto}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab:hover{color:var(--text)}
@@ -476,10 +478,10 @@ html.admin .admin-only{display:flex!important}
   <button class="tabs-arrow left" id="tabsArrowLeft" onclick="rolarTabs('tabsBar',-1)" aria-label="Rolar pra esquerda"><i class="fas fa-chevron-left"></i></button>
   <div class="tabs" id="tabsBar">
     <div class="tab active" data-tab="cosplayers"><span class="tab-ic">🎭</span> Cosplayers</div>
-    <div class="tab" data-tab="eventos"><span class="tab-ic">📅</span> Eventos</div>
-    <div class="tab" data-tab="ideias"><span class="tab-ic">💡</span> Ideias</div>
-    <div class="tab" data-tab="cenas"><span class="tab-ic">🎬</span> Cenas</div>
-    <div class="tab" data-tab="colabs"><span class="tab-ic">🤝</span> Colabs</div>
+    <div class="tab" data-tab="eventos"><span class="tab-ic">📅</span> Eventos<span class="tab-badge" id="badge-eventos"></span></div>
+    <div class="tab" data-tab="ideias"><span class="tab-ic">💡</span> Ideias<span class="tab-badge" id="badge-ideias"></span></div>
+    <div class="tab" data-tab="cenas"><span class="tab-ic">🎬</span> Cenas<span class="tab-badge" id="badge-cenas"></span></div>
+    <div class="tab" data-tab="colabs"><span class="tab-ic">🤝</span> Colabs<span class="tab-badge" id="badge-colabs"></span></div>
     <div class="tab" data-tab="empresas"><span class="tab-ic">🏷️</span> Marcas</div>
     <div class="tab" data-tab="lojas"><span class="tab-ic">🏪</span> Lojas</div>
     <div class="tab" data-tab="ajuda"><span class="tab-ic">💬</span> Ajuda</div>
@@ -504,6 +506,10 @@ html.admin .admin-only{display:flex!important}
         <button class="fbtn" data-f="wigmaker">💇 WigMaker</button>
         <button class="fbtn" data-f="propmaker">🛠️ PropMaker</button>
         <button class="fbtn" data-f="cosmaker">💄 CosMaker</button>
+        <button class="fbtn" data-f="editor">🎞️ Editor(a)</button>
+        <button class="fbtn" data-f="artista">🎨 Artista</button>
+        <button class="fbtn" data-f="maquiadora">💋 Maquiador(a)</button>
+        <button class="fbtn" data-f="streamer">🎥 Streamer</button>
         <div class="fsep-h"></div>
         <button class="fbtn" data-f="post">🆕 Com postagem</button>
         <button class="fbtn" data-f="semcat">❔ Sem categoria</button>
@@ -514,7 +520,7 @@ html.admin .admin-only{display:flex!important}
   <div class="toolbar">
     <div class="count" id="count">0 cosplayers</div>
     <div style="display:flex;gap:.6rem;align-items:center">
-      <button class="btn sec btn-inline" onclick="openAutoCadastro()"><i class="fas fa-user-plus"></i> Não estou na lista</button>
+      <button class="btn sec btn-inline" onclick="openAutoCadastro()"><i class="fas fa-user-plus"></i> Adicionar um amigo</button>
       <div class="views">
         <button class="vbtn active" data-v="grid"><i class="fas fa-table-cells-large"></i> Colunas</button>
         <button class="vbtn" data-v="carousel"><i class="fas fa-arrows-left-right"></i> Deslizar</button>
@@ -527,8 +533,9 @@ html.admin .admin-only{display:flex!important}
 <!-- MODAL: AUTO-CADASTRO (visitante que ainda não está na lista) -->
 <div id="mAutoCadastro" class="modal"><div class="mbox" style="max-width:440px">
   <button class="mclose" onclick="closeModal('mAutoCadastro')">&times;</button>
-  <div class="mtitle">🙋 Entrar pra comunidade</div>
-  <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Preenche seu @, nome e WhatsApp pra entrar na lista. Seu perfil já aparece pra todo mundo — depois, quando quiser editar mais coisas (fotos, categoria, etc), é só cadastrar seu email.</span></div>
+  <div class="mtitle">🙋 Adicionar cosplayer</div>
+  <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Pode ser você ou um amigo(a) que ainda não está na lista. Preenche @, nome e WhatsApp pra entrar. O perfil já aparece pra todo mundo — depois, quando a pessoa quiser editar mais coisas (fotos, categoria, etc), é só ela cadastrar o próprio email.</span></div>
+  <div class="alert a-warn" style="margin-top:.6rem"><i class="fas fa-shield-halved"></i><span>Só adicione com o consentimento da pessoa — o WhatsApp cadastrado é usado só pra confirmar quem é o dono do perfil depois.</span></div>
 
   <div class="fg">
     <label class="fl"><i class="fab fa-instagram"></i> Seu @ do Instagram <span style="color:var(--error)">*</span></label>
@@ -648,11 +655,20 @@ html.admin .admin-only{display:flex!important}
 <div id="ajuda" class="content"><div class="wrapper">
   <div style="background:linear-gradient(135deg,#833AB4,#E4405F);border-radius:14px;padding:1.4rem;margin-bottom:1.5rem">
     <h2 style="font-size:19px;font-weight:800;margin-bottom:.7rem"><i class="fas fa-masks-theater"></i> Sobre a comunidade DiaDeCosplay</h2>
-    <p style="font-size:13.5px;line-height:1.6;opacity:.95">
-      O DiaDeCosplay nasceu pra unir cosplayers de Natal/RN (e além) num só lugar: pra encontrar gente pra colaborações,
-      divulgar eventos, trocar ideias de personagens e criar uma rede de apoio de verdade entre quem vive dessa arte.
+    <p style="font-size:13.5px;line-height:1.7;opacity:.95">
+      Nossa comunidade nasceu com um propósito claro: <b>fortalecer e expandir a cena cosplay de Natal, no Rio Grande do Norte</b>.
+      A ideia é simples — quando não houver eventos grandes marcados no calendário, a gente se organiza e cria os próprios
+      encontros, porque cosplay não pode esperar datas.
+    </p>
+    <p style="font-size:13.5px;line-height:1.7;opacity:.95;margin-top:.8rem">
+      Estamos sempre em evolução, e <b>toda ideia é bem-vinda</b>. Quanto mais a comunidade cresce, mais perto ficamos de ter
+      encontros com frequência real, quase sob demanda. Mudança de local, escolha de novos pontos de encontro e decisões
+      sobre os próximos passos são sempre feitas <b>em conjunto, por votação</b> — porque essa comunidade é de todo mundo
+      que faz parte dela.
+    </p>
+    <p style="font-size:13.5px;line-height:1.7;opacity:.95;margin-top:.8rem">
       Aqui você mostra seu trabalho, monta duos e grupos, fica sabendo dos próximos encontros e, se quiser, se conecta
-      com marcas em busca de parceria. A ideia é simples: <b>crescer junto, com respeito e segurança pra todo mundo</b>,
+      com marcas em busca de parceria. A ideia é <b>crescer junto, com respeito e segurança pra todo mundo</b>,
       especialmente pros membros mais novos da comunidade — por isso perfis de menores de idade têm proteções extras
       em qualquer contato com terceiros.
     </p>
@@ -775,6 +791,10 @@ html.admin .admin-only{display:flex!important}
       <div class="chip"><input type="checkbox" id="cWig" value="wigmaker"><label for="cWig"><span class="ci">💇</span>WigMaker</label></div>
       <div class="chip"><input type="checkbox" id="cProp" value="propmaker"><label for="cProp"><span class="ci">🛠️</span>PropMaker</label></div>
       <div class="chip"><input type="checkbox" id="cCos" value="cosmaker"><label for="cCos"><span class="ci">💄</span>CosMaker</label></div>
+      <div class="chip"><input type="checkbox" id="cEditor" value="editor"><label for="cEditor"><span class="ci">🎞️</span>Editor(a)</label></div>
+      <div class="chip"><input type="checkbox" id="cArtista" value="artista"><label for="cArtista"><span class="ci">🎨</span>Artista</label></div>
+      <div class="chip"><input type="checkbox" id="cMaquiadora" value="maquiadora"><label for="cMaquiadora"><span class="ci">💋</span>Maquiador(a)</label></div>
+      <div class="chip"><input type="checkbox" id="cStreamer" value="streamer"><label for="cStreamer"><span class="ci">🎥</span>Streamer</label></div>
     </div>
     <span class="hint">Você escolhe. Ninguém define isso por você. <b>CosMaker</b> é pra quem faz maquiagem.</span>
   </div>
@@ -873,7 +893,7 @@ html.admin .admin-only{display:flex!important}
 <!-- MODAL: CENA -->
 <div id="mCena" class="modal"><div class="mbox">
   <button class="mclose" onclick="closeModal('mCena')">&times;</button>
-  <div class="mtitle">🎬 Sugerir Cena</div>
+  <div class="mtitle" id="cenaModalTitulo">🎬 Sugerir Cena</div>
   <div id="cenaAuthor"></div>
   <div class="fg"><label class="fl">Título da cena</label><input type="text" class="fi" id="cTitle" placeholder="Ex: Luta final do Naruto vs Sasuke"></div>
   <div class="fg"><label class="fl">Obra / Fonte</label><input type="text" class="fi" id="cSource" placeholder="Anime, filme, jogo..."></div>
@@ -883,7 +903,7 @@ html.admin .admin-only{display:flex!important}
     <select class="fs" id="cDiff"><option value="Fácil">Fácil</option><option value="Média" selected>Média</option><option value="Difícil">Difícil</option></select>
   </div>
   <div class="bgrp">
-    <button class="btn" onclick="saveCena()"><i class="fas fa-check"></i> Enviar</button>
+    <button class="btn" onclick="saveCena()"><i class="fas fa-check"></i> <span id="cenaBtnTexto">Enviar</span></button>
     <button class="btn sec" onclick="closeModal('mCena')">Cancelar</button>
   </div>
 </div></div>
@@ -2339,7 +2359,7 @@ function renderCos(){
   document.getElementById('count').textContent=`${arr.length} cosplayer${arr.length===1?'':'s'}`;
   if(!arr.length){g.innerHTML=`<div class="empty"><i class="fas fa-face-frown"></i><b>Nada encontrado</b>Tente outro filtro ou busca</div>`;return}
 
-  const CAT={cosplay:'👺 Cosplay',wigmaker:'💇 WigMaker',propmaker:'🛠️ PropMaker',cosmaker:'💄 CosMaker'};
+  const CAT={cosplay:'👺 Cosplay',wigmaker:'💇 WigMaker',propmaker:'🛠️ PropMaker',cosmaker:'💄 CosMaker',editor:'🎞️ Editor(a)',artista:'🎨 Artista',maquiadora:'💋 Maquiador(a)',streamer:'🎥 Streamer'};
 
   g.innerHTML=arr.map(c=>{
     const ig=`https://instagram.com/${c.username.replace('@','')}`;
@@ -2543,6 +2563,10 @@ function openEdit(id,focusPost){
   document.getElementById('cWig').checked=(c.cats||[]).includes('wigmaker');
   document.getElementById('cProp').checked=(c.cats||[]).includes('propmaker');
   document.getElementById('cCos').checked=(c.cats||[]).includes('cosmaker');
+  document.getElementById('cEditor').checked=(c.cats||[]).includes('editor');
+  document.getElementById('cArtista').checked=(c.cats||[]).includes('artista');
+  document.getElementById('cMaquiadora').checked=(c.cats||[]).includes('maquiadora');
+  document.getElementById('cStreamer').checked=(c.cats||[]).includes('streamer');
   document.getElementById('fSlide').checked=c.slideshow!==false;
   fotosTemp=(c.photos&&c.photos.length)?[...c.photos]:(c.photo?[c.photo]:[]);
   fotosTempTocado=false; // reseta a cada edição — só vira true se a pessoa mexer de propósito
@@ -2721,48 +2745,85 @@ function gerarPdfAutorizacao(cosplayer,responsavel){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const dataAgora=new Date().toLocaleString('pt-BR');
+  const SITE_URL='https://diadecosplay.pages.dev';
+  const linkPerfil=`${SITE_URL}/#${cosplayer.username.replace('@','')}`;
+  // ✅ código de referência do documento — liga esse PDF específico ao
+  // perfil e ao momento em que foi assinado, pra facilitar conferência
+  const codigoDoc=`DC-${cosplayer.id}-${Date.now().toString(36).toUpperCase()}`;
 
+  // --- CABEÇALHO ---
   doc.setFillColor(228,64,95);
-  doc.rect(0,0,210,28,'F');
+  doc.rect(0,0,210,30,'F');
   doc.setTextColor(255,255,255);
-  doc.setFontSize(18);
-  doc.text('🎭 DiaDeCosplay',15,13);
-  doc.setFontSize(11);
+  doc.setFontSize(19);
+  doc.setFont(undefined,'bold');
+  doc.text('DiaDeCosplay',15,14);
+  doc.setFont(undefined,'normal');
+  doc.setFontSize(10.5);
   doc.text('Termo de Autorização de Participação de Menor de Idade',15,21);
+  doc.setFontSize(8);
+  doc.text(SITE_URL,15,26.5);
+  doc.setFontSize(7.5);
+  doc.text(`Ref: ${codigoDoc}`,195,26.5,{align:'right'});
 
   doc.setTextColor(30,30,30);
-  doc.setFontSize(12);
   let y=42;
-  doc.setFont(undefined,'bold');doc.text('Dados do(a) cosplayer',15,y);doc.setFont(undefined,'normal');
-  y+=8;
-  doc.setFontSize(11);
-  doc.text(`Nome / Instagram: ${cosplayer.nome?cosplayer.nome+' — ':''}${cosplayer.username}`,15,y);y+=7;
-  doc.text(`Idade informada: ${cosplayer.idade} anos`,15,y);y+=7;
-  doc.text(`Email cadastrado: ${cosplayer.email||'-'}`,15,y);y+=12;
 
-  doc.setFontSize(12);
-  doc.setFont(undefined,'bold');doc.text('Dados do responsável',15,y);doc.setFont(undefined,'normal');
-  y+=8;
-  doc.setFontSize(11);
-  doc.text(`Nome: ${responsavel.nome}`,15,y);y+=7;
-  doc.text(`WhatsApp: ${responsavel.whats}`,15,y);y+=12;
+  // --- CAIXA: DADOS DO COSPLAYER ---
+  doc.setFillColor(245,245,248);
+  doc.roundedRect(15,y-6,180,26,2,2,'F');
+  doc.setFont(undefined,'bold');doc.setFontSize(11);
+  doc.text('👤 Dados do(a) cosplayer',18,y);
+  doc.setFont(undefined,'normal');doc.setFontSize(10);
+  y+=7;
+  doc.text(`Nome / Instagram: ${cosplayer.nome?cosplayer.nome+' — ':''}${cosplayer.username}`,18,y);y+=6;
+  doc.text(`Idade informada: ${cosplayer.idade} anos    ·    Email: ${cosplayer.email||'-'}`,18,y);y+=6;
+  doc.setTextColor(100,100,105);doc.setFontSize(8.5);
+  doc.text(`Perfil no site: ${linkPerfil}`,18,y);
+  doc.setTextColor(30,30,30);
+  y+=14;
 
-  doc.setFontSize(10.5);
+  // --- CAIXA: DADOS DO RESPONSÁVEL ---
+  doc.setFillColor(245,245,248);
+  doc.roundedRect(15,y-6,180,19,2,2,'F');
+  doc.setFont(undefined,'bold');doc.setFontSize(11);
+  doc.text('👨‍👩‍👧 Dados do responsável',18,y);
+  doc.setFont(undefined,'normal');doc.setFontSize(10);
+  y+=7;
+  doc.text(`Nome: ${responsavel.nome}`,18,y);y+=6;
+  doc.text(`WhatsApp: ${responsavel.whats}`,18,y);
+  y+=16;
+
+  // --- TEXTO DE AUTORIZAÇÃO (destacado) ---
+  doc.setFillColor(255,247,230);
   const texto='Eu, responsável pelo(a) cosplayer acima identificado(a), autorizo sua participação na comunidade DiaDeCosplay, incluindo presença em encontros, publicação de fotos no site e, quando aplicável, contato de marcas parceiras exclusivamente através do meu WhatsApp informado acima — nunca diretamente com o(a) menor.';
-  const linhas=doc.splitTextToSize(texto,180);
-  doc.text(linhas,15,y);
-  y+=linhas.length*5+10;
+  const linhas=doc.splitTextToSize(texto,168);
+  const alturaTexto=linhas.length*5+10;
+  doc.roundedRect(15,y-6,180,alturaTexto,2,2,'F');
+  doc.setDrawColor(255,193,7);doc.setLineWidth(.8);
+  doc.line(15,y-6,15,y-6+alturaTexto); // barrinha lateral de destaque
+  doc.setFontSize(10);
+  doc.text(linhas,21,y);
+  y+=alturaTexto+8;
 
-  doc.setFont(undefined,'bold');doc.setFontSize(12);doc.text('Assinatura do responsável',15,y);doc.setFont(undefined,'normal');
+  // --- ASSINATURA ---
+  doc.setFont(undefined,'bold');doc.setFontSize(11);doc.text('✍️ Assinatura do responsável',15,y);doc.setFont(undefined,'normal');
   y+=4;
+  doc.setDrawColor(210,210,215);doc.setLineWidth(.3);
+  doc.roundedRect(15,y,90,32,2,2);
   if(assinaturaImg){
-    doc.addImage(assinaturaImg,'PNG',15,y,90,30);
+    doc.addImage(assinaturaImg,'PNG',18,y+2,84,28);
   }
-  y+=36;
-  doc.setDrawColor(180,180,180);
-  doc.line(15,y,105,y);
-  doc.setFontSize(9);doc.setTextColor(120,120,120);
-  doc.text('Documento gerado eletronicamente em '+dataAgora+' pelo site DiaDeCosplay.',15,y+6);
+  y+=40;
+
+  // --- RODAPÉ ---
+  doc.setDrawColor(220,220,225);
+  doc.line(15,y,195,y);
+  y+=6;
+  doc.setFontSize(8);doc.setTextColor(130,130,135);
+  doc.text(`Documento gerado eletronicamente em ${dataAgora} pelo site DiaDeCosplay.`,15,y);y+=4.5;
+  doc.text(`Confira este perfil e o cadastro completo em: ${linkPerfil}`,15,y);y+=4.5;
+  doc.text(`Código de referência: ${codigoDoc}`,15,y);
 
   return doc.output('datauristring'); // já sai como data URL, pronto pra embutir/guardar
 }
@@ -2956,7 +3017,7 @@ function saveProfile(){
   c.cosplayFavorito=document.getElementById('fCosplayFavorito').value.trim();
   c.fotoFavorito=fotoFavoritoTemp; // sobe junto com as outras fotos no hospedarFotos, se for nova
   c.emoji=getPickedEmoji();
-  c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
+  c.cats=['cCosplay','cWig','cProp','cCos','cEditor','cArtista','cMaquiadora','cStreamer'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
   // ✅ TRAVA DE SEGURANÇA: só aplica o rascunho de fotos se a pessoa
   // realmente mexeu nelas (adicionou ou removeu) OU se o rascunho tem
   // fotos de verdade pra salvar. Se o rascunho estiver vazio e a pessoa
@@ -3108,6 +3169,7 @@ function renderColabGate(){
 }
 
 let ideiaEditId=null;
+let cenaEditId=null;
 let fotoIdeiaTemp=null;
 
 function previewFotoIdeia(input){
@@ -3141,7 +3203,17 @@ function tryAdd(kind){
     fotoIdeiaTemp=null;
     document.getElementById('ideiaAuthor').innerHTML=authorHtml;openModal('mIdeia');
   }
-  else{document.getElementById('cenaAuthor').innerHTML=authorHtml;openModal('mCena')}
+  else{
+    cenaEditId=null;
+    document.getElementById('cenaModalTitulo').textContent='🎬 Sugerir Cena';
+    document.getElementById('cenaBtnTexto').textContent='Enviar';
+    document.getElementById('cTitle').value='';
+    document.getElementById('cSource').value='';
+    document.getElementById('cDesc').value='';
+    document.getElementById('cChars').value='';
+    document.getElementById('cDiff').value='Média';
+    document.getElementById('cenaAuthor').innerHTML=authorHtml;openModal('mCena');
+  }
 }
 
 /* ✅ Abre a ideia já existente pra edição — só quem criou (ou admin) vê o
@@ -3206,15 +3278,49 @@ async function saveIdeia(){
   if(!ok||fotoPendente){pendente=true;agendarSync(500)}
 }
 
+/* ✅ Abre a cena já existente pra edição — só quem criou (ou admin) vê */
+function editarCena(id){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const c=db.cenas.find(x=>x.id===id);
+  if(!c)return;
+  if(!admin&&(!me||c.email!==me.email)){toast('Só quem criou pode editar','err');return}
+
+  cenaEditId=id;
+  document.getElementById('cenaModalTitulo').textContent='✏️ Editar Cena';
+  document.getElementById('cenaBtnTexto').textContent='Salvar alterações';
+  document.getElementById('cTitle').value=c.title||'';
+  document.getElementById('cSource').value=c.source||'';
+  document.getElementById('cDesc').value=c.desc||'';
+  document.getElementById('cChars').value=c.chars||'';
+  document.getElementById('cDiff').value=c.diff||'Média';
+  document.getElementById('cenaAuthor').innerHTML=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Editando como <b>${c.author}</b>.</span></div>`;
+  openModal('mCena');
+}
+
 async function saveCena(){
   const me=getMe();if(!me)return;
   const t=document.getElementById('cTitle').value.trim();
   if(!t){toast('Coloque um título','err');return}
-  db.cenas.unshift({id:Date.now(),title:t,source:document.getElementById('cSource').value.trim(),desc:document.getElementById('cDesc').value.trim(),chars:document.getElementById('cChars').value.trim(),diff:document.getElementById('cDiff').value,author:me.username,email:me.email,date:new Date().toISOString()});
+
+  const source=document.getElementById('cSource').value.trim();
+  const desc=document.getElementById('cDesc').value.trim();
+  const chars=document.getElementById('cChars').value.trim();
+  const diff=document.getElementById('cDiff').value;
+
+  const eraEdicao=!!cenaEditId;
+  if(cenaEditId){
+    const c=db.cenas.find(x=>x.id===cenaEditId);
+    if(c){c.title=t;c.source=source;c.desc=desc;c.chars=chars;c.diff=diff}
+  }else{
+    db.cenas.unshift({id:Date.now(),title:t,source,desc,chars,diff,author:me.username,email:me.email,date:new Date().toISOString()});
+  }
+
   save(false);renderCenas();closeModal('mCena');
   ['cTitle','cSource','cDesc','cChars'].forEach(i=>document.getElementById(i).value='');
+  cenaEditId=null;
   const ok=await cloudPush(false);
-  toast(ok?'Cena publicada!':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
+  toast(ok?(eraEdicao?'Cena atualizada!':'Cena publicada!'):'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
 }
 
@@ -3358,12 +3464,13 @@ function renderCenas(){
     return new Date(b.date)-new Date(a.date);
   });
   el.innerHTML=arr.map(c=>`<div class="item">
-    <h3>${c.title}</h3>
-    ${c.source?`<p><b>${c.source}</b></p>`:''}
-    ${c.desc?`<p>${c.desc}</p>`:''}
-    <div><span class="tag">${c.diff}</span>${c.chars?c.chars.split(',').map(x=>`<span class="tag">${x.trim()}</span>`).join(''):''}</div>
+    <h3>${escapeHtml(c.title)}</h3>
+    ${c.source?`<p><b>${escapeHtml(c.source)}</b></p>`:''}
+    ${c.desc?`<p>${escapeHtml(c.desc)}</p>`:''}
+    <div><span class="tag">${c.diff}</span>${c.chars?c.chars.split(',').map(x=>`<span class="tag">${escapeHtml(x.trim())}</span>`).join(''):''}</div>
     <div class="item-meta"><i class="fas fa-user"></i> ${c.author} ${me&&c.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
-      ${me&&c.email===me.email?`<button class="bs del" style="margin-left:auto;padding:.3rem .6rem" onclick="delCena(${c.id})"><i class="fas fa-trash"></i></button>`:''}
+      ${(me&&c.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="editarCena(${c.id})" title="Editar"><i class="fas fa-pen"></i></button>
+      <button class="bs del" style="padding:.3rem .6rem" onclick="delCena(${c.id})" title="Excluir"><i class="fas fa-trash"></i></button>`:''}
     </div>
   </div>`).join('');
 }
@@ -4732,6 +4839,7 @@ async function cloudPull(auto=false){
       renderColabGate();
       renderVitrine();
       renderLojas();
+      atualizarBadgesNovidades();
       if(document.documentElement.classList.contains('admin'))admRenderAll();
     }
     
@@ -5388,6 +5496,47 @@ function alternarTema(){
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.content').forEach(c=>c.classList.toggle('active',c.id===name));
+  marcarAbaVista(name);
+}
+
+/* ===== SELOS DE NOVIDADE nas abas — mostra "quantos itens novos" desde
+   a última vez que a pessoa entrou naquela aba, tipo notificação. ===== */
+const ABAS_COM_NOVIDADE=['eventos','ideias','cenas','colabs'];
+
+function dataDoItem(item){
+  if(item.date){const d=new Date(item.date);if(!isNaN(d))return d}
+  if(typeof item.id==='number'&&item.id>1000000000000)return new Date(item.id); // id no formato Date.now()
+  return null;
+}
+
+function marcarAbaVista(name){
+  if(!ABAS_COM_NOVIDADE.includes(name))return;
+  localStorage.setItem('dc_visto_'+name,String(Date.now()));
+  atualizarBadgesNovidades();
+}
+
+function atualizarBadgesNovidades(){
+  const fontes={eventos:db.eventos,ideias:db.ideias,cenas:db.cenas,colabs:db.colabs};
+  ABAS_COM_NOVIDADE.forEach(nome=>{
+    const badge=document.getElementById('badge-'+nome);
+    if(!badge)return;
+    let visto=localStorage.getItem('dc_visto_'+nome);
+    if(visto===null){
+      // ✅ primeira visita — não mostra tudo como "novo" de uma vez,
+      // só passa a contar a partir de agora
+      localStorage.setItem('dc_visto_'+nome,String(Date.now()));
+      badge.classList.remove('on');
+      return;
+    }
+    visto=parseInt(visto,10);
+    const itens=fontes[nome]||[];
+    const novos=itens.filter(item=>{
+      const d=dataDoItem(item);
+      return d&&d.getTime()>visto;
+    }).length;
+    badge.textContent=novos>9?'9+':String(novos);
+    badge.classList.toggle('on',novos>0);
+  });
 }
 function openModal(id){document.getElementById(id).classList.add('active')}
 function closeModal(id){document.getElementById(id).classList.remove('active')}
@@ -5484,6 +5633,7 @@ function init(){
   document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active')});
 
   applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();
+  atualizarBadgesNovidades();
 
   // RELÓGIO: publica automaticamente as postagens agendadas quando chega a hora
   setInterval(()=>{
