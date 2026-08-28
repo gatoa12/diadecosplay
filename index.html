@@ -1875,6 +1875,21 @@ function seedEventosExternos(){
 
 function ehDataUrl(s){return typeof s==='string'&&s.startsWith('data:')}
 
+/* ✅ Transforma um título em texto de URL legível — "Time Naruto" vira
+   "time-naruto". Usado pra deixar os links de compartilhar convidativos
+   em vez de só um número (ex: .../ideia/time-naruto-123456 em vez de
+   .../ideia/123456), sem perder a confiabilidade: o número continua lá
+   no final, só que agora tem contexto na frente. */
+function slugify(texto){
+  return (texto||'')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // tira acentos
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-') // qualquer coisa que não seja letra/número vira hífen
+    .replace(/^-+|-+$/g,'') // tira hífen sobrando nas pontas
+    .slice(0,50);
+}
+
 /* ✅ Escapa texto livre digitado por qualquer pessoa antes de mostrar na
    tela — impede que alguém malicioso injete HTML/script num comentário,
    contra-ideia, ou texto de loja e afete outras pessoas que veem a
@@ -3285,7 +3300,7 @@ function compartilharCena(id){
   const conf=db.config||{};
   if(!conf.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${conf.workerUrl}/cena/${c.id}`;
+  const url=`${conf.workerUrl}/cena/${slugify(c.title)}-${c.id}`;
   const txt=`🎬 ${c.title}`;
 
   if(navigator.share){
@@ -3408,7 +3423,7 @@ function compartilharIdeia(id){
   const c=db.config||{};
   if(!c.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${c.workerUrl}/ideia/${i.id}`;
+  const url=`${c.workerUrl}/ideia/${slugify(i.title)}-${i.id}`;
   const txt=`💡 ${i.title}`;
 
   if(navigator.share){
@@ -3573,7 +3588,7 @@ function compartilhar(id){
   // ✅ Passa pelo Worker (mesma lógica de ideias/cenas) pra WhatsApp e
   // Instagram mostrarem a foto e uma mini descrição do perfil na prévia
   const url=conf.workerUrl
-    ? `${conf.workerUrl}/perfil/${c.id}`
+    ? `${conf.workerUrl}/perfil/${slugify(c.username)}-${c.id}`
     : location.origin+location.pathname+'#'+c.username.replace('@',''); // se não tiver Worker configurado, cai no link direto normal
 
   if(navigator.share){
@@ -3960,7 +3975,7 @@ function toggleKey(){
   e.className=ver?'fas fa-eye-slash':'fas fa-eye';
 }
 
-function saveConfig(){
+async function saveConfig(){
   db.config=db.config||{};
   db.config.siteName=document.getElementById('cfgName').value.trim()||'DiaDeCosplay';
   db.wa=document.getElementById('cfgWa').value.trim();
@@ -3968,8 +3983,11 @@ function saveConfig(){
   db.config.credito=document.getElementById('cfgCredito').value.trim();
   db.config.workerUrl=CLOUD_URL;
   db.config.writeKey=CLOUD_KEY;
-  save();applyConfig();admStats();
-  toast('Configurações salvas','ok');
+  save(false);applyConfig();admStats();
+  toast('📤 Enviando configurações...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Configurações salvas e no ar!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function applyConfig(){
@@ -4080,7 +4098,7 @@ async function salvarAutoCadastro(){
   if(!ok){pendente=true;agendarSync(500)}
 }
 
-function admAddCos(){
+async function admAddCos(){
   const txt=document.getElementById('admNovosCos').value.trim();
   if(!txt){toast('Cole pelo menos um @','err');return}
   const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(limparPrefixoNumerico);
@@ -4095,9 +4113,16 @@ function admAddCos(){
       ignorados++;
     }
   });
-  save();document.getElementById('admNovosCos').value='';
+  save(false);document.getElementById('admNovosCos').value='';
   admRenderAll();renderCos();
-  toast(add?`${add} adicionado(s)${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'Todos já estavam na lista','ok');
+  if(add){
+    toast('📤 Enviando pra nuvem...');
+    const ok=await cloudPush(false);
+    toast(ok?`✅ ${add} adicionado(s) e já no ar!${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+    if(!ok){pendente=true;agendarSync(500)}
+  }else{
+    toast('Todos já estavam na lista','ok');
+  }
 }
 
 function admRenderCos(){
@@ -4331,13 +4356,17 @@ function admRenderAjuda(){
     </div>`).join('');
 }
 function admAddAjuda(){db.ajuda=db.ajuda||[];db.ajuda.push({icon:'✨',title:'',text:''});admRenderAjuda()}
-function saveAjuda(){
+async function saveAjuda(){
   const novo=(db.ajuda||[]).map(a=>({...a}));
   document.querySelectorAll('[data-aj]').forEach(el=>{
     novo[+el.dataset.i][el.dataset.aj]=el.value;
   });
   db.ajuda=novo.filter(a=>a.title.trim());
-  save();renderAjuda();admRenderAjuda();toast('Ajuda atualizada','ok');
+  save(false);renderAjuda();admRenderAjuda();
+  toast('📤 Enviando...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Ajuda atualizada e no ar!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 function renderAjuda(){
   document.getElementById('helpGrid').innerHTML=(db.ajuda||[]).map(a=>
@@ -4526,7 +4555,7 @@ function cancelarImportPendente(){
   toast('Importação cancelada — nada foi alterado');
 }
 
-function aplicarImport(obj,substituir){
+async function aplicarImport(obj,substituir){
   if(!obj||typeof obj!=='object'){toast('Arquivo inválido','err');return}
   if(substituir){
     // ✅ confirmação já foi feita na tela de prévia — não pergunta de novo
@@ -4545,9 +4574,12 @@ function aplicarImport(obj,substituir){
     if(obj.ajuda&&!db.ajuda?.length)db.ajuda=obj.ajuda;
     if(obj.wa&&!db.wa)db.wa=obj.wa;
   }
-  save();seed();applyConfig();admRenderAll();
+  save(false);seed();applyConfig();admRenderAll();
   renderCos();renderEventos();renderIdeias();renderCenas();renderAjuda();
-  toast(substituir?'Dados substituídos':'Dados juntados','ok');
+  toast('📤 Enviando pra nuvem...');
+  const ok=await cloudPush(false);
+  toast(ok?(substituir?'✅ Dados substituídos e já no ar!':'✅ Dados juntados e já no ar!'):'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 function importData(substituir){
   const f=document.getElementById('admImport').files[0];
@@ -4617,6 +4649,27 @@ const WORKER_CODE=`export default {
     const path = url.pathname;
     const key = request.headers.get("X-Write-Key") || url.searchParams.get("k");
 
+    const SITE_URL = "https://diadecosplay.pages.dev/";
+    const escapar = (s) => (s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    function paginaDePrevia(titulo, descricaoBruta, imagem, hashDestino) {
+      const descricao = escapar((descricaoBruta || "").length > 200 ? descricaoBruta.slice(0, 197) + "..." : (descricaoBruta || ""));
+      const tituloEscapado = escapar(titulo);
+      const destino = SITE_URL + (hashDestino ? "#" + hashDestino : "");
+      const html = \`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>\${tituloEscapado}</title>
+<meta property="og:title" content="\${tituloEscapado}"><meta property="og:description" content="\${descricao}">
+\${imagem ? \`<meta property="og:image" content="\${escapar(imagem)}">\` : ""}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="\${imagem ? "summary_large_image" : "summary"}">
+<meta name="twitter:title" content="\${tituloEscapado}"><meta name="twitter:description" content="\${descricao}">
+\${imagem ? \`<meta name="twitter:image" content="\${escapar(imagem)}">\` : ""}
+<meta http-equiv="refresh" content="0;url=\${destino}">
+<style>body{background:#0F0F12;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:1rem}</style></head>
+<body><p>Abrindo o DiaDeCosplay... <a href="\${destino}" style="color:#E4405F">clique aqui se não for redirecionado</a></p>
+<script>window.location.replace(\${JSON.stringify(destino)});<\/script></body></html>\`;
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=UTF-8" } });
+    }
+
     // ===== FOTOS: /f/<id> =====
     if (path.startsWith("/f/")) {
       const id = "foto:" + path.slice(3);
@@ -4648,6 +4701,41 @@ const WORKER_CODE=`export default {
           return new Response("Formato invalido", { status: 400, headers: cors });
         await env.DC_KV.put(id, body);
         return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, ...noCache } });
+      }
+    }
+
+    // ===== PRÉVIA RICA DE IDEIA/CENA/PERFIL (compartilhamento) =====
+    if (request.method === "GET" && (path.startsWith("/ideia/") || path.startsWith("/cena/") || path.startsWith("/perfil/"))) {
+      const dadosTexto = await env.DC_KV.get("dados");
+      const dados = dadosTexto ? JSON.parse(dadosTexto) : {};
+
+      if (path.startsWith("/ideia/")) {
+        const id = path.split("/").pop();
+        const ideia = (dados.ideias || []).find(i => String(i.id) === String(id));
+        const titulo = ideia ? \`💡 \${ideia.title}\` : "💡 Ideia de Cosplay — DiaDeCosplay";
+        const desc = ideia?.desc || "Confira essa ideia de cosplay na comunidade DiaDeCosplay!";
+        return paginaDePrevia(titulo, desc, ideia?.foto || "", ideia ? \`ideia-\${ideia.id}\` : "ideias");
+      }
+      if (path.startsWith("/cena/")) {
+        const id = path.split("/").pop();
+        const cena = (dados.cenas || []).find(c => String(c.id) === String(id));
+        const titulo = cena ? \`🎬 \${cena.title}\` : "🎬 Cena de Cosplay — DiaDeCosplay";
+        const desc = cena?.desc || (cena?.source ? \`Cena de \${cena.source}\` : "Confira essa cena sugerida na comunidade DiaDeCosplay!");
+        return paginaDePrevia(titulo, desc, "", cena ? \`cena-\${cena.id}\` : "cenas");
+      }
+      if (path.startsWith("/perfil/")) {
+        const id = path.split("/").pop();
+        const cos = (dados.cosplayers || []).find(c => String(c.id) === String(id));
+        const CAT_LABEL = { cosplay: "Cosplay", wigmaker: "WigMaker", propmaker: "PropMaker", cosmaker: "CosMaker", editor: "Editor(a)", artista: "Artista", maquiadora: "Maquiador(a)", streamer: "Streamer" };
+        if (!cos) return paginaDePrevia("DiaDeCosplay — Comunidade de Natal/RN", "Confira esse perfil na comunidade DiaDeCosplay!", "", "cosplayers");
+        const titulo = \`🎭 \${cos.nome ? cos.nome + " — " : ""}\${cos.username}\`;
+        const categorias = (cos.cats || []).map(c => CAT_LABEL[c] || c).join(", ");
+        const partes = [];
+        if (categorias) partes.push(categorias);
+        if (cos.grupo) partes.push(\`grupo \${cos.grupo}\`);
+        const desc = partes.length ? \`\${partes.join(" · ")} — faz parte da comunidade DiaDeCosplay, em Natal/RN.\` : "Faz parte da comunidade DiaDeCosplay, em Natal/RN.";
+        const imagem = (cos.photos && cos.photos[0]) || cos.photo || "";
+        return paginaDePrevia(titulo, desc, imagem, cos.username.replace("@", ""));
       }
     }
 
@@ -4755,8 +4843,11 @@ async function cloudPush(auto=false){
     
     syncBadge('on','✅ Online · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
     if(!auto){
+      // ✅ Não mostra toast genérico aqui — quem chamou essa função já
+      // mostra o próprio aviso específico (ex: "Ideia publicada!",
+      // "Presença confirmada!"). Mostrar os dois juntos ficava repetitivo
+      // e "aparecendo direto" a cada clique, mesmo em ações pequenas.
       cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados ONLINE! Todos conseguem ver agora!</span></div>`);
-      toast('Dados sincronizados com sucesso','ok');
     }
     return true;
   }catch(e){
@@ -4911,8 +5002,10 @@ async function cloudPull(auto=false){
     
     syncBadge('on','Atualizado agora');
     if(!auto){
+      // ✅ Sem toast genérico aqui também — o badge de sincronização no
+      // topo já muda de cor/ícone visualmente, e quem chamou essa função
+      // (ex: atualizarELancarTudo) já mostra o próprio aviso final.
       cloudStatus(`<div class="alert a-ok" style="margin-top:.8rem"><i class="fas fa-circle-check"></i><span>✅ Dados atualizados da nuvem.</span></div>`);
-      toast('Dados sincronizados','ok');
     }
     return true;
   }catch(e){
