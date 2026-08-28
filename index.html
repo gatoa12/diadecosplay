@@ -22,6 +22,9 @@
 @media(prefers-color-scheme:light){
 :root{--bg:#F8F7F5;--s1:#fff;--s2:#F2F1ED;--text:#1a1a1e;--text2:#696967;--border:#E5E5E5}
 }
+/* ✅ Tema manual — a pessoa escolhe, independente da preferência do celular/PC */
+html.tema-claro{--bg:#F8F7F5;--s1:#fff;--s2:#F2F1ED;--text:#1a1a1e;--text2:#696967;--border:#E5E5E5}
+html.tema-escuro{--bg:#0F0F12;--s1:#1a1a1e;--s2:#24242b;--text:#fff;--text2:#B0B0B5;--border:#3a3a42}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
 
 /* HEADER */
@@ -273,6 +276,10 @@ html.admin .sync-badge{display:flex}
 .bs.del{background:rgba(255,107,107,.1);border-color:var(--error);color:var(--error)}
 .bs.del:hover{background:var(--error);color:#fff}
 .socials{display:flex;gap:.5rem;font-size:13px}
+.card-extras{display:flex;flex-direction:column;gap:.35rem;font-size:11px;color:var(--text2);margin:.5rem 0;padding:.5rem .6rem;background:var(--s2);border-radius:8px}
+.card-extras i{width:14px;color:var(--primary)}
+.card-favorito{display:flex;align-items:center;gap:.4rem}
+.card-favorito img{width:26px;height:26px;border-radius:6px;object-fit:cover;flex:0 0 auto}
 .socials a{color:var(--text2);transition:.2s}
 .socials a:hover{color:var(--primary)}
 .admin-only{display:none!important}
@@ -282,7 +289,7 @@ html.admin .admin-only{display:flex!important}
 .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem}
 @media(max-width:640px){.list{grid-template-columns:1fr}}
 .item{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;transition:.25s}
-.item:hover{border-color:var(--primary)}
+.item:hover{border-color:var(--primary);transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
 .item h3{font-size:17px;font-weight:800;margin-bottom:.4rem}
 .item p{font-size:14px;color:var(--text2);margin-bottom:.6rem}
 .item-meta{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:.4rem;padding-top:.6rem;border-top:1px solid var(--border);margin-top:.6rem}
@@ -376,7 +383,8 @@ html.admin .admin-only{display:flex!important}
 .adm-tab:hover:not(.active){background:var(--s1);color:var(--text)}
 .adm-pane{display:none}
 .adm-pane.active{display:block;animation:fade .25s}
-.adm-stats{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1rem;font-size:13px;line-height:1.9;margin-bottom:1.2rem}
+.adm-stats{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:10px;padding:1.1rem 1.2rem;font-size:13px;line-height:2.1;margin-bottom:1.2rem}
+.adm-stats b{color:var(--primary);font-size:14px}
 .adm-list{max-height:290px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--s2)}
 .adm-row{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:13px}
 .adm-row:last-child{border-bottom:none}
@@ -436,6 +444,7 @@ html.admin .admin-only{display:flex!important}
   <div class="header-right">
     <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
     <button class="header-icon-btn" id="btnAtualizarTudo" onclick="atualizarELancarTudo()" title="Atualizar e enviar minhas alterações" style="display:none"><i class="fas fa-rotate" id="iconAtualizarTudo"></i></button>
+    <button class="header-icon-btn" onclick="alternarTema()" title="Trocar tema claro/escuro"><i class="fas fa-moon" id="iconTema"></i></button>
     <div class="user-chip" id="userChip" onclick="openMyProfile()" style="display:none">
       <span class="dot"></span><span id="userChipText"></span>
     </div>
@@ -625,6 +634,17 @@ html.admin .admin-only{display:flex!important}
 
   <div id="gateAlert"></div>
 
+  <div class="fg" id="boxProgresso" style="background:var(--s2);border-radius:12px;padding:.9rem 1rem;margin-bottom:1.2rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+      <span style="font-size:12px;font-weight:700;color:var(--text2)">📋 Perfil completo</span>
+      <span style="font-size:12px;font-weight:800;color:var(--primary)" id="progressoTexto">0%</span>
+    </div>
+    <div style="background:var(--border);border-radius:20px;height:7px;overflow:hidden">
+      <div id="progressoBarra" style="height:100%;width:0%;background:linear-gradient(90deg,#E4405F,#833AB4);border-radius:20px;transition:width .4s"></div>
+    </div>
+    <div id="progressoFalta" style="font-size:11px;color:var(--text2);margin-top:.5rem"></div>
+  </div>
+
   <div class="fg">
     <label class="fl"><i class="fab fa-instagram"></i> Seu @ do Instagram</label>
     <input type="text" class="fi" id="fUser" placeholder="@seuusuario">
@@ -654,6 +674,28 @@ html.admin .admin-only{display:flex!important}
       <option value="10">10 anos ou mais</option>
     </select>
     <span class="hint">Aparece como uma medalha no seu perfil — quanto mais tempo, mais brilhante ela fica! ✨</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">👥 Qual grupo você faz parte? (opcional)</label>
+    <input type="text" class="fi" id="fGrupo" placeholder="Ex: Squad Konoha, Guild RN, ou deixe vazio">
+    <span class="hint">Se você faz parte de algum grupo/squad de cosplay, coloca o nome aqui.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🔮 Qual seria seu próximo cosplay? (opcional)</label>
+    <input type="text" class="fi" id="fProximoCosplay" placeholder="Ex: Nezuko (Demon Slayer)">
+    <span class="hint">Conta pra galera o que você está planejando montar!</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">❤️ Qual cosplay ou foto você mais gostou de fazer? (opcional)</label>
+    <input type="text" class="fi" id="fCosplayFavorito" placeholder="Ex: Tanjiro (Demon Slayer)" style="margin-bottom:.6rem">
+    <div class="foto-slot" id="fFavoritoSlot" style="max-width:160px" onclick="document.getElementById('fFotoFavorito').click()">
+      <i class="fas fa-heart" style="font-size:20px;opacity:.5"></i>
+    </div>
+    <input type="file" id="fFotoFavorito" accept="image/*" style="display:none" onchange="previewFavorito(this)">
+    <span class="hint">Pode contar qual foi (texto) e/ou colocar a foto dele — o que preferir.</span>
   </div>
 
   <div class="fg" id="boxResponsavel" style="display:none;border:1px solid var(--warn);border-radius:12px;padding:1rem;background:rgba(255,193,7,.06)">
@@ -961,8 +1003,19 @@ html.admin .admin-only{display:flex!important}
   </div>
 
   <div class="fg">
-    <label class="fl">🔗 Link (site, Instagram ou WhatsApp) <span style="color:var(--error)">*</span></label>
-    <input type="url" class="fi" id="lLink" placeholder="https://instagram.com/...">
+    <label class="fl">🔗 Link (site, Instagram, Shopee, Mercado Livre...) <span style="color:var(--error)">*</span></label>
+    <input type="url" class="fi" id="lLink" placeholder="https://instagram.com/..." oninput="detectarLogoLoja()">
+    <span class="hint">Cola o link — o site já busca a logo sozinho, não precisa subir nada.</span>
+  </div>
+
+  <div class="fg" id="boxLogoAuto" style="display:none">
+    <label class="fl">🖼️ Logo detectada</label>
+    <div style="display:flex;align-items:center;gap:.7rem">
+      <div class="foto-slot" id="lLogoSlot" style="width:56px;height:56px;flex:0 0 auto;aspect-ratio:1/1;border-radius:50%">
+        <i class="fas fa-store" style="font-size:18px;opacity:.5"></i>
+      </div>
+      <span class="hint" style="margin:0">Achamos essa aqui automaticamente pelo link. Se não bater com a loja certa, sem problema — ainda funciona normal.</span>
+    </div>
   </div>
 
   <div class="fg">
@@ -1313,6 +1366,11 @@ function load(){
   }
 }
 let syncTimer=null, syncing=false, pendente=false, tentativas=0;
+// ✅ Trava crítica: enquanto alguém está no meio de salvar um perfil
+// (subindo foto pode levar alguns segundos), a sincronização automática
+// NUNCA pode substituir os dados por baixo — senão a edição se perde
+// silenciosamente, sem erro nenhum, como se nunca tivesse acontecido.
+let editandoAgora=false;
 
 function save(auto=true){
   try{
@@ -1751,11 +1809,31 @@ async function hospedarFotos(c){
       algumaPendente=true;
     }
   }
+
+  if(c.fotoFavorito&&ehDataUrl(c.fotoFavorito)){
+    try{
+      c.fotoFavorito=await subirFoto(c.fotoFavorito);
+    }catch(e){
+      console.warn('⚠️ Foto favorita ficará pendente, tentando de novo automaticamente:',e.message);
+      algumaPendente=true;
+    }
+  }
   return algumaPendente;
 }
 
 /* varre o site atrás de fotos que ficaram só no navegador e sobe pra nuvem */
 async function reenviarFotosPendentes(){
+  // ✅ CORREÇÃO CRÍTICA: se essa aba ficou aberta um tempo (ou é uma aba
+  // "esquecida" de antes), os dados dela podem estar desatualizados —
+  // outra pessoa/aba pode ter removido uma foto ENQUANTO essa aba ainda
+  // tinha a versão antiga guardada. Sem atualizar primeiro, essa função
+  // reenviaria a foto antiga e "ressuscitaria" algo que já tinha sido
+  // removido em outro lugar. Por isso, sempre busca o que há de mais
+  // recente ANTES de decidir o que precisa subir.
+  if(!editandoAgora&&!syncing&&!pendente){
+    await cloudPull(true);
+  }
+
   let mudou=false;
   for(const c of db.cosplayers){
     const pend=(c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media);
@@ -1765,7 +1843,7 @@ async function reenviarFotosPendentes(){
         mudou=true;
       }catch(e){
         // ✅ se falhar pra uma pessoa, não trava a migração das outras —
-        // essa pessoa só tenta de novo no próximo ciclo (2 em 2 minutos)
+        // essa pessoa só tenta de novo no próximo ciclo
         console.warn(`Migração de foto pendente falhou pra ${c.username}: ${e.message}`);
       }
     }
@@ -1789,6 +1867,23 @@ function pesoDados(){
 
 /* ===== GERENCIADOR DE FOTOS (até 3) ===== */
 let fotosTemp=[];
+let fotoFavoritoTemp=null; // guarda a foto do cosplay favorito, antes de salvar
+
+function previewFavorito(input){
+  const f=input.files[0];
+  if(!f)return;
+  const slot=document.getElementById('fFavoritoSlot');
+  slot.innerHTML=`<i class="fas fa-spinner fa-spin"></i>`;
+  comprimirImagem(f,900,.8).then(dataUrl=>{
+    fotoFavoritoTemp=dataUrl;
+    slot.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+    atualizarProgressoPerfil();
+  }).catch(()=>{
+    toast('Não consegui processar essa foto — tenta outra','err');
+    slot.innerHTML=`<i class="fas fa-heart" style="font-size:20px;opacity:.5"></i>`;
+    fotoFavoritoTemp=null;
+  });
+}
 
 function renderFotos(){
   const g=document.getElementById('fotosGrid');
@@ -2135,6 +2230,14 @@ function renderCos(){
           ${c.twitter?`<a href="https://x.com/${c.twitter.replace('@','')}" target="_blank" title="Twitter"><i class="fab fa-x-twitter"></i></a>`:''}
           ${c.youtube?`<a href="https://youtube.com/${c.youtube}" target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>`:''}
         </div>`:''}
+        ${(c.grupo||c.proximoCosplay||c.cosplayFavorito||c.fotoFavorito)?`<div class="card-extras">
+          ${c.grupo?`<div><i class="fas fa-users"></i> ${c.grupo}</div>`:''}
+          ${c.proximoCosplay?`<div><i class="fas fa-wand-magic-sparkles"></i> Próximo: ${c.proximoCosplay}</div>`:''}
+          ${(c.cosplayFavorito||c.fotoFavorito)?`<div class="card-favorito">
+            ${c.fotoFavorito?`<img src="${c.fotoFavorito}" alt="Favorito" onerror="this.remove()">`:''}
+            <span><i class="fas fa-heart"></i> ${c.cosplayFavorito||'Favorito'}</span>
+          </div>`:''}
+        </div>`:''}
         <div class="card-btns">
           <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
           <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
@@ -2208,6 +2311,14 @@ function openEdit(id,focusPost){
   // ✅ idade + responsável (só o dono/admin vê preenchido, é dado sensível)
   document.getElementById('fIdade').value=(souDono||admin)?(c.idade||''):'';
   document.getElementById('fTempoCosplay').value=c.tempoCosplay||'';
+  document.getElementById('fGrupo').value=c.grupo||'';
+  document.getElementById('fProximoCosplay').value=c.proximoCosplay||'';
+  document.getElementById('fCosplayFavorito').value=c.cosplayFavorito||'';
+  document.getElementById('fFavoritoSlot').innerHTML=c.fotoFavorito
+    ?`<img src="${c.fotoFavorito}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
+    :`<i class="fas fa-heart" style="font-size:20px;opacity:.5"></i>`;
+  document.getElementById('fFotoFavorito').value='';
+  fotoFavoritoTemp=c.fotoFavorito||null;
   if((souDono||admin)&&c.responsavel){
     document.getElementById('fRespNome').value=c.responsavel.nome||'';
     document.getElementById('fRespWhats').value=c.responsavel.whats||'';
@@ -2222,6 +2333,7 @@ function openEdit(id,focusPost){
   // no perfil de outra pessoa (o canvas é o mesmo elemento reaproveitado)
   limparAssinatura();
   checarIdade();
+  setTimeout(atualizarProgressoPerfil,80); // espera os campos serem preenchidos antes de calcular
   setTimeout(()=>{
     const status=document.getElementById('assinaturaStatus');
     if(status){
@@ -2289,6 +2401,39 @@ function mascararEmail(email){
   const pontos='•'.repeat(Math.max(3,local.length-3));
   const dom=dominio?dominio[0]+'•'.repeat(Math.max(2,dominio.length-1)):'';
   return `${ini}${pontos}@${dom}`;
+}
+
+/* ✅ Barra de progresso do perfil — mostra o quanto falta preencher e
+   incentiva a completar (ligado à regra de "quem tem foto aparece
+   primeiro"). Roda toda vez que algo no formulário muda. */
+function atualizarProgressoPerfil(){
+  const barra=document.getElementById('progressoBarra');
+  if(!barra)return;
+
+  const itens=[
+    {ok:!!fotosTemp.length,label:'foto'},
+    {ok:!!document.getElementById('fNome').value.trim(),label:'nome'},
+    {ok:!!document.getElementById('fIdade').value,label:'idade'},
+    {ok:['cCosplay','cWig','cProp','cCos'].some(i=>document.getElementById(i)?.checked),label:'categoria (Cosplay/WigMaker/etc)'},
+    {ok:!!getPickedEmoji(),label:'emoji'},
+    {ok:!!document.getElementById('fTempoCosplay').value,label:'tempo de cosplay'},
+    {ok:!!(document.getElementById('fTiktok').value||document.getElementById('fTwitter').value||document.getElementById('fYoutube').value),label:'alguma outra rede social'},
+  ];
+
+  const feitos=itens.filter(i=>i.ok).length;
+  const pct=Math.round((feitos/itens.length)*100);
+
+  barra.style.width=pct+'%';
+  const texto=document.getElementById('progressoTexto');
+  if(texto)texto.textContent=pct+'%';
+
+  const falta=itens.filter(i=>!i.ok).map(i=>i.label);
+  const faltaEl=document.getElementById('progressoFalta');
+  if(faltaEl){
+    faltaEl.textContent=pct===100
+      ? '🎉 Perfil completo!'
+      : `Falta: ${falta.join(', ')}`;
+  }
 }
 
 function checarIdade(){
@@ -2606,6 +2751,10 @@ function saveProfile(){
     c.responsavel=responsavel;
   }
   c.tempoCosplay=document.getElementById('fTempoCosplay').value||'';
+  c.grupo=document.getElementById('fGrupo').value.trim();
+  c.proximoCosplay=document.getElementById('fProximoCosplay').value.trim();
+  c.cosplayFavorito=document.getElementById('fCosplayFavorito').value.trim();
+  c.fotoFavorito=fotoFavoritoTemp; // sobe junto com as outras fotos no hospedarFotos, se for nova
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
   c.photos=[...fotosTemp];
@@ -2620,6 +2769,11 @@ function saveProfile(){
   const media=document.getElementById('fMedia').files[0];
 
   const finish=async()=>{
+    // ✅ Liga a trava JÁ AQUI, antes de qualquer espera (upload de foto pode
+    // levar alguns segundos) — durante esse tempo, a sincronização
+    // automática (a cada 12s) fica proibida de substituir os dados por
+    // baixo, senão a edição em andamento pode se perder sem erro nenhum.
+    editandoAgora=true;
     try{
       // Valida fotos ANTES de enviar
       const totalFotos=(c.photos||[]).reduce((n,f)=>n+(f?f.length:0),0);
@@ -2631,10 +2785,19 @@ function saveProfile(){
       // o que não conseguir subir agora fica pendente e tenta de novo
       // sozinho, em segundo plano, sem precisar de mais nada da pessoa.
       let fotosPendentes=false;
-      if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)){
+      if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)||ehDataUrl(c.fotoFavorito)){
         toast('📤 Enviando fotos...');
         fotosPendentes=await hospedarFotos(c);
       }
+
+      // ✅ SEGUNDA CAMADA DE PROTEÇÃO: relê o cosplayer direto de db.cosplayers
+      // por ID logo antes de gravar — mesmo que algo tenha trocado a
+      // referência no meio do caminho (não deveria mais acontecer agora
+      // que editandoAgora bloqueia o pull, mas não custa garantir).
+      const cAtual=db.cosplayers.find(x=>x.id===c.id)||c;
+      cAtual.photos=c.photos;cAtual.photo=c.photo;
+      if(c.media!==undefined){cAtual.media=c.media;cAtual.mediaType=c.mediaType}
+      cAtual.fotoFavorito=c.fotoFavorito;
       
       save(false); // grava local sem agendar - vamos enviar de verdade agora, na hora
       setMe(email);
@@ -2677,6 +2840,10 @@ function saveProfile(){
       closeModal('mEdit');
       toast('✅ Salvo neste aparelho! Confirmando com a nuvem em instantes...','ok');
       pendente=true;agendarSync(800);
+    }finally{
+      // ✅ Sempre libera a trava no final, dê certo ou não — nunca deixa
+      // a sincronização automática travada pra sempre por um esquecimento.
+      editandoAgora=false;
     }
   };
 
@@ -3034,26 +3201,31 @@ function saveEvento(){
   if(old&&!admin)data.status=old.status;
 
   const finish=async()=>{
-    if(ehDataUrl(data.img)){
-      toast('Enviando cartaz pra nuvem...');
-      try{data.img=await subirFoto(data.img)}catch(e){}
+    editandoAgora=true;
+    try{
+      if(ehDataUrl(data.img)){
+        toast('Enviando cartaz pra nuvem...');
+        try{data.img=await subirFoto(data.img)}catch(e){}
+      }
+      
+      // ✅ PREVINE DUPLICAÇÃO: verifica se evento já existe
+      const eventoExiste=db.eventos.find(e=>e.id===data.id);
+      
+      if(evEditId){
+        // Atualiza evento existente (sem duplicar)
+        db.eventos=db.eventos.map(e=>e.id===evEditId?data:e);
+      }else if(!eventoExiste){
+        // Só adiciona se não existe
+        db.eventos.push(data);
+      }
+      
+      save(false);renderEventos();renderEvGate();closeModal('mEvento');
+      const ok=await cloudPush(false);
+      toast(ok?(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!')):'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+      if(!ok){pendente=true;agendarSync(500)}
+    }finally{
+      editandoAgora=false;
     }
-    
-    // ✅ PREVINE DUPLICAÇÃO: verifica se evento já existe
-    const eventoExiste=db.eventos.find(e=>e.id===data.id);
-    
-    if(evEditId){
-      // Atualiza evento existente (sem duplicar)
-      db.eventos=db.eventos.map(e=>e.id===evEditId?data:e);
-    }else if(!eventoExiste){
-      // Só adiciona se não existe
-      db.eventos.push(data);
-    }
-    
-    save(false);renderEventos();renderEvGate();closeModal('mEvento');
-    const ok=await cloudPush(false);
-    toast(ok?(data.status==='pendente'?'Sugestão enviada! O admin vai conferir.':(evEditId?'Evento atualizado':'Evento publicado!')):'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
-    if(!ok){pendente=true;agendarSync(500)}
   };
 
   const f=document.getElementById('eImg').files[0];
@@ -3159,6 +3331,7 @@ function renderEventos(){
       </div>`:''}
       <div class="ev-actions">
         ${e.url?`<a href="${e.url}" target="_blank" class="bs"><i class="fas fa-arrow-up-right-from-square"></i> Ver no site</a>`:''}
+        <button class="bs" onclick="compartilharEvento(${e.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
         ${admin&&pend?`<button class="bs" style="background:var(--success);border-color:var(--success);color:#fff" onclick="aprovarEvento(${e.id})"><i class="fas fa-check"></i> Aprovar</button>`:''}
         ${admin?`<button class="bs" onclick="editEvento(${e.id})"><i class="fas fa-pen"></i></button>
         <button class="bs del" onclick="delEvento(${e.id})"><i class="fas fa-trash"></i></button>`:''}
@@ -3167,6 +3340,18 @@ function renderEventos(){
   }).join('');
 }
 function delEvento(id){if(!confirm('Remover esse evento?'))return;db.eventos=db.eventos.filter(e=>e.id!==id);save();renderEventos();toast('Evento removido','ok')}
+
+function compartilharEvento(id){
+  const e=db.eventos.find(x=>x.id===id);if(!e)return;
+  const dataFmt=new Date(e.date+'T12:00').toLocaleDateString('pt-BR');
+  const txt=`🎭 ${e.title}\n📅 ${dataFmt}${e.time?' às '+e.time:''}\n📍 ${e.city}\n\n${e.desc||''}`;
+  if(navigator.share){
+    navigator.share({title:e.title,text:txt,url:e.url||location.origin+location.pathname}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(txt).then(()=>toast('Detalhes do evento copiados!','ok'))
+      .catch(()=>toast('Não consegui copiar — tenta de novo'));
+  }
+}
 
 /* ===== ADMIN ===== */
 function openAdmin(){
@@ -3959,8 +4144,9 @@ async function cloudPull(auto=false){
     if(!auto)toast('Conexão não configurada','err');
     return true; // não é falha de rede, é falta de configuração — não adianta tentar de novo
   }
-  // nunca puxa por cima de algo que ainda não subiu
-  if(auto&&(pendente||syncing))return true;
+  // nunca puxa por cima de algo que ainda não subiu, nem no meio de alguém
+  // salvando um perfil (mesmo que ainda não tenha marcado "pendente")
+  if(auto&&(pendente||syncing||editandoAgora))return true;
   if(!auto&&!confirm('Isso traz os dados da nuvem e substitui os deste navegador. Continuar?'))return true;
   if(!auto)cloudStatus(`<div class="alert a-info" style="margin-top:.8rem"><i class="fas fa-spinner fa-spin"></i><span>Buscando...</span></div>`);
   
@@ -4352,6 +4538,39 @@ function previewFotoLoja(input){
   });
 }
 
+/* ✅ Detecta a logo automaticamente a partir do domínio do link, usando
+   um serviço público de favicon — funciona pra Instagram, Shopee,
+   Mercado Livre, sites próprios, qualquer link. Não precisa a pessoa
+   subir nada: só guardamos o DOMÍNIO, e a imagem é buscada na hora de
+   mostrar (sempre atualizada, e não pesa quase nada nos dados salvos). */
+function dominioDoLink(link){
+  try{
+    const u=new URL(link.startsWith('http')?link:'https://'+link);
+    return u.hostname.replace('www.','');
+  }catch(e){
+    return null;
+  }
+}
+function logoUrlDoDominio(dominio){
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=128`;
+}
+
+let dominioLojaTemp=null;
+function detectarLogoLoja(){
+  const link=document.getElementById('lLink').value.trim();
+  const box=document.getElementById('boxLogoAuto');
+  const slot=document.getElementById('lLogoSlot');
+  const dominio=dominioDoLink(link);
+  if(!dominio){
+    box.style.display='none';
+    dominioLojaTemp=null;
+    return;
+  }
+  dominioLojaTemp=dominio;
+  box.style.display='block';
+  slot.innerHTML=`<img src="${logoUrlDoDominio(dominio)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-store\\' style=\\'font-size:18px;opacity:.5\\'></i>'">`;
+}
+
 const REACOES_DISPONIVEIS=['👍','❤️','😂','😮','👎'];
 
 function renderLojas(){
@@ -4400,10 +4619,13 @@ function renderLojas(){
 
     return `<div class="item">
       ${l.foto?`<img src="${l.foto}" alt="Foto de ${l.nome}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:.6rem">
-        <h3 style="margin-bottom:.2rem">${l.nome}</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem">
+        <div style="display:flex;align-items:center;gap:.5rem">
+          ${(l.logoDominio||l.logo)?`<img src="${l.logoDominio?logoUrlDoDominio(l.logoDominio):l.logo}" alt="Logo ${l.nome}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--border);background:#fff" onerror="this.remove()">`:''}
+          <h3 style="margin-bottom:0">${l.nome}</h3>
+        </div>
       </div>
-      <div style="margin-bottom:.4rem">${estrelasHtml(l.nota)}</div>
+      <div style="margin:.4rem 0 .4rem">${estrelasHtml(l.nota)}</div>
       <div style="margin-bottom:.5rem"><span class="tag">${CAT_LABEL[l.categoria]||l.categoria}</span></div>
       <a href="${l.link}" target="_blank" rel="noopener" style="font-size:12.5px;color:var(--primary);word-break:break-all"><i class="fas fa-link"></i> ${l.link}</a>
       ${l.desc?`<p style="margin-top:.5rem">${l.desc}</p>`:''}
@@ -4411,6 +4633,7 @@ function renderLojas(){
 
       <div style="display:flex;gap:.4rem;margin-top:.7rem;align-items:center;flex-wrap:wrap">
         ${chipsReacao}
+        <button class="bs" onclick="compartilharLoja(${l.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
         ${(admin||(me&&me.username===l.author))?`<button class="bs del" style="margin-left:auto" onclick="delLoja(${l.id})"><i class="fas fa-trash"></i></button>`:''}
       </div>
 
@@ -4448,7 +4671,9 @@ function openNovaLoja(){
   document.getElementById('lDesc').value='';
   document.getElementById('lFotoSlot').innerHTML=`<i class="fas fa-camera" style="font-size:22px;opacity:.5"></i>`;
   document.getElementById('lFoto').value='';
+  document.getElementById('boxLogoAuto').style.display='none';
   fotoLojaTemp=null;
+  dominioLojaTemp=null;
   openModal('mLoja');
 }
 
@@ -4469,9 +4694,14 @@ async function saveLoja(){
   const jaExiste=db.lojas.some(l=>l.link.toLowerCase()===link.toLowerCase());
   if(jaExiste){toast('Essa loja já foi indicada — procura ela na lista pra reagir!','err');return}
 
-  db.lojas.push({id:Date.now(),nome,link,categoria,nota,foto:fotoLojaTemp,desc,author:me.username,reacoes:{},comentarios:[]});
+  // ✅ garante que o domínio detectado bate com o link final (caso a
+  // pessoa cole e depois edite o link sem a logo atualizar)
+  const dominioFinal=dominioDoLink(link)||dominioLojaTemp;
+
+  db.lojas.push({id:Date.now(),nome,link,categoria,nota,foto:fotoLojaTemp,logoDominio:dominioFinal,desc,author:me.username,reacoes:{},comentarios:[]});
   save(false);renderLojas();closeModal('mLoja');
   fotoLojaTemp=null;
+  dominioLojaTemp=null;
   const ok=await cloudPush(false);
   toast(ok?'Loja indicada! Obrigado por ajudar a comunidade 🎉':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
   if(!ok){pendente=true;agendarSync(500)}
@@ -4497,6 +4727,17 @@ function reagirLoja(id,emoji){
     l.reacoes[emoji].push(me.username);
   }
   save();renderLojas();
+}
+
+function compartilharLoja(id){
+  const l=(db.lojas||[]).find(x=>x.id===id);if(!l)return;
+  const txt=`🛍️ ${l.nome}\n⭐ Nota ${l.nota?l.nota.toFixed(1):'—'}\n\n${l.desc||''}\n\n${l.link}`;
+  if(navigator.share){
+    navigator.share({title:l.nome,text:txt,url:l.link}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(txt).then(()=>toast('Detalhes da loja copiados!','ok'))
+      .catch(()=>toast('Não consegui copiar — tenta de novo'));
+  }
 }
 
 function delLoja(id){
@@ -4627,6 +4868,25 @@ function recalcularSombrasTabs(){
   });
 }
 
+/* ===== TEMA CLARO/ESCURO (escolha manual, guardada no navegador) ===== */
+function aplicarTemaSalvo(){
+  const salvo=localStorage.getItem('dc_tema'); // 'claro', 'escuro', ou null (segue o sistema)
+  document.documentElement.classList.remove('tema-claro','tema-escuro');
+  if(salvo==='claro')document.documentElement.classList.add('tema-claro');
+  else if(salvo==='escuro')document.documentElement.classList.add('tema-escuro');
+  const icone=document.getElementById('iconTema');
+  if(icone){
+    const claroAgora=salvo==='claro'||(!salvo&&window.matchMedia('(prefers-color-scheme:light)').matches);
+    icone.className=claroAgora?'fas fa-sun':'fas fa-moon';
+  }
+}
+function alternarTema(){
+  const atual=localStorage.getItem('dc_tema');
+  const claroAgora=atual==='claro'||(!atual&&window.matchMedia('(prefers-color-scheme:light)').matches);
+  localStorage.setItem('dc_tema',claroAgora?'escuro':'claro');
+  aplicarTemaSalvo();
+}
+
 function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   document.querySelectorAll('.content').forEach(c=>c.classList.toggle('active',c.id===name));
@@ -4642,6 +4902,7 @@ function toast(msg,type=''){
 function init(){
   load();seed();
   if(sessionStorage.getItem('dc_admin'))document.documentElement.classList.add('admin');
+  aplicarTemaSalvo();
 
   // ✅ Tela de boas-vindas — usa os dados já salvos localmente (não espera
   // a nuvem responder, aparece na hora)
@@ -4653,6 +4914,16 @@ function init(){
     // "empurrando" a barra pra revelar as próximas se preciso
     t.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});
   });
+
+  // ✅ Recalcula a barra de progresso do perfil ao vivo, conforme a
+  // pessoa vai preenchendo qualquer campo do formulário de edição
+  const boxEdit=document.getElementById('mEdit');
+  if(boxEdit){
+    boxEdit.addEventListener('input',()=>setTimeout(atualizarProgressoPerfil,50));
+    boxEdit.addEventListener('click',(e)=>{
+      if(e.target.closest('.emoji-pick,.chip'))setTimeout(atualizarProgressoPerfil,50);
+    });
+  }
 
   // ✅ Indicador visual de scroll nas barras de abas: mostra sombra dos lados
   // que realmente têm mais conteúdo escondido — assim fica claro (em
