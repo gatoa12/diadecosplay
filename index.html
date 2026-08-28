@@ -1951,15 +1951,13 @@ async function subirFoto(dataUrl){
       });
       if(!r.ok){throw new Error(`Servidor respondeu ${r.status}`)}
 
-      // ✅ CORRIGIDO: a resposta "success:true" do servidor JÁ é a prova
-      // de que a foto foi salva. Testar carregando ela de volta na hora
-      // parecia mais seguro, mas o Cloudflare KV tem um pequeno atraso de
-      // propagação global — a foto podia estar salva com sucesso mas
-      // ainda não visível em todo lugar nos primeiros segundos, fazendo
-      // esse teste falhar por engano e cancelar um envio que na verdade
-      // tinha dado certo. Confiar na resposta do servidor é mais correto.
+      // ✅ CORRIGIDO (bug crítico): o site esperava a palavra "success" na
+      // resposta, mas o Worker de verdade responde com "ok" — então essa
+      // checagem SEMPRE falhava, mesmo quando a foto tinha sido salva com
+      // sucesso de verdade no Cloudflare! Isso fazia o site achar que todo
+      // envio de foto tinha falhado, sempre. Agora aceita as duas formas.
       const corpo=await r.json().catch(()=>null);
-      if(!corpo||corpo.success!==true){throw new Error('Servidor não confirmou o salvamento')}
+      if(!corpo||(corpo.success!==true&&corpo.ok!==true)){throw new Error('Servidor não confirmou o salvamento')}
 
       return `${c.workerUrl}/f/${id}`;
     }catch(e){
@@ -4872,10 +4870,17 @@ async function cloudPush(auto=false){
       throw new Error('❌ Chave de escrita incorreta — confira WRITE_KEY');
     }
     if(r.status===409){
-      console.warn('⚠️ Binding não configurado, mas continuando...');
-      // NÃO retorna false, tenta mesmo assim
+      // ✅ CORRIGIDO (bug crítico): no SEU Worker de verdade, o código 409
+      // significa "recusado por parecer um pacote suspeito" (proteção
+      // real contra perda de dados) — não "binding não configurado" como
+      // eu tinha assumido antes, baseado numa versão diferente do Worker.
+      // Tratar isso como sucesso escondia recusas de segurança de verdade,
+      // fazendo o site achar que salvou quando na real foi bloqueado.
+      let msgReal='Envio recusado pelo Worker (parece um pacote suspeito — dados muito menores que o esperado)';
+      try{const corpoTexto=await r.text();if(corpoTexto)msgReal=corpoTexto}catch(_e){}
+      throw new Error(msgReal);
     }
-    if(!r.ok && r.status!==409){
+    if(!r.ok){
       // ✅ Lê o corpo da resposta pra pegar a mensagem REAL do erro
       let msgReal=`Servidor respondeu ${r.status}`;
       try{
