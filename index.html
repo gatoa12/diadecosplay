@@ -6,6 +6,19 @@
 <title>DiaDeCosplay</title>
 <meta name="theme-color" content="#E4405F">
 <meta name="description" content="Diretório da comunidade de cosplay de Natal/RN — perfis, eventos, colabs e parcerias com marcas.">
+
+<!-- ✅ Open Graph: card bonito ao compartilhar o link do site no
+     WhatsApp/Instagram/Facebook/Twitter etc -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="DiaDeCosplay">
+<meta property="og:title" content="DiaDeCosplay — Comunidade de Cosplay de Natal/RN">
+<meta property="og:description" content="Perfis de cosplayers, eventos, ideias de cosplay, colaborações e lojas parceiras da comunidade de Natal/RN.">
+<meta property="og:image" content="icon.svg">
+<meta property="og:url" content="https://diadecosplay.pages.dev/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="DiaDeCosplay — Comunidade de Cosplay de Natal/RN">
+<meta name="twitter:description" content="Perfis de cosplayers, eventos, ideias de cosplay, colaborações e lojas parceiras da comunidade de Natal/RN.">
+<meta name="twitter:image" content="icon.svg">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -820,10 +833,19 @@ html.admin .admin-only{display:flex!important}
     <input type="text" class="fi" id="fYoutube" placeholder="@canal">
   </div>
 
+  <div class="fg" id="boxLgpd" style="display:none;background:var(--s2);border-radius:10px;padding:.8rem 1rem">
+    <div class="chip" style="width:fit-content">
+      <input type="checkbox" id="cLgpd">
+      <label for="cLgpd"><span class="ci">✅</span>Concordo com o armazenamento dos meus dados (@, nome, fotos, contato) para exibição pública na plataforma, nos termos da LGPD</label>
+    </div>
+  </div>
+
   <div class="bgrp">
     <button class="btn" id="btnSalvarPerfil" onclick="saveProfile()"><i class="fas fa-check"></i> Salvar</button>
     <button class="btn sec" onclick="closeModal('mEdit')">Cancelar</button>
   </div>
+
+  <button class="btn sec" id="btnExcluirPerfil" style="display:none;margin-top:.8rem;width:100%;border-color:var(--error);color:var(--error)" onclick="excluirMeuPerfil()"><i class="fas fa-trash"></i> Excluir meu perfil da plataforma</button>
 </div></div>
 
 <!-- MODAL: IDEIA -->
@@ -1832,6 +1854,20 @@ function seedEventosExternos(){
    Isso evita estourar o espaço do navegador — que era o motivo das fotos sumirem. */
 
 function ehDataUrl(s){return typeof s==='string'&&s.startsWith('data:')}
+
+/* ✅ Escapa texto livre digitado por qualquer pessoa antes de mostrar na
+   tela — impede que alguém malicioso injete HTML/script num comentário,
+   contra-ideia, ou texto de loja e afete outras pessoas que veem a
+   página (ataque conhecido como XSS). */
+function escapeHtml(s){
+  if(s===null||s===undefined)return '';
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
 function novoIdFoto(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
 /* ✅ SIMPLIFICADO: a foto NÃO depende mais de um endpoint separado do Worker.
@@ -1986,6 +2022,12 @@ function pesoDados(){
 
 /* ===== GERENCIADOR DE FOTOS (até 3) ===== */
 let fotosTemp=[];
+// ✅ TRAVA DE SEGURANÇA: só true quando a pessoa clica de propósito pra
+// adicionar ou remover uma foto. Se ela NUNCA mexeu nisso durante essa
+// edição, o site NUNCA sobrescreve as fotos que já existiam — mesmo que
+// por qualquer motivo o rascunho (fotosTemp) esteja vazio no momento de
+// salvar. Isso impede apagar fotos de verdade por acidente.
+let fotosTempTocado=false;
 let fotoFavoritoTemp=null; // guarda a foto do cosplay favorito, antes de salvar
 
 function previewFavorito(input){
@@ -2032,6 +2074,7 @@ function escolherFoto(){
 
 function removerFoto(i){
   fotosTemp.splice(i,1);
+  fotosTempTocado=true;
   renderFotos();
   toast('Foto removida — clique em Salvar pra confirmar');
 }
@@ -2043,7 +2086,7 @@ function aoEscolherFoto(e){
   toast(`Otimizando foto (${tamanhoLegivel(f.size)})...`);
   comprimirImagem(f,1000,.82).then(out=>{
     if(fotosTemp.includes(out)){toast('Essa foto já está no seu perfil','err');return}
-    fotosTemp.push(out);renderFotos();
+    fotosTemp.push(out);fotosTempTocado=true;renderFotos();
     toast(`Foto ${fotosTemp.length} de 3 adicionada`,'ok');
   }).catch(err=>toast(err.message||'Não consegui processar a foto','err'));
 }
@@ -2454,6 +2497,18 @@ function openEdit(id,focusPost){
     document.getElementById('fRespWhats').value='';
     document.getElementById('cRespConfirma').checked=false;
   }
+  // ✅ LGPD: checkbox de consentimento só aparece se a pessoa ainda não
+  // consentiu antes — não fica pedindo de novo toda edição
+  const boxLgpd=document.getElementById('boxLgpd');
+  if(boxLgpd){
+    boxLgpd.style.display=c.lgpdConsentimento?'none':'block';
+    document.getElementById('cLgpd').checked=false;
+  }
+  // ✅ Botão de excluir o próprio perfil — só aparece pra quem é dono
+  // (ou admin), nunca pra visitante olhando o perfil de outra pessoa
+  const btnExcluir=document.getElementById('btnExcluirPerfil');
+  if(btnExcluir)btnExcluir.style.display=(souDono||admin)?'block':'none';
+
   // ✅ SEMPRE limpa o quadro de assinatura ao abrir qualquer perfil — evita
   // que um traço deixado num perfil "vaze" ou seja reaproveitado por engano
   // no perfil de outra pessoa (o canvas é o mesmo elemento reaproveitado)
@@ -2490,6 +2545,7 @@ function openEdit(id,focusPost){
   document.getElementById('cCos').checked=(c.cats||[]).includes('cosmaker');
   document.getElementById('fSlide').checked=c.slideshow!==false;
   fotosTemp=(c.photos&&c.photos.length)?[...c.photos]:(c.photo?[c.photo]:[]);
+  fotosTempTocado=false; // reseta a cada edição — só vira true se a pessoa mexer de propósito
   renderFotos();
   document.getElementById('fPost').value=c.post||'';
   document.getElementById('fSchedule').value=c.schedule||'';
@@ -2775,6 +2831,17 @@ function saveProfile(){
   const email=document.getElementById('fEmail').value.trim();
   if(!email||!email.includes('@')||!email.includes('.')){toast('Coloque um email válido','err');return}
 
+  // ✅ LGPD: exige o consentimento na primeira vez (só aparece o checkbox
+  // se ainda não foi dado antes — não trava quem já consentiu)
+  const boxLgpdCheck=document.getElementById('boxLgpd');
+  if(boxLgpdCheck&&boxLgpdCheck.style.display!=='none'){
+    if(!document.getElementById('cLgpd').checked){
+      toast('Precisa marcar o consentimento de dados (LGPD) pra continuar','err');
+      boxLgpdCheck.scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+  }
+
   // ✅ VALIDAÇÃO DE IDADE + RESPONSÁVEL
   const idadeVal=parseInt(document.getElementById('fIdade').value,10);
   if(isNaN(idadeVal)||idadeVal<=0){
@@ -2790,6 +2857,11 @@ function saveProfile(){
     const respConfirma=document.getElementById('cRespConfirma').checked;
     if(!respNome||!respWhats||!respConfirma){
       toast('Como você é menor de 18, um responsável precisa preencher e confirmar a autorização','err');
+      document.getElementById('boxResponsavel').scrollIntoView({behavior:'smooth',block:'center'});
+      return;
+    }
+    if(!whatsappValido(respWhats)){
+      toast('O WhatsApp do responsável não parece completo — confere o DDD e o número','err');
       document.getElementById('boxResponsavel').scrollIntoView({behavior:'smooth',block:'center'});
       return;
     }
@@ -2841,8 +2913,7 @@ function saveProfile(){
   // troca de @ (até 6 vezes)
   let novoUser=document.getElementById('fUser').value.trim();
   if(novoUser){
-    if(!novoUser.startsWith('@'))novoUser='@'+novoUser;
-    novoUser=novoUser.replace(/\s/g,'');
+    novoUser=limparInstagramHandle(novoUser);
     if(novoUser.toLowerCase()!==c.username.toLowerCase()){
       const trocasUsadas=c.qtdTrocasUser||0;
       if(trocasUsadas>=6&&!admin){toast('Você já usou as 6 trocas de @ permitidas','err');return}
@@ -2861,6 +2932,9 @@ function saveProfile(){
   }
 
   c.email=email;
+  if(boxLgpdCheck&&boxLgpdCheck.style.display!=='none'){
+    c.lgpdConsentimento=new Date().toISOString();
+  }
   c.idade=idadeVal;
   c.menorDeIdade=idadeVal<18;
   if(responsavel){
@@ -2883,8 +2957,15 @@ function saveProfile(){
   c.fotoFavorito=fotoFavoritoTemp; // sobe junto com as outras fotos no hospedarFotos, se for nova
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
-  c.photos=[...fotosTemp];
-  c.photo=fotosTemp[0]||null;
+  // ✅ TRAVA DE SEGURANÇA: só aplica o rascunho de fotos se a pessoa
+  // realmente mexeu nelas (adicionou ou removeu) OU se o rascunho tem
+  // fotos de verdade pra salvar. Se o rascunho estiver vazio e a pessoa
+  // não tocou em nada de foto, PRESERVA o que já existia — nunca apaga
+  // fotos reais por acidente (ex: um rascunho que não carregou direito).
+  if(fotosTempTocado||fotosTemp.length>0){
+    c.photos=[...fotosTemp];
+    c.photo=fotosTemp[0]||null;
+  }
   c.slideshow=document.getElementById('fSlide').checked;
   const novoPost=document.getElementById('fPost').value.trim();
   // ✅ Marca a hora em que a postagem virou "nova" — usado pra ela deixar
@@ -3161,13 +3242,13 @@ function renderIdeias(){
     const contraIdeias=i.contraIdeias||[];
     const contraIdeiasHtml=contraIdeias.map(ci=>`
       <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
-        <b>${ci.author}:</b> ${ci.texto}
+        <b>${escapeHtml(ci.author)}:</b> ${escapeHtml(ci.texto)}
       </div>`).join('');
 
     return `<div class="item">
     ${i.foto?`<img src="${i.foto}" alt="Foto de ${i.title}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
-    <h3>${i.title}</h3>
-    ${i.desc?`<p>${i.desc}</p>`:''}
+    <h3>${escapeHtml(i.title)}</h3>
+    ${i.desc?`<p>${escapeHtml(i.desc)}</p>`:''}
     ${i.chars?`<div>${i.chars.split(',').map(c=>`<span class="tag">${c.trim()}</span>`).join('')}</div>`:''}
     <div class="item-meta"><i class="fas fa-user"></i> ${i.author} ${me&&i.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
       <button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="compartilharIdeia(${i.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
@@ -3289,7 +3370,7 @@ function renderCenas(){
 function delCena(id){db.cenas=db.cenas.filter(c=>c.id!==id);save();renderCenas();toast('Cena removida','ok')}
 
 /* ===== CONFIRMAÇÃO DE PRESENÇA ===== */
-function togglePresenca(id){
+async function togglePresenca(id){
   const me=getMe();
   if(!me){toast('Cadastre seu email na aba Cosplayers para confirmar presença','err');switchTab('cosplayers');return}
 
@@ -3306,14 +3387,19 @@ function togglePresenca(id){
   const e=db.eventos.find(x=>x.id===id);if(!e)return;
   e.presencas=e.presencas||[];
   const i=e.presencas.findIndex(p=>p.email===me.email);
+  const confirmando=i<0;
   if(i>=0){
     e.presencas.splice(i,1);
-    toast('Presença desmarcada');
   }else{
     e.presencas.push({email:me.email,user:me.username,nome:me.nome||'',emoji:me.emoji||''});
-    toast('Presença confirmada! 🎉','ok');
   }
-  save();renderEventos();
+  save(false);renderEventos();
+  // ✅ ESPERA DE VERDADE o envio terminar — a mesma correção que já tinha
+  // feito em perfil/evento/ideia/loja, mas que tinha esquecido aqui. Isso
+  // explicava gente que confirmava presença e sumia da lista depois.
+  const ok=await cloudPush(false);
+  toast(confirmando?(ok?'Presença confirmada! 🎉':'✅ Confirmado! Confirmando com a nuvem, aparece em instantes.'):'Presença desmarcada',ok||!confirmando?'ok':'ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function verPresencas(id){
@@ -3776,14 +3862,32 @@ function openAutoCadastro(){
   openModal('mAutoCadastro');
 }
 
+/* ✅ Limpa e valida um @ do Instagram: tira espaços/caracteres inválidos,
+   garante o @ na frente. Instagram só aceita letras, números, ponto e
+   underline no nome de usuário. */
+function limparInstagramHandle(raw){
+  let t=(raw||'').trim();
+  if(!t.startsWith('@'))t='@'+t;
+  t=t.replace(/\s/g,'');
+  t='@'+t.slice(1).replace(/[^a-zA-Z0-9._]/g,'');
+  return t;
+}
+
+/* ✅ Valida se um WhatsApp parece minimamente válido: precisa ter DDD +
+   número, só dígitos depois de limpar formatação (parênteses, espaços,
+   traços). Brasil: 10 ou 11 dígitos (com o 9 na frente do celular). */
+function whatsappValido(raw){
+  const digitos=(raw||'').replace(/\D/g,'');
+  return digitos.length>=10&&digitos.length<=13;
+}
+
 async function salvarAutoCadastro(){
-  let user=document.getElementById('acUser').value.trim();
+  let user=limparInstagramHandle(document.getElementById('acUser').value);
   const nome=document.getElementById('acNome').value.trim();
   const whats=document.getElementById('acWhats').value.trim();
 
-  if(!user||!nome||!whats){toast('Preenche @, nome e WhatsApp','err');return}
-  if(!user.startsWith('@'))user='@'+user;
-  user=user.replace(/\s/g,'');
+  if(!user||user==='@'||!nome||!whats){toast('Preenche @, nome e WhatsApp','err');return}
+  if(!whatsappValido(whats)){toast('Esse WhatsApp não parece completo — confere o DDD e o número','err');return}
 
   const dup=db.cosplayers.find(c=>c.username.toLowerCase()===user.toLowerCase());
   if(dup){toast('Esse @ já está na lista! Se for você, pede pro admin liberar seu email.','err');return}
@@ -3942,6 +4046,27 @@ function checarDuplicados(){
       `).join('')}
     </div>
   `).join('');
+}
+
+/* ✅ LGPD: qualquer pessoa pode apagar o próprio perfil e todos os dados
+   ligados a ele (fotos, termo de autorização, etc), sem precisar do admin */
+async function excluirMeuPerfil(){
+  const me=getMe();
+  if(!editId||!me)return;
+  const c=db.cosplayers.find(x=>x.id===editId);
+  if(!c)return;
+  const admin=document.documentElement.classList.contains('admin');
+  if(!admin&&c.username!==me.username&&c.email!==me.email){toast('Você só pode excluir o seu próprio perfil','err');return}
+
+  if(!confirm(`⚠️ Tem certeza que quer excluir o perfil ${c.username} e TODOS os dados dele (fotos, redes sociais, tudo)?\n\nIsso não tem volta.`))return;
+  if(!confirm('Confirma mesmo? Essa é a última chance de cancelar.'))return;
+
+  db.cosplayers=db.cosplayers.filter(x=>x.id!==c.id);
+  save(false);renderCos();closeModal('mEdit');
+  clearMe();renderMe();
+  const ok=await cloudPush(false);
+  toast(ok?'Perfil excluído. Você pode se cadastrar de novo quando quiser.':'✅ Excluído aqui, confirmando com a nuvem...','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function admDelCos(id){
@@ -4777,7 +4902,7 @@ function renderVitrine(){
     const comentarios=v.comentarios||[];
     const comentariosHtml=comentarios.map(cm=>`
       <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
-        <b>${cm.author}:</b> ${cm.texto}
+        <b>${escapeHtml(cm.author)}:</b> ${escapeHtml(cm.texto)}
       </div>`).join('');
 
     return `<div class="item">
@@ -4986,7 +5111,7 @@ function renderLojas(){
     const comentarios=l.comentarios||[];
     const comentariosHtml=comentarios.map(cm=>`
       <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
-        <b>${cm.author}:</b> ${cm.texto}
+        <b>${escapeHtml(cm.author)}:</b> ${escapeHtml(cm.texto)}
       </div>`).join('');
 
     return `<div class="item">
@@ -5098,7 +5223,8 @@ function reagirLoja(id,emoji){
     l.reacoes[emoji]=l.reacoes[emoji]||[];
     l.reacoes[emoji].push(me.username);
   }
-  save();renderLojas();
+  save(false);renderLojas();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
 }
 
 function compartilharLoja(id){
