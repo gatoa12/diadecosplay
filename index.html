@@ -141,8 +141,9 @@ html.admin .sync-badge{display:flex}
 .grid.carousel::-webkit-scrollbar{height:8px}
 .grid.carousel::-webkit-scrollbar-track{background:var(--s1);border-radius:4px}
 .grid.carousel::-webkit-scrollbar-thumb{background:var(--primary);border-radius:4px}
-@media(max-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem}.grid.carousel .card{flex:0 0 180px}}
+@media(max-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1rem}.grid.carousel .card{flex:0 0 210px}}
 @media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:.8rem}.grid.carousel .card{flex:0 0 calc(50% - .4rem)}}
+@media(max-width:420px){.grid{grid-template-columns:1fr}.grid.carousel .card{flex:0 0 85%}}
 
 /* CARD ESTILO FIFA */
 .card{background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:.35s cubic-bezier(.4,0,.2,1);position:relative;display:flex;flex-direction:column}
@@ -465,10 +466,10 @@ html.admin .admin-only{display:flex!important}
     <div class="tab" data-tab="eventos"><span class="tab-ic">📅</span> Eventos</div>
     <div class="tab" data-tab="ideias"><span class="tab-ic">💡</span> Ideias</div>
     <div class="tab" data-tab="cenas"><span class="tab-ic">🎬</span> Cenas</div>
-    <div class="tab" data-tab="colabs"><span class="tab-ic">👯</span> Colabs</div>
-    <div class="tab" data-tab="empresas"><span class="tab-ic">💼</span> Marcas</div>
-    <div class="tab" data-tab="lojas"><span class="tab-ic">🛍️</span> Lojas</div>
-    <div class="tab" data-tab="ajuda"><span class="tab-ic">❓</span> Ajuda</div>
+    <div class="tab" data-tab="colabs"><span class="tab-ic">🤝</span> Colabs</div>
+    <div class="tab" data-tab="empresas"><span class="tab-ic">🏷️</span> Marcas</div>
+    <div class="tab" data-tab="lojas"><span class="tab-ic">🏪</span> Lojas</div>
+    <div class="tab" data-tab="ajuda"><span class="tab-ic">💬</span> Ajuda</div>
   </div>
   <button class="tabs-arrow right" id="tabsArrowRight" onclick="rolarTabs('tabsBar',1)" aria-label="Rolar pra direita"><i class="fas fa-chevron-right"></i></button>
 </div>
@@ -499,12 +500,40 @@ html.admin .admin-only{display:flex!important}
   <div class="filtro-backdrop" id="filtroBackdrop" onclick="fecharTodosFiltroPanel()"></div>
   <div class="toolbar">
     <div class="count" id="count">0 cosplayers</div>
-    <div class="views">
-      <button class="vbtn active" data-v="grid"><i class="fas fa-table-cells-large"></i> Colunas</button>
-      <button class="vbtn" data-v="carousel"><i class="fas fa-arrows-left-right"></i> Deslizar</button>
+    <div style="display:flex;gap:.6rem;align-items:center">
+      <button class="btn sec btn-inline" onclick="openAutoCadastro()"><i class="fas fa-user-plus"></i> Não estou na lista</button>
+      <div class="views">
+        <button class="vbtn active" data-v="grid"><i class="fas fa-table-cells-large"></i> Colunas</button>
+        <button class="vbtn" data-v="carousel"><i class="fas fa-arrows-left-right"></i> Deslizar</button>
+      </div>
     </div>
   </div>
   <div id="cosGrid" class="grid"></div>
+</div></div>
+
+<!-- MODAL: AUTO-CADASTRO (visitante que ainda não está na lista) -->
+<div id="mAutoCadastro" class="modal"><div class="mbox" style="max-width:440px">
+  <button class="mclose" onclick="closeModal('mAutoCadastro')">&times;</button>
+  <div class="mtitle">🙋 Entrar pra comunidade</div>
+  <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Preenche seu @, nome e WhatsApp pra entrar na lista. Seu perfil já aparece pra todo mundo — depois, quando quiser editar mais coisas (fotos, categoria, etc), é só cadastrar seu email.</span></div>
+
+  <div class="fg">
+    <label class="fl"><i class="fab fa-instagram"></i> Seu @ do Instagram <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="acUser" placeholder="@seuusuario">
+  </div>
+  <div class="fg">
+    <label class="fl">🙋 Seu nome <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="acNome" placeholder="Como quer ser chamado(a)">
+  </div>
+  <div class="fg">
+    <label class="fl"><i class="fab fa-whatsapp"></i> Seu WhatsApp <span style="color:var(--error)">*</span></label>
+    <input type="text" class="fi" id="acWhats" placeholder="(84) 9....-....">
+  </div>
+
+  <div class="bgrp">
+    <button class="btn" onclick="salvarAutoCadastro()"><i class="fas fa-check"></i> Entrar na lista</button>
+    <button class="btn sec" onclick="closeModal('mAutoCadastro')">Cancelar</button>
+  </div>
 </div></div>
 
 <!-- EVENTOS -->
@@ -800,13 +829,21 @@ html.admin .admin-only{display:flex!important}
 <!-- MODAL: IDEIA -->
 <div id="mIdeia" class="modal"><div class="mbox">
   <button class="mclose" onclick="closeModal('mIdeia')">&times;</button>
-  <div class="mtitle">💡 Propor Ideia</div>
+  <div class="mtitle" id="ideiaModalTitulo">💡 Propor Ideia</div>
   <div id="ideiaAuthor"></div>
   <div class="fg"><label class="fl">Título</label><input type="text" class="fi" id="iTitle" placeholder="Ex: Ensaio temático de Demon Slayer"></div>
   <div class="fg"><label class="fl">Descrição</label><textarea class="ft" id="iDesc" placeholder="Como seria essa ideia?"></textarea></div>
   <div class="fg"><label class="fl">Personagens</label><input type="text" class="fi" id="iChars" placeholder="Tanjiro, Nezuko, Zenitsu..."></div>
+  <div class="fg">
+    <label class="fl">📸 Foto de referência (opcional)</label>
+    <div class="foto-slot" id="iFotoSlot" style="max-width:200px" onclick="document.getElementById('iFoto').click()">
+      <i class="fas fa-image" style="font-size:22px;opacity:.5"></i>
+    </div>
+    <input type="file" id="iFoto" accept="image/*" style="display:none" onchange="previewFotoIdeia(this)">
+    <span class="hint">Uma imagem de referência do personagem/cena ajuda todo mundo a visualizar a ideia — e fica bonita quando você compartilhar!</span>
+  </div>
   <div class="bgrp">
-    <button class="btn" onclick="saveIdeia()"><i class="fas fa-check"></i> Enviar</button>
+    <button class="btn" onclick="saveIdeia()"><i class="fas fa-check"></i> <span id="ideiaBtnTexto">Enviar</span></button>
     <button class="btn sec" onclick="closeModal('mIdeia')">Cancelar</button>
   </div>
 </div></div>
@@ -1481,6 +1518,13 @@ function seed(){
       c.photos=c.photo?[c.photo]:[];
       c.slideshow=true;changed=true;
     }
+    // ✅ postagem já existente de antes dessa atualização, sem data
+    // registrada — considera que já passou das 24h (deixa de aparecer
+    // como "nova", mas continua acessível normalmente pra quem quiser ver)
+    if((c.post||c.media)&&!c.postagemEm){
+      c.postagemEm=new Date(Date.now()-25*60*60*1000).toISOString();
+      changed=true;
+    }
   });
 
   // ADICIONA os que faltam, SEM apagar perfis já preenchidos
@@ -1521,13 +1565,19 @@ function seed(){
   if(db.eventos.length!==antes){
     console.warn('⚠️ Duplicatas removidas:',antes-db.eventos.length);
     save();
-    // reenvia a lista já limpa pra nuvem, pra sumir de vez com as cópias extras
-    setTimeout(()=>cloudPush(true),1000);
+    // ✅ NÃO envia sozinho pra nuvem aqui — mesma razão do bloco abaixo:
+    // isso roda em toda visita, com dados possivelmente desatualizados
+    // daquele navegador específico. Só limpa localmente por enquanto.
   }
 
-  corrigirTudoAgora();
+  // ✅ Esse "seed()" roda em TODA visita ao site, muitas vezes ANTES dos
+  // dados reais da nuvem terem chegado ainda. Por isso a limpeza abaixo
+  // corrige a exibição local, mas NUNCA envia pra nuvem sozinha — só
+  // quando o admin pede isso de propósito (botão no painel).
+  corrigirTudoAgora(false);
 
   seedEvento();
+  seedEventosExternos();
   seedAjuda();
 }
 
@@ -1535,7 +1585,7 @@ function seed(){
    fotos repetidas no mesmo perfil, eventos duplicados, lojas duplicadas
    e vitrine com mais de 1 entrada por pessoa. Roda sozinha toda vez que
    o site carrega, e também pode ser chamada manualmente pelo Admin. */
-function corrigirTudoAgora(){
+function corrigirTudoAgora(podeEnviar=false){
   // 1) @ com número/lixo na frente (ex: "@1 - @celipe.cosplay")
   const pareceLixo=(u)=>/^@\d/.test(u)||/^@[\s\-\).]/.test(u);
   let corrigidos=0;
@@ -1653,9 +1703,25 @@ function corrigirTudoAgora(){
     // envio dessa correção, achando que era perda de verdade.
     const novoTotal=(db.cosplayers||[]).length;
     localStorage.setItem('dc_max_cosplayers',String(novoTotal));
+    localStorage.setItem('dc_max_eventos',String((db.eventos||[]).length));
 
     save();
-    setTimeout(()=>cloudPush(true),1200);
+
+    // ✅ CORREÇÃO CRÍTICA DE VERDADE: essa função roda toda vez que
+    // QUALQUER pessoa abre o site — inclusive ANTES dos dados reais da
+    // nuvem terem chegado ainda. Se ela empurrasse pra nuvem sozinha
+    // nesse momento, estaria mandando uma versão baseada em dados VELHOS
+    // que só existiam naquele navegador específico — apagando por cima
+    // qualquer coisa nova que outras pessoas tivessem adicionado depois
+    // da última vez que aquele navegador sincronizou. Isso explicava
+    // eventos que "voltavam" e fotos que "somiam": um navegador
+    // desatualizado empurrando a própria versão velha por cima da certa.
+    // Por isso agora só envia pra nuvem quando alguém pede isso de
+    // propósito (o botão "Corrigir tudo agora" do Admin) — nunca sozinho
+    // ao simplesmente abrir a página.
+    if(podeEnviar){
+      setTimeout(()=>cloudPush(true),1200);
+    }
   }
   return integridadeMexeu;
 }
@@ -1705,6 +1771,59 @@ function seedEvento(){
     img:null,status:'aprovado',by:'@ofcvictorcorreia'
   });
   save();
+}
+
+/* ✅ Eventos externos coletados e adicionados direto no código — IDs
+   fixos, então nunca duplicam mesmo rodando em toda visita. Diferente da
+   "correção automática", isso é uma ADIÇÃO genuinamente nova (não uma
+   correção de dados já existentes), então é seguro enviar pra nuvem
+   uma única vez quando realmente faltar. */
+function seedEventosExternos(){
+  const EVENTOS_EXTERNOS=[
+    {
+      id:1758288000000,
+      title:'DCXP26 - Digicom Experience 2026 (10 anos)',
+      date:'2026-09-19',time:'10:00',
+      city:'Natal',local:'Hotel Praiamar Arena, Natal/RN',
+      price:'A partir de R$ 47,50 (combo 2 dias) - ingresso solidário disponível',
+      type:'Geek',url:'https://dcxp26.com.br/',
+      desc:'Um dos maiores eventos geek e gamer do Rio Grande do Norte, celebrando 10 anos! Dias 19 e 20 de setembro de 2026. Painéis com artistas, mais de 20 áreas de atividades, exposições de quadrinhos, concursos culturais, área de games, apresentações de cosplay e K-pop, feira criativa com artistas independentes. Nessa edição estreia o primeiro HUB de Games e eSports do Nordeste. Ingresso solidário: desconto mediante doação de 1kg de alimento não perecível.',
+      img:'https://images.ticket360.com.br/images.ticket360/eventos/interna/32704-20260310160706.webp',status:'aprovado',by:''
+    },
+    {
+      id:1758374400000,
+      title:'FLiQ 2026 - 14ª Feira de Livros e Quadrinhos de Natal',
+      date:'2026-09-25',time:'',
+      city:'Natal',local:'Parque das Dunas',
+      price:'R$ 1 (taxa de acesso ao parque) - programação cultural gratuita',
+      type:'Geek',url:'https://www.instagram.com/p/DW626e9D1i3/',
+      desc:'14ª edição da Feira de Livros e Quadrinhos de Natal, um dos principais eventos de literatura e quadrinhos do Nordeste. De 25 a 27 de setembro, com mais de 50 horas de programação cultural gratuita: literatura, quadrinhos, música, teatro, games, cordel, palestras, cosplay, oficinas e contação de histórias. Patrocínio da Prefeitura de Natal (Lei Djalma Maranhão), Unimed Natal, Casa de Apostas Arena das Dunas e Sistema Fecomércio RN/Senac, com apoio do Governo do Estado.',
+      img:'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh2YKqMJ3R_7XY69wMi7xLsUZZc3-jJaxIdQ05eIP6Ygv4dfZ80IuPgZweKeR4OwHMhvFGM2xAMwIAsyp_MjM3lD7Ew7bBpfA5r81zQhmcAxZIzvfzHWTv5VAjWeNfksuvQ7YYlVhYCK52LNAQWl6xt-4KXHgwC_HaW89F5VjGMKW6ohJjsR7n8_48GHY0/s1600/Imagem%20FLiQ%2006.jpg',status:'aprovado',by:''
+    }
+  ];
+
+  let algumNovo=false;
+  EVENTOS_EXTERNOS.forEach(ev=>{
+    const existente=db.eventos.find(e=>e.id===ev.id);
+    if(!existente){
+      db.eventos.push(ev);
+      algumNovo=true;
+    }else if(!existente.img&&ev.img){
+      // ✅ evento já existia (importado antes sem foto) — só completa a
+      // foto que estava faltando, sem mexer em mais nada que a pessoa
+      // já tenha editado nele
+      existente.img=ev.img;
+      algumNovo=true;
+    }
+  });
+
+  if(algumNovo){
+    save();
+    // ✅ Push único e seguro: só acontece quando ADICIONA algo genuinamente
+    // novo (ID nunca visto antes) — não é uma "correção" de dados que já
+    // existiam, então não corre o risco que a correção automática tinha.
+    setTimeout(()=>cloudPush(true),1500);
+  }
 }
 
 /* ===== HOSPEDAGEM DE FOTOS NA NUVEM =====
@@ -2036,8 +2155,15 @@ function tamanhoLegivel(b){return b>1048576?(b/1048576).toFixed(1)+'MB':Math.rou
 
 function postLive(c){
   if(!c.post&&!c.media)return false;
-  if(!c.schedule)return true;
-  return new Date(c.schedule)<=new Date();
+  if(c.schedule&&new Date(c.schedule)>new Date())return false; // ainda não chegou a hora agendada
+
+  // ✅ Depois de 24h publicada, a postagem deixa de contar como "nova"
+  // (some o selo de destaque) — mas continua acessível pra quem quiser ver
+  if(c.postagemEm){
+    const passou24h=(new Date()-new Date(c.postagemEm))>24*60*60*1000;
+    if(passou24h)return false;
+  }
+  return true;
 }
 function schedLabel(c){
   if(!c.schedule)return '';
@@ -2760,7 +2886,13 @@ function saveProfile(){
   c.photos=[...fotosTemp];
   c.photo=fotosTemp[0]||null;
   c.slideshow=document.getElementById('fSlide').checked;
-  c.post=document.getElementById('fPost').value.trim();
+  const novoPost=document.getElementById('fPost').value.trim();
+  // ✅ Marca a hora em que a postagem virou "nova" — usado pra ela deixar
+  // de aparecer como "nova postagem" sozinha depois de 24h
+  if(novoPost&&novoPost!==c.post){
+    c.postagemEm=new Date().toISOString();
+  }
+  c.post=novoPost;
   c.schedule=document.getElementById('fSchedule').value;
   c.tiktok=document.getElementById('fTiktok').value.trim();
   c.twitter=document.getElementById('fTwitter').value.trim();
@@ -2894,24 +3026,103 @@ function renderColabGate(){
   document.getElementById('colabGate').innerHTML=html;
 }
 
+let ideiaEditId=null;
+let fotoIdeiaTemp=null;
+
+function previewFotoIdeia(input){
+  const f=input.files[0];
+  if(!f)return;
+  const slot=document.getElementById('iFotoSlot');
+  slot.innerHTML=`<i class="fas fa-spinner fa-spin"></i>`;
+  comprimirImagem(f,1000,.8).then(dataUrl=>{
+    fotoIdeiaTemp=dataUrl;
+    slot.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+  }).catch(()=>{
+    toast('Não consegui processar essa foto — tenta outra','err');
+    slot.innerHTML=`<i class="fas fa-image" style="font-size:22px;opacity:.5"></i>`;
+    fotoIdeiaTemp=null;
+  });
+}
+
 function tryAdd(kind){
   const me=getMe();
   if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
   const authorHtml=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Publicando como <b>${me.username}</b> — <i class="fas fa-lock"></i> seu email não aparece pra ninguém.</span></div>`;
-  if(kind==='ideia'){document.getElementById('ideiaAuthor').innerHTML=authorHtml;openModal('mIdeia')}
+  if(kind==='ideia'){
+    ideiaEditId=null;
+    document.getElementById('ideiaModalTitulo').textContent='💡 Propor Ideia';
+    document.getElementById('ideiaBtnTexto').textContent='Enviar';
+    document.getElementById('iTitle').value='';
+    document.getElementById('iDesc').value='';
+    document.getElementById('iChars').value='';
+    document.getElementById('iFotoSlot').innerHTML=`<i class="fas fa-image" style="font-size:22px;opacity:.5"></i>`;
+    document.getElementById('iFoto').value='';
+    fotoIdeiaTemp=null;
+    document.getElementById('ideiaAuthor').innerHTML=authorHtml;openModal('mIdeia');
+  }
   else{document.getElementById('cenaAuthor').innerHTML=authorHtml;openModal('mCena')}
+}
+
+/* ✅ Abre a ideia já existente pra edição — só quem criou (ou admin) vê o
+   botão de editar */
+function editarIdeia(id){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const i=db.ideias.find(x=>x.id===id);
+  if(!i)return;
+  if(!admin&&(!me||i.email!==me.email)){toast('Só quem criou pode editar','err');return}
+
+  ideiaEditId=id;
+  document.getElementById('ideiaModalTitulo').textContent='✏️ Editar Ideia';
+  document.getElementById('ideiaBtnTexto').textContent='Salvar alterações';
+  document.getElementById('iTitle').value=i.title||'';
+  document.getElementById('iDesc').value=i.desc||'';
+  document.getElementById('iChars').value=i.chars||'';
+  document.getElementById('iFotoSlot').innerHTML=i.foto
+    ?`<img src="${i.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
+    :`<i class="fas fa-image" style="font-size:22px;opacity:.5"></i>`;
+  document.getElementById('iFoto').value='';
+  fotoIdeiaTemp=i.foto||null;
+  document.getElementById('ideiaAuthor').innerHTML=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Editando como <b>${i.author}</b>.</span></div>`;
+  openModal('mIdeia');
 }
 
 async function saveIdeia(){
   const me=getMe();if(!me)return;
   const t=document.getElementById('iTitle').value.trim();
   if(!t){toast('Coloque um título','err');return}
-  db.ideias.unshift({id:Date.now(),title:t,desc:document.getElementById('iDesc').value.trim(),chars:document.getElementById('iChars').value.trim(),author:me.username,email:me.email,date:new Date().toISOString()});
+
+  const desc=document.getElementById('iDesc').value.trim();
+  const chars=document.getElementById('iChars').value.trim();
+
+  // ✅ Sobe a foto de verdade pra nuvem (mesmo sistema das outras fotos do
+  // site) — isso é o que permite a prévia bonita aparecer ao compartilhar
+  let fotoFinal=fotoIdeiaTemp;
+  let fotoPendente=false;
+  if(fotoIdeiaTemp&&ehDataUrl(fotoIdeiaTemp)){
+    try{
+      fotoFinal=await subirFoto(fotoIdeiaTemp);
+    }catch(e){
+      console.warn('Foto da ideia ficará pendente:',e.message);
+      fotoPendente=true;
+    }
+  }
+
+  if(ideiaEditId){
+    const i=db.ideias.find(x=>x.id===ideiaEditId);
+    if(i){
+      i.title=t;i.desc=desc;i.chars=chars;i.foto=fotoFinal;
+    }
+  }else{
+    db.ideias.unshift({id:Date.now(),title:t,desc,chars,foto:fotoFinal,author:me.username,email:me.email,date:new Date().toISOString(),reacoes:{},vaoFazer:[],contraIdeias:[]});
+  }
+
   save(false);renderIdeias();closeModal('mIdeia');
   ['iTitle','iDesc','iChars'].forEach(i=>document.getElementById(i).value='');
+  fotoIdeiaTemp=null;ideiaEditId=null;
   const ok=await cloudPush(false);
-  toast(ok?'Ideia publicada!':'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
-  if(!ok){pendente=true;agendarSync(500)}
+  toast(ok?(fotoPendente?'✅ Salva! A foto ainda está subindo, aparece em instantes.':'✅ Ideia salva!'):'✅ Salva! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok||fotoPendente){pendente=true;agendarSync(500)}
 }
 
 async function saveCena(){
@@ -2935,16 +3146,127 @@ function renderIdeias(){
     if(me){if(a.email===me.email&&b.email!==me.email)return -1;if(b.email===me.email&&a.email!==me.email)return 1}
     return new Date(b.date)-new Date(a.date);
   });
-  el.innerHTML=arr.map(i=>`<div class="item">
+  el.innerHTML=arr.map(i=>{
+    const reacoes=i.reacoes||{};
+    const minhaReacao=me&&Object.keys(reacoes).find(emoji=>(reacoes[emoji]||[]).includes(me.username||me.email));
+    const chipsReacao=REACOES_DISPONIVEIS.map(emoji=>{
+      const qtd=(reacoes[emoji]||[]).length;
+      const ativa=minhaReacao===emoji;
+      return `<button class="bs${ativa?' indo':''}" style="padding:.3rem .5rem;font-size:12px" onclick="reagirIdeia(${i.id},'${emoji}')" ${!me?'disabled':''}>${emoji}${qtd?` ${qtd}`:''}</button>`;
+    }).join('');
+
+    const vaoFazer=i.vaoFazer||[];
+    const euVouFazer=me&&vaoFazer.some(v=>v.username===(me.username||me.email));
+
+    const contraIdeias=i.contraIdeias||[];
+    const contraIdeiasHtml=contraIdeias.map(ci=>`
+      <div style="background:var(--s2);border-radius:8px;padding:.5rem .7rem;margin-top:.4rem;font-size:12px">
+        <b>${ci.author}:</b> ${ci.texto}
+      </div>`).join('');
+
+    return `<div class="item">
+    ${i.foto?`<img src="${i.foto}" alt="Foto de ${i.title}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
     <h3>${i.title}</h3>
     ${i.desc?`<p>${i.desc}</p>`:''}
     ${i.chars?`<div>${i.chars.split(',').map(c=>`<span class="tag">${c.trim()}</span>`).join('')}</div>`:''}
     <div class="item-meta"><i class="fas fa-user"></i> ${i.author} ${me&&i.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
-      ${me&&i.email===me.email?`<button class="bs del" style="margin-left:auto;padding:.3rem .6rem" onclick="delIdeia(${i.id})"><i class="fas fa-trash"></i></button>`:''}
+      <button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="compartilharIdeia(${i.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
+      ${(me&&i.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="padding:.3rem .6rem" onclick="editarIdeia(${i.id})" title="Editar"><i class="fas fa-pen"></i></button>
+      <button class="bs del" style="padding:.3rem .6rem" onclick="delIdeia(${i.id})" title="Excluir"><i class="fas fa-trash"></i></button>`:''}
     </div>
-  </div>`).join('');
+
+    ${vaoFazer.length?`<div style="font-size:11.5px;color:var(--text2);margin-top:.5rem"><i class="fas fa-people-arrows"></i> ${vaoFazer.map(v=>v.username).join(', ')} ${vaoFazer.length>1?'vão fazer':'vai fazer'} esse cosplay!</div>`:''}
+
+    <div style="display:flex;gap:.4rem;margin-top:.7rem;align-items:center;flex-wrap:wrap">
+      ${chipsReacao}
+      <button class="bs${euVouFazer?' indo':''}" style="margin-left:auto" onclick="toggleVouFazer(${i.id})" ${!me?'disabled title="Cadastre seu email pra marcar"':''}>
+        <i class="fas fa-wand-magic-sparkles"></i> ${euVouFazer?'Vou fazer! ✓':'Eu vou fazer esse!'}
+      </button>
+    </div>
+
+    <div style="margin-top:.6rem">${contraIdeiasHtml}</div>
+    <div style="display:flex;gap:.4rem;margin-top:.5rem">
+      <input type="text" class="fi" id="contraIdeia${i.id}" placeholder="Sugere uma ideia diferente pra esse tema..." style="font-size:12px;padding:.5rem .7rem" ${!me?'disabled':''}>
+      <button class="bs" style="flex:0 0 auto" onclick="enviarContraIdeia(${i.id})" ${!me?'disabled':''}><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>`;
+  }).join('');
 }
 function delIdeia(id){db.ideias=db.ideias.filter(i=>i.id!==id);save();renderIdeias();toast('Ideia removida','ok')}
+
+/* ✅ Compartilha a ideia com foto+descrição aparecendo de verdade na
+   prévia do WhatsApp/Instagram. Isso só funciona porque o link aponta
+   pra uma página especial no Worker, que devolve as tags certas
+   (og:image, og:description) — o link normal do site (sem isso) não
+   consegue mostrar prévia nenhuma, porque é tudo montado só no navegador. */
+function compartilharIdeia(id){
+  const i=db.ideias.find(x=>x.id===id);if(!i)return;
+  const c=db.config||{};
+  if(!c.workerUrl){toast('Conexão não configurada','err');return}
+
+  const url=`${c.workerUrl}/ideia/${i.id}`;
+  const txt=`💡 ${i.title}`;
+
+  if(navigator.share){
+    navigator.share({title:i.title,text:txt,url}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(url).then(()=>toast('Link da ideia copiado! Cole no WhatsApp ou Instagram.','ok'))
+      .catch(()=>toast('Link: '+url));
+  }
+}
+
+function reagirIdeia(id,emoji){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra reagir','err');return}
+  const i=db.ideias.find(x=>x.id===id);
+  if(!i)return;
+  if(!i.reacoes)i.reacoes={};
+  const chave=me.username||me.email;
+  REACOES_DISPONIVEIS.forEach(e=>{
+    if(!i.reacoes[e])i.reacoes[e]=[];
+    const idx=i.reacoes[e].indexOf(chave);
+    if(idx>=0)i.reacoes[e].splice(idx,1);
+  });
+  if(!(i.reacoes[emoji]||[]).includes(chave)){
+    i.reacoes[emoji]=i.reacoes[emoji]||[];
+    i.reacoes[emoji].push(chave);
+  }
+  save(false);renderIdeias();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
+}
+
+function toggleVouFazer(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');return}
+  const i=db.ideias.find(x=>x.id===id);
+  if(!i)return;
+  if(!Array.isArray(i.vaoFazer))i.vaoFazer=[];
+  const chave=me.username||me.email;
+  const idx=i.vaoFazer.findIndex(v=>v.username===chave);
+  if(idx>=0){
+    i.vaoFazer.splice(idx,1);
+    toast('Removido da lista','ok');
+  }else{
+    i.vaoFazer.push({username:chave});
+    toast('🎉 Marcado! Boa sorte com esse cosplay!','ok');
+  }
+  save(false);renderIdeias();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
+}
+
+function enviarContraIdeia(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra sugerir','err');return}
+  const input=document.getElementById('contraIdeia'+id);
+  const texto=input.value.trim();
+  if(!texto)return;
+  const i=db.ideias.find(x=>x.id===id);
+  if(!i)return;
+  if(!Array.isArray(i.contraIdeias))i.contraIdeias=[];
+  i.contraIdeias.push({author:me.username||me.email,texto,date:new Date().toISOString()});
+  save(false);renderIdeias();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
+}
 
 function renderCenas(){
   const me=getMe();
@@ -3442,6 +3764,45 @@ function limparPrefixoNumerico(raw){
   return t;
 }
 
+/* ===== AUTO-CADASTRO: visitante que ainda não está na lista pode se
+   adicionar sozinho, sem precisar do admin. Fica "quase ativo" — aparece
+   pra todo mundo, mas só consegue editar mais coisas (foto, categoria,
+   etc) depois de cadastrar um email de verdade, que é a trava normal
+   que já protege edição de perfil no site inteiro. */
+function openAutoCadastro(){
+  document.getElementById('acUser').value='';
+  document.getElementById('acNome').value='';
+  document.getElementById('acWhats').value='';
+  openModal('mAutoCadastro');
+}
+
+async function salvarAutoCadastro(){
+  let user=document.getElementById('acUser').value.trim();
+  const nome=document.getElementById('acNome').value.trim();
+  const whats=document.getElementById('acWhats').value.trim();
+
+  if(!user||!nome||!whats){toast('Preenche @, nome e WhatsApp','err');return}
+  if(!user.startsWith('@'))user='@'+user;
+  user=user.replace(/\s/g,'');
+
+  const dup=db.cosplayers.find(c=>c.username.toLowerCase()===user.toLowerCase());
+  if(dup){toast('Esse @ já está na lista! Se for você, pede pro admin liberar seu email.','err');return}
+
+  const maxId=db.cosplayers.reduce((m,c)=>Math.max(m,c.id),0);
+  db.cosplayers.push({
+    id:maxId+1,username:user,nome,email:'',whatsCadastro:whats,
+    cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',
+    schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',
+    userTrocado:false,qtdTrocasUser:0,nomeTrocado:true, // nome já veio definido no cadastro
+    quaseAtivo:true // ✅ marca que ainda falta o email pra liberar edição completa
+  });
+
+  save(false);renderCos();closeModal('mAutoCadastro');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Você já está na lista! Cadastre seu email quando quiser editar mais coisas.':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
 function admAddCos(){
   const txt=document.getElementById('admNovosCos').value.trim();
   if(!txt){toast('Cole pelo menos um @','err');return}
@@ -3475,7 +3836,7 @@ function admRenderCos(){
       : `⚠️ idade não informada`;
     return `<div class="adm-row">
     <div class="nome">${c.emoji||''} ${c.nome?c.nome+' ':''}${c.username}
-      <div class="sub">${c.email?'📧 cadastrado':'sem email'}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''} · <span style="color:${c.idade?(c.menorDeIdade&&!temTermo?'var(--error)':'var(--text2)'):'var(--warn)'}">${idadeTag}</span></div>
+      <div class="sub">${c.email?'📧 cadastrado':(c.quaseAtivo&&c.whatsCadastro?`⏳ quase ativo · 📱 ${c.whatsCadastro}`:'sem email')}${(c.cats||[]).length?' · '+c.cats.join(', '):''}${postLive(c)?' · 🔗 postagem no ar':''} · <span style="color:${c.idade?(c.menorDeIdade&&!temTermo?'var(--error)':'var(--text2)'):'var(--warn)'}">${idadeTag}</span></div>
     </div>
     <div class="acts">
       ${temTermo?`<button class="adm-btn ok" onclick="verTermoPdf(${c.id})" title="Ver termo de autorização (PDF)"><i class="fas fa-file-pdf"></i></button>`:''}
@@ -4040,18 +4401,25 @@ async function cloudPush(auto=false){
   }
 
   // ✅ TRAVA ANTI-PERDA CRÍTICA: nunca envia se os dados locais parecem
-  // suspeitosamente menores do que o maior número já visto de cosplayers.
-  // Isso impede que uma aba "vazia" (que ainda não terminou de puxar da
-  // nuvem) apague o trabalho de todo mundo.
+  // suspeitosamente menores do que o maior número já visto de cosplayers
+  // OU de eventos. Isso impede que uma aba "vazia" (que ainda não
+  // terminou de puxar da nuvem) apague o trabalho de todo mundo.
   const maiorJaVisto=parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
   const atual=(db.cosplayers||[]).length;
-  if(atual>maiorJaVisto){
-    localStorage.setItem('dc_max_cosplayers',String(atual));
-  }else if(maiorJaVisto>0&&atual<maiorJaVisto*0.7){
-    console.error(`🛑 BLOQUEADO: envio recusado. Local tem ${atual} cosplayers, mas já vimos ${maiorJaVisto}. Isso pareceria perda de dados.`);
+  const maiorEventosJaVisto=parseInt(localStorage.getItem('dc_max_eventos')||'0',10);
+  const atualEventos=(db.eventos||[]).length;
+
+  if(atual>maiorJaVisto)localStorage.setItem('dc_max_cosplayers',String(atual));
+  if(atualEventos>maiorEventosJaVisto)localStorage.setItem('dc_max_eventos',String(atualEventos));
+
+  const perdeuCosplayers=maiorJaVisto>0&&atual<maiorJaVisto*0.7;
+  const perdeuEventos=maiorEventosJaVisto>0&&atualEventos<maiorEventosJaVisto*0.7;
+
+  if(perdeuCosplayers||perdeuEventos){
+    console.error(`🛑 BLOQUEADO: envio recusado. Cosplayers: ${atual}/${maiorJaVisto} · Eventos: ${atualEventos}/${maiorEventosJaVisto}. Isso pareceria perda de dados.`);
     syncBadge('off','Envio bloqueado (proteção anti-perda)');
     if(!auto){
-      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-shield-halved"></i><span>⚠️ Envio bloqueado por segurança: os dados daqui (${atual}) estão bem menores que o esperado (${maiorJaVisto}). Clica em "Puxar agora" pra atualizar antes de tentar de novo.</span></div>`);
+      cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-shield-halved"></i><span>⚠️ Envio bloqueado por segurança: os dados daqui estão bem menores que o esperado. Clica em "Puxar agora" pra atualizar antes de tentar de novo.</span></div>`);
     }
     return false;
   }
@@ -4217,6 +4585,10 @@ async function cloudPull(auto=false){
     const totalNuvem=(db.cosplayers||[]).length;
     const maiorAtual=parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
     if(totalNuvem>maiorAtual)localStorage.setItem('dc_max_cosplayers',String(totalNuvem));
+
+    const totalEventosNuvem=(db.eventos||[]).length;
+    const maiorEventosAtual=parseInt(localStorage.getItem('dc_max_eventos')||'0',10);
+    if(totalEventosNuvem>maiorEventosAtual)localStorage.setItem('dc_max_eventos',String(totalEventosNuvem));
 
     seed();
     applyConfig();
@@ -4993,6 +5365,12 @@ function init(){
     const due=db.cosplayers.some(c=>c.schedule&&new Date(c.schedule)<=now&&new Date(c.schedule)>new Date(now-35000));
     if(due){renderCos();toast('Uma postagem agendada acabou de entrar no ar','ok')}
   },30000);
+
+  // ✅ Faz o selo de "nova postagem" sumir sozinho assim que completa 24h,
+  // mesmo sem a pessoa recarregar a página — checa a cada 2 minutos
+  setInterval(()=>{
+    if(document.getElementById('cosplayers')?.classList.contains('active'))renderCos();
+  },120000);
 
   // GALERIA: alterna as fotos a cada 3 segundos
   setInterval(girarFotos,3000);
