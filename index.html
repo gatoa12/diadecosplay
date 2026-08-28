@@ -283,7 +283,7 @@ html.admin .sync-badge{display:flex}
 .bs.indo{background:var(--accent);border-color:var(--accent);color:#fff}
 .pres-bar{display:flex;gap:.5rem;padding:0 1.1rem .8rem;flex-wrap:wrap}
 .pres-bar .bs:first-child{flex:1}
-.card.destaque{animation:pisca 1.6s ease-out 2}
+.card.destaque,.item.destaque{animation:pisca 1.6s ease-out 2}
 @keyframes pisca{0%,100%{box-shadow:0 0 0 0 rgba(228,64,95,0)}50%{box-shadow:0 0 0 5px rgba(228,64,95,.45)}}
 .bs.post{background:linear-gradient(135deg,#833AB4,#E4405F,#FCAF45);border:none;color:#fff}
 .bs.post:hover{filter:brightness(1.15)}
@@ -3279,6 +3279,23 @@ async function saveIdeia(){
 }
 
 /* ✅ Abre a cena já existente pra edição — só quem criou (ou admin) vê */
+/* ✅ Compartilha a cena com link direto pra ela (mesma lógica das ideias) */
+function compartilharCena(id){
+  const c=db.cenas.find(x=>x.id===id);if(!c)return;
+  const conf=db.config||{};
+  if(!conf.workerUrl){toast('Conexão não configurada','err');return}
+
+  const url=`${conf.workerUrl}/cena/${c.id}`;
+  const txt=`🎬 ${c.title}`;
+
+  if(navigator.share){
+    navigator.share({title:c.title,text:txt,url}).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(url).then(()=>toast('Link da cena copiado! Cole no WhatsApp ou Instagram.','ok'))
+      .catch(()=>toast('Link: '+url));
+  }
+}
+
 function editarCena(id){
   const me=getMe();
   const admin=document.documentElement.classList.contains('admin');
@@ -3469,7 +3486,8 @@ function renderCenas(){
     ${c.desc?`<p>${escapeHtml(c.desc)}</p>`:''}
     <div><span class="tag">${c.diff}</span>${c.chars?c.chars.split(',').map(x=>`<span class="tag">${escapeHtml(x.trim())}</span>`).join(''):''}</div>
     <div class="item-meta"><i class="fas fa-user"></i> ${c.author} ${me&&c.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
-      ${(me&&c.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="editarCena(${c.id})" title="Editar"><i class="fas fa-pen"></i></button>
+      <button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="compartilharCena(${c.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
+      ${(me&&c.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="padding:.3rem .6rem" onclick="editarCena(${c.id})" title="Editar"><i class="fas fa-pen"></i></button>
       <button class="bs del" style="padding:.3rem .6rem" onclick="delCena(${c.id})" title="Excluir"><i class="fas fa-trash"></i></button>`:''}
     </div>
   </div>`).join('');
@@ -3549,8 +3567,15 @@ function copiarLinkGrupo(){
 /* ===== COMPARTILHAR CARTA / LINK DIRETO ===== */
 function compartilhar(id){
   const c=db.cosplayers.find(x=>x.id===id);if(!c)return;
-  const url=location.origin+location.pathname+'#'+c.username.replace('@','');
+  const conf=db.config||{};
   const txt=`${c.nome?c.nome+' ':''}${c.username} no DiaDeCosplay`;
+
+  // ✅ Passa pelo Worker (mesma lógica de ideias/cenas) pra WhatsApp e
+  // Instagram mostrarem a foto e uma mini descrição do perfil na prévia
+  const url=conf.workerUrl
+    ? `${conf.workerUrl}/perfil/${c.id}`
+    : location.origin+location.pathname+'#'+c.username.replace('@',''); // se não tiver Worker configurado, cai no link direto normal
+
   if(navigator.share){
     navigator.share({title:'DiaDeCosplay',text:txt,url}).catch(()=>{});
   }else{
@@ -3562,6 +3587,33 @@ function compartilhar(id){
 function abrirPorHash(){
   const h=decodeURIComponent(location.hash.replace('#','')).trim();
   if(!h)return;
+
+  // ✅ Link direto pra uma IDEIA específica (ex: #ideia-123)
+  if(h.startsWith('ideia-')){
+    const id=Number(h.replace('ideia-',''));
+    if(!db.ideias.some(i=>i.id===id))return;
+    switchTab('ideias');
+    setTimeout(()=>destacarItemPorId('ideiaList',id),250);
+    return;
+  }
+  // ✅ Link direto pra uma CENA específica (ex: #cena-123)
+  if(h.startsWith('cena-')){
+    const id=Number(h.replace('cena-',''));
+    if(!db.cenas.some(c=>c.id===id))return;
+    switchTab('cenas');
+    setTimeout(()=>destacarItemPorId('cenaList',id),250);
+    return;
+  }
+  // ✅ Link direto pra um EVENTO específico (ex: #evento-123)
+  if(h.startsWith('evento-')){
+    const id=Number(h.replace('evento-',''));
+    if(!db.eventos.some(e=>e.id===id))return;
+    switchTab('eventos');
+    setTimeout(()=>destacarItemPorId('evList',id),250);
+    return;
+  }
+
+  // Link direto pra um PERFIL (ex: #ofcvictorcorreia) — comportamento original
   const c=db.cosplayers.find(x=>x.username.toLowerCase().replace('@','')===h.toLowerCase().replace('@',''));
   if(!c)return;
   switchTab('cosplayers');
@@ -3571,6 +3623,20 @@ function abrirPorHash(){
     const card=document.querySelector('.card');
     if(card){card.scrollIntoView({behavior:'smooth',block:'center'});card.classList.add('destaque')}
   },200);
+}
+
+/* ✅ Rola até um item específico numa lista e destaca ele visualmente por
+   alguns segundos — usado pelos links diretos de ideia/cena/evento */
+function destacarItemPorId(containerId,id){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  const botao=container.querySelector(`[onclick*="${id})"]`);
+  const item=botao?botao.closest('.item,.ev-item'):null;
+  if(item){
+    item.scrollIntoView({behavior:'smooth',block:'center'});
+    item.classList.add('destaque');
+    setTimeout(()=>item.classList.remove('destaque'),3000);
+  }
 }
 
 /* ===== EVENTOS ===== */
@@ -3894,7 +3960,7 @@ function toggleKey(){
   e.className=ver?'fas fa-eye-slash':'fas fa-eye';
 }
 
-function saveConfig(){
+async function saveConfig(){
   db.config=db.config||{};
   db.config.siteName=document.getElementById('cfgName').value.trim()||'DiaDeCosplay';
   db.wa=document.getElementById('cfgWa').value.trim();
@@ -3902,8 +3968,11 @@ function saveConfig(){
   db.config.credito=document.getElementById('cfgCredito').value.trim();
   db.config.workerUrl=CLOUD_URL;
   db.config.writeKey=CLOUD_KEY;
-  save();applyConfig();admStats();
-  toast('Configurações salvas','ok');
+  save(false);applyConfig();admStats();
+  toast('📤 Enviando configurações...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Configurações salvas e no ar!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function applyConfig(){
@@ -4014,7 +4083,7 @@ async function salvarAutoCadastro(){
   if(!ok){pendente=true;agendarSync(500)}
 }
 
-function admAddCos(){
+async function admAddCos(){
   const txt=document.getElementById('admNovosCos').value.trim();
   if(!txt){toast('Cole pelo menos um @','err');return}
   const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(limparPrefixoNumerico);
@@ -4029,9 +4098,16 @@ function admAddCos(){
       ignorados++;
     }
   });
-  save();document.getElementById('admNovosCos').value='';
+  save(false);document.getElementById('admNovosCos').value='';
   admRenderAll();renderCos();
-  toast(add?`${add} adicionado(s)${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'Todos já estavam na lista','ok');
+  if(add){
+    toast('📤 Enviando pra nuvem...');
+    const ok=await cloudPush(false);
+    toast(ok?`✅ ${add} adicionado(s) e já no ar!${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+    if(!ok){pendente=true;agendarSync(500)}
+  }else{
+    toast('Todos já estavam na lista','ok');
+  }
 }
 
 function admRenderCos(){
@@ -4265,13 +4341,17 @@ function admRenderAjuda(){
     </div>`).join('');
 }
 function admAddAjuda(){db.ajuda=db.ajuda||[];db.ajuda.push({icon:'✨',title:'',text:''});admRenderAjuda()}
-function saveAjuda(){
+async function saveAjuda(){
   const novo=(db.ajuda||[]).map(a=>({...a}));
   document.querySelectorAll('[data-aj]').forEach(el=>{
     novo[+el.dataset.i][el.dataset.aj]=el.value;
   });
   db.ajuda=novo.filter(a=>a.title.trim());
-  save();renderAjuda();admRenderAjuda();toast('Ajuda atualizada','ok');
+  save(false);renderAjuda();admRenderAjuda();
+  toast('📤 Enviando...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Ajuda atualizada e no ar!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 function renderAjuda(){
   document.getElementById('helpGrid').innerHTML=(db.ajuda||[]).map(a=>
@@ -4460,7 +4540,7 @@ function cancelarImportPendente(){
   toast('Importação cancelada — nada foi alterado');
 }
 
-function aplicarImport(obj,substituir){
+async function aplicarImport(obj,substituir){
   if(!obj||typeof obj!=='object'){toast('Arquivo inválido','err');return}
   if(substituir){
     // ✅ confirmação já foi feita na tela de prévia — não pergunta de novo
@@ -4479,9 +4559,12 @@ function aplicarImport(obj,substituir){
     if(obj.ajuda&&!db.ajuda?.length)db.ajuda=obj.ajuda;
     if(obj.wa&&!db.wa)db.wa=obj.wa;
   }
-  save();seed();applyConfig();admRenderAll();
+  save(false);seed();applyConfig();admRenderAll();
   renderCos();renderEventos();renderIdeias();renderCenas();renderAjuda();
-  toast(substituir?'Dados substituídos':'Dados juntados','ok');
+  toast('📤 Enviando pra nuvem...');
+  const ok=await cloudPush(false);
+  toast(ok?(substituir?'✅ Dados substituídos e já no ar!':'✅ Dados juntados e já no ar!'):'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 function importData(substituir){
   const f=document.getElementById('admImport').files[0];
@@ -4551,6 +4634,27 @@ const WORKER_CODE=`export default {
     const path = url.pathname;
     const key = request.headers.get("X-Write-Key") || url.searchParams.get("k");
 
+    const SITE_URL = "https://diadecosplay.pages.dev/";
+    const escapar = (s) => (s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    function paginaDePrevia(titulo, descricaoBruta, imagem, hashDestino) {
+      const descricao = escapar((descricaoBruta || "").length > 200 ? descricaoBruta.slice(0, 197) + "..." : (descricaoBruta || ""));
+      const tituloEscapado = escapar(titulo);
+      const destino = SITE_URL + (hashDestino ? "#" + hashDestino : "");
+      const html = \`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>\${tituloEscapado}</title>
+<meta property="og:title" content="\${tituloEscapado}"><meta property="og:description" content="\${descricao}">
+\${imagem ? \`<meta property="og:image" content="\${escapar(imagem)}">\` : ""}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="\${imagem ? "summary_large_image" : "summary"}">
+<meta name="twitter:title" content="\${tituloEscapado}"><meta name="twitter:description" content="\${descricao}">
+\${imagem ? \`<meta name="twitter:image" content="\${escapar(imagem)}">\` : ""}
+<meta http-equiv="refresh" content="0;url=\${destino}">
+<style>body{background:#0F0F12;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:1rem}</style></head>
+<body><p>Abrindo o DiaDeCosplay... <a href="\${destino}" style="color:#E4405F">clique aqui se não for redirecionado</a></p>
+<script>window.location.replace(\${JSON.stringify(destino)});</script></body></html>\`;
+      return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=UTF-8" } });
+    }
+
     // ===== FOTOS: /f/<id> =====
     if (path.startsWith("/f/")) {
       const id = "foto:" + path.slice(3);
@@ -4582,6 +4686,41 @@ const WORKER_CODE=`export default {
           return new Response("Formato invalido", { status: 400, headers: cors });
         await env.DC_KV.put(id, body);
         return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, ...noCache } });
+      }
+    }
+
+    // ===== PRÉVIA RICA DE IDEIA/CENA/PERFIL (compartilhamento) =====
+    if (request.method === "GET" && (path.startsWith("/ideia/") || path.startsWith("/cena/") || path.startsWith("/perfil/"))) {
+      const dadosTexto = await env.DC_KV.get("dados");
+      const dados = dadosTexto ? JSON.parse(dadosTexto) : {};
+
+      if (path.startsWith("/ideia/")) {
+        const id = path.split("/").pop();
+        const ideia = (dados.ideias || []).find(i => String(i.id) === String(id));
+        const titulo = ideia ? \`💡 \${ideia.title}\` : "💡 Ideia de Cosplay — DiaDeCosplay";
+        const desc = ideia?.desc || "Confira essa ideia de cosplay na comunidade DiaDeCosplay!";
+        return paginaDePrevia(titulo, desc, ideia?.foto || "", ideia ? \`ideia-\${ideia.id}\` : "ideias");
+      }
+      if (path.startsWith("/cena/")) {
+        const id = path.split("/").pop();
+        const cena = (dados.cenas || []).find(c => String(c.id) === String(id));
+        const titulo = cena ? \`🎬 \${cena.title}\` : "🎬 Cena de Cosplay — DiaDeCosplay";
+        const desc = cena?.desc || (cena?.source ? \`Cena de \${cena.source}\` : "Confira essa cena sugerida na comunidade DiaDeCosplay!");
+        return paginaDePrevia(titulo, desc, "", cena ? \`cena-\${cena.id}\` : "cenas");
+      }
+      if (path.startsWith("/perfil/")) {
+        const id = path.split("/").pop();
+        const cos = (dados.cosplayers || []).find(c => String(c.id) === String(id));
+        const CAT_LABEL = { cosplay: "Cosplay", wigmaker: "WigMaker", propmaker: "PropMaker", cosmaker: "CosMaker", editor: "Editor(a)", artista: "Artista", maquiadora: "Maquiador(a)", streamer: "Streamer" };
+        if (!cos) return paginaDePrevia("DiaDeCosplay — Comunidade de Natal/RN", "Confira esse perfil na comunidade DiaDeCosplay!", "", "cosplayers");
+        const titulo = \`🎭 \${cos.nome ? cos.nome + " — " : ""}\${cos.username}\`;
+        const categorias = (cos.cats || []).map(c => CAT_LABEL[c] || c).join(", ");
+        const partes = [];
+        if (categorias) partes.push(categorias);
+        if (cos.grupo) partes.push(\`grupo \${cos.grupo}\`);
+        const desc = partes.length ? \`\${partes.join(" · ")} — faz parte da comunidade DiaDeCosplay, em Natal/RN.\` : "Faz parte da comunidade DiaDeCosplay, em Natal/RN.";
+        const imagem = (cos.photos && cos.photos[0]) || cos.photo || "";
+        return paginaDePrevia(titulo, desc, imagem, cos.username.replace("@", ""));
       }
     }
 
