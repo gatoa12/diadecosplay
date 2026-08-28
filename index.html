@@ -1407,6 +1407,17 @@ html.admin .admin-only{display:flex!important}
       <button class="btn sec" onclick="copyWorker()" style="margin-top:.7rem"><i class="fas fa-copy"></i> Ver código do Worker</button>
       <pre class="codebox" id="workerCode"></pre>
     </div>
+
+    <div class="fg" style="margin-top:1.4rem;border:1px solid var(--border);border-radius:12px;padding:1rem">
+      <label class="fl">🔄 Atualizar o código de referência do Worker</label>
+      <span class="hint" style="display:block;margin-bottom:.8rem">Quando eu (ou quem te ajudar) te der uma versão nova do Worker, cola ou sobe o arquivo aqui. Isso <b>não publica sozinho no Cloudflare</b> — o site não tem esse acesso, por segurança — mas garante que essa tela sempre mostre exatamente a versão certa, sem mais confusão sobre "qual é a atual". Depois é só copiar daqui e colar no dash.cloudflare.com.</span>
+
+      <input type="file" id="workerFileInput" accept=".js" style="display:none" onchange="lerArquivoWorker(this)">
+      <button class="btn sec" style="width:100%;margin-bottom:.6rem" onclick="document.getElementById('workerFileInput').click()"><i class="fas fa-file-arrow-up"></i> Subir arquivo .js</button>
+
+      <textarea class="ft" id="workerCodePaste" placeholder="...ou cola o código aqui direto" style="min-height:120px;font-family:monospace;font-size:11.5px"></textarea>
+      <button class="btn" style="width:100%;margin-top:.6rem" onclick="salvarNovoWorkerCode()"><i class="fas fa-check"></i> Salvar como referência atual</button>
+    </div>
   </div>
 
   <div class="bgrp">
@@ -3300,7 +3311,7 @@ function compartilharCena(id){
   const conf=db.config||{};
   if(!conf.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${conf.workerUrl}/cena/${slugify(c.title)}-${c.id}`;
+  const url=`${location.origin}/cena/${slugify(c.title)}-${c.id}`;
   const txt=`🎬 ${c.title}`;
 
   if(navigator.share){
@@ -3423,7 +3434,7 @@ function compartilharIdeia(id){
   const c=db.config||{};
   if(!c.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${c.workerUrl}/ideia/${slugify(i.title)}-${i.id}`;
+  const url=`${location.origin}/ideia/${slugify(i.title)}-${i.id}`;
   const txt=`💡 ${i.title}`;
 
   if(navigator.share){
@@ -3585,11 +3596,9 @@ function compartilhar(id){
   const conf=db.config||{};
   const txt=`${c.nome?c.nome+' ':''}${c.username} no DiaDeCosplay`;
 
-  // ✅ Passa pelo Worker (mesma lógica de ideias/cenas) pra WhatsApp e
-  // Instagram mostrarem a foto e uma mini descrição do perfil na prévia
-  const url=conf.workerUrl
-    ? `${conf.workerUrl}/perfil/${slugify(c.username)}-${c.id}`
-    : location.origin+location.pathname+'#'+c.username.replace('@',''); // se não tiver Worker configurado, cai no link direto normal
+  // ✅ Link no PRÓPRIO domínio do site agora (não mais no domínio do
+  // Worker) — as Cloudflare Pages Functions rodam nesse mesmo endereço
+  const url=`${location.origin}/perfil/${slugify(c.username)}-${c.id}`;
 
   if(navigator.share){
     navigator.share({title:'DiaDeCosplay',text:txt,url}).catch(()=>{});
@@ -3954,7 +3963,7 @@ function openAdmin(){
   if(!document.documentElement.classList.contains('admin')){openModal('mLogin');return}
   loadConfigFields();
   admRenderAll();
-  document.getElementById('workerCode').textContent=WORKER_CODE;
+  document.getElementById('workerCode').textContent=codigoWorkerAtual();
   openModal('mAdmin');
 }
 
@@ -4772,9 +4781,44 @@ const WORKER_CODE=`export default {
 };`;
 
 function copyWorker(){
-  navigator.clipboard.writeText(WORKER_CODE)
+  navigator.clipboard.writeText(codigoWorkerAtual())
     .then(()=>toast('Código copiado! Cole no seu Worker.','ok'))
     .catch(()=>toast('Não consegui copiar — selecione o texto na tela','err'));
+}
+
+/* ✅ Sempre que precisar mostrar/copiar o código do Worker, usa a
+   referência salva pelo admin (se existir) — senão cai no exemplo padrão
+   embutido no site. Isso resolve de vez a confusão de "qual versão é a
+   certa": o que aparece aqui é sempre o que o admin mandou por último. */
+function codigoWorkerAtual(){
+  return (db.config&&db.config.workerCodeRef)||WORKER_CODE;
+}
+
+function lerArquivoWorker(input){
+  const f=input.files[0];
+  if(!f)return;
+  if(!f.name.endsWith('.js')){toast('Precisa ser um arquivo .js','err');return}
+  const r=new FileReader();
+  r.onload=e=>{document.getElementById('workerCodePaste').value=e.target.result;toast('Arquivo carregado — confere e clica em "Salvar como referência atual"','ok')};
+  r.onerror=()=>toast('Não consegui ler esse arquivo','err');
+  r.readAsText(f);
+}
+
+async function salvarNovoWorkerCode(){
+  const codigo=document.getElementById('workerCodePaste').value.trim();
+  if(!codigo||codigo.length<50){toast('Cola ou sobe o código completo do Worker primeiro','err');return}
+  if(!codigo.includes('export default')){
+    if(!confirm('Esse texto não parece um código de Worker completo (não tem "export default"). Salvar mesmo assim?'))return;
+  }
+  db.config=db.config||{};
+  db.config.workerCodeRef=codigo;
+  save(false);
+  document.getElementById('workerCode').textContent=codigoWorkerAtual();
+  document.getElementById('workerCodePaste').value='';
+  toast('📤 Salvando referência...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Referência do Worker atualizada! Agora é só copiar e colar no Cloudflare.':'✅ Salvo aqui! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
 }
 
 function cloudStatus(html){document.getElementById('cloudStatus').innerHTML=html}
