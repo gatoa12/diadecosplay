@@ -22,6 +22,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DiaDeCosplay">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -54,6 +58,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,
 .logo{font-size:23px;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;display:flex;align-items:center;gap:8px;letter-spacing:-.5px}
 .logo i{-webkit-text-fill-color:var(--primary)}
 .wa-link{display:inline-flex;align-items:center;gap:7px;padding:.5rem 1rem;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:700;transition:.25s}
+.ig-link{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;background:linear-gradient(135deg,#833AB4,#E4405F,#FCAF45);color:#fff;text-decoration:none;border-radius:8px;font-size:15px;flex:0 0 auto}
+@media(max-width:560px){.wa-link-texto{display:none}.wa-link{padding:.5rem .7rem}}
 .wa-link:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(37,211,102,.35)}
 .header-right{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
 .user-chip{display:flex;align-items:center;gap:.5rem;background:var(--s2);border:1px solid var(--border);padding:.4rem .8rem;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:.25s}
@@ -111,6 +117,14 @@ html.admin .sync-badge{display:flex}
 #btnTopo.on{opacity:1;pointer-events:auto;transform:translateY(0)}
 #btnTopo:hover{background:var(--secondary)}
 @media(max-width:480px){#btnTopo{bottom:1rem;right:1rem;width:42px;height:42px;font-size:14px}}
+
+/* ✅ Faixa de "instalar app" - some sozinha, só aparece se o navegador
+   permitir instalar (dá o efeito de tela cheia de verdade no celular) */
+#faixaInstalar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(135deg,#833AB4,#E4405F);color:#fff;padding:.8rem 1rem;display:none;align-items:center;gap:.8rem;z-index:200;box-shadow:0 -4px 14px rgba(0,0,0,.3)}
+#faixaInstalar.on{display:flex}
+#faixaInstalar span{flex:1;font-size:12.5px}
+#faixaInstalar button{flex:0 0 auto;background:#fff;color:var(--primary);border:none;padding:.5rem 1rem;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer}
+#faixaInstalar .fechar{background:transparent;color:#fff;padding:.5rem;font-size:16px}
 .tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px;flex:0 0 auto}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab:hover{color:var(--text)}
@@ -173,7 +187,17 @@ html.admin .sync-badge{display:flex}
 .grid.carousel::-webkit-scrollbar-thumb{background:var(--primary);border-radius:4px}
 @media(max-width:900px){.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1rem}.grid.carousel .card{flex:0 0 210px}}
 @media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr);gap:.8rem}.grid.carousel .card{flex:0 0 calc(50% - .4rem)}}
-@media(max-width:420px){.grid{grid-template-columns:1fr}.grid.carousel .card{flex:0 0 85%}}
+@media(max-width:420px){
+  /* ✅ Como pedido: mantém 2 colunas mesmo em telas bem pequenas (era 1
+     coluna só antes) — só deixa tudo mais compacto pra nenhum botão ou
+     informação cortar, já que agora tem metade do espaço de largura */
+  .grid{grid-template-columns:repeat(2,1fr);gap:.6rem}
+  .grid.carousel .card{flex:0 0 85%}
+  .card-body{padding:.7rem}
+  .bs{font-size:9.5px;padding:.45rem .3rem;gap:.2rem}
+  .card-btns{gap:.35rem}
+  .reacoes-perfil{gap:.35rem}
+}
 
 /* CARD ESTILO FIFA */
 .card{background:var(--s2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:.35s cubic-bezier(.4,0,.2,1);position:relative;display:flex;flex-direction:column}
@@ -352,6 +376,20 @@ html.admin .sync-badge{display:flex}
 .duo-box img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto}
 .duo-box:hover{background:var(--border)}
 
+/* ✅ Mini biografia — expansível (clica pra abrir), não polui o card */
+.bio-box{margin:.5rem 0;background:var(--s2);border-radius:8px;overflow:hidden}
+.bio-box summary{padding:.6rem .8rem;font-size:12px;font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;gap:.4rem}
+.bio-box summary::-webkit-details-marker{display:none}
+.bio-box[open] summary{border-bottom:1px solid var(--border)}
+.bio-conteudo{padding:.7rem .8rem;font-size:12px;color:var(--text2);line-height:1.6}
+.bio-conteudo p{margin-bottom:.5rem}
+.bio-conteudo p:last-child{margin-bottom:0}
+
+/* ✅ Reações (coração) e elogios no card do perfil */
+.reacoes-perfil{display:flex;gap:.5rem;margin:.5rem 0}
+.reacoes-perfil .bs{flex:1}
+.reacoes-perfil .bs.indo{border-color:#E4405F;color:#E4405F}
+
 /* ✅ Grupinho de mini-fotos sobrepostas (quem confirmou/participou) */
 .mini-avatars-grupo{display:flex;align-items:center}
 .mini-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--s1);margin-left:-8px;flex:0 0 auto;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -525,6 +563,11 @@ html.admin .admin-only{display:flex!important}
 </head>
 <body>
 <button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo" aria-label="Voltar ao topo"><i class="fas fa-arrow-up"></i></button>
+<div id="faixaInstalar">
+  <span>📱 Instala o DiaDeCosplay na sua tela inicial — abre em tela cheia, sem barra do navegador!</span>
+  <button onclick="instalarApp()">Instalar</button>
+  <button class="fechar" onclick="fecharFaixaInstalar()"><i class="fas fa-xmark"></i></button>
+</div>
 
 <!-- ✅ TELA DE BOAS-VINDAS: primeira coisa que a pessoa vê ao entrar -->
 <div id="splash">
@@ -537,7 +580,8 @@ html.admin .admin-only{display:flex!important}
 <div class="header">
   <div class="header-left">
     <div class="logo"><i class="fas fa-masks-theater"></i> <span id="siteName">DiaDeCosplay</span></div>
-    <a id="waLink" class="wa-link" target="_blank"><i class="fab fa-whatsapp"></i> Participe da Comunidade</a>
+    <a id="waLink" class="wa-link" target="_blank"><i class="fab fa-whatsapp"></i> <span class="wa-link-texto">Participe da Comunidade</span></a>
+    <a id="igOficialLink" class="ig-link" target="_blank" style="display:none"><i class="fab fa-instagram"></i></a>
   </div>
   <div class="header-right">
     <div class="sync-badge admin-only" id="syncBadge" onclick="cloudPull(false)" title="Sincronização"></div>
@@ -672,6 +716,17 @@ html.admin .admin-only{display:flex!important}
 </div></div>
 
 <!-- MODAL: CRIAR ANIME PHOTO -->
+<!-- MODAL: ELOGIOS DO PERFIL -->
+<div id="mElogios" class="modal"><div class="mbox">
+  <button class="mclose" onclick="closeModal('mElogios')">&times;</button>
+  <div class="mtitle" id="elogiosTitulo">💬 Elogios</div>
+  <div id="elogiosLista" style="max-height:300px;overflow-y:auto;margin-bottom:1rem"></div>
+  <div id="elogioNovoBox" style="display:flex;gap:.5rem">
+    <input type="text" class="fi" id="elogioInput" placeholder="Deixa um elogio bacana..." maxlength="200">
+    <button class="bs" style="flex:0 0 auto" onclick="enviarElogio()"><i class="fas fa-paper-plane"></i></button>
+  </div>
+</div></div>
+
 <div id="mAnimePhoto" class="modal"><div class="mbox">
   <button class="mclose" onclick="fecharCriadorAnimePhoto()">&times;</button>
   <div class="mtitle">🎬 Criar Anime Photo</div>
@@ -862,8 +917,8 @@ html.admin .admin-only{display:flex!important}
 
   <div class="fg">
     <label class="fl">🎂 Sua idade <span style="color:var(--error)">*</span></label>
-    <input type="number" class="fi" id="fIdade" placeholder="Ex: 17" min="10" max="99" oninput="checarIdade()">
-    <span class="hint">Usamos só pra saber se você precisa de autorização de um responsável. Sua idade <b>não aparece publicamente</b> no seu perfil.</span>
+    <input type="number" class="fi" id="fIdade" placeholder="Ex: 17" min="14" max="99" oninput="checarIdade()">
+    <span class="hint">Comunidade aberta a partir de <b>14 anos</b>. Usamos só pra saber se você precisa de autorização de um responsável (obrigatória até os 18) — sua idade <b>não aparece publicamente</b> no seu perfil.</span>
   </div>
 
   <div class="fg">
@@ -907,6 +962,14 @@ html.admin .admin-only{display:flex!important}
     <input type="text" class="fi" id="fCosplaySonho" placeholder="✨ Cosplay dos sonhos que você faria um dia" style="margin-bottom:.5rem">
     <input type="text" class="fi" id="fCosplayNao" placeholder="🚫 Cosplay que você nunca faria">
     <span class="hint">Preenche quantos quiser — só os que você escrever aparecem, alternando a cada 5 segundos no seu card.</span>
+  </div>
+
+  <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem">
+    <label class="fl">📖 Mini biografia <span style="font-weight:400;color:var(--text2)">(opcional)</span></label>
+    <span class="hint" style="display:block;margin-bottom:.7rem">Ajuda gente nova da comunidade a te conhecer melhor — aparece quando alguém abre seu perfil ou clica no link que você compartilhar.</span>
+    <textarea class="ft" id="fSobreMim" placeholder="Sobre você — quem é, o que gosta, um pouco da sua história..." style="margin-bottom:.6rem"></textarea>
+    <input type="text" class="fi" id="fComoComecei" placeholder="Como você começou no cosplay?" style="margin-bottom:.6rem">
+    <input type="text" class="fi" id="fPrimeiroCosplay" placeholder="Qual foi seu primeiro cosplay?">
   </div>
 
   <div class="fg" id="boxDuoPedidoRecebido" style="display:none"></div>
@@ -1365,6 +1428,7 @@ html.admin .admin-only{display:flex!important}
   <div class="adm-pane active" id="at-geral">
     <div class="fg"><label class="fl">Nome do site</label><input type="text" class="fi" id="cfgName" placeholder="DiaDeCosplay"></div>
     <div class="fg"><label class="fl"><i class="fab fa-whatsapp"></i> Link do grupo</label><input type="url" class="fi" id="cfgWa"><span class="hint">Deixe vazio para esconder o botão do WhatsApp.</span></div>
+    <div class="fg"><label class="fl"><i class="fab fa-instagram"></i> Instagram oficial (divulgação de eventos)</label><input type="text" class="fi" id="cfgIgOficial" placeholder="@diadecosplay"><span class="hint">Aparece como ícone no topo do site, ao lado do WhatsApp. Deixe vazio pra esconder.</span></div>
     <div class="fg"><label class="fl">Aviso no topo da página</label><textarea class="ft" id="cfgAviso" placeholder="Ex: Encontro dia 06/09 depois do almoço!"></textarea><span class="hint">Aparece pra todo mundo na aba Cosplayers. Vazio = nada aparece.</span></div>
     <div class="fg"><label class="fl">Idealizador (rodapé da Ajuda)</label><input type="text" class="fi" id="cfgCredito" placeholder="@ofcvictorcorreia"></div>
     <div id="admStats" class="adm-stats"></div>
@@ -1632,7 +1696,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v70';
+const SITE_VERSION='v74';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -2865,6 +2929,15 @@ function renderCos(){
             <span>${tipoLabel} de <b>${parceiro.username}</b></span>
           </div>`;
         })()}
+        ${(c.sobreMim||c.comoComecei||c.primeiroCosplay)?`<details class="bio-box">
+          <summary><i class="fas fa-book-open"></i> Sobre ${c.nome||c.username}</summary>
+          <div class="bio-conteudo">
+            ${c.sobreMim?`<p>${escapeHtml(c.sobreMim)}</p>`:''}
+            ${c.comoComecei?`<p><b>Como começou:</b> ${escapeHtml(c.comoComecei)}</p>`:''}
+            ${c.primeiroCosplay?`<p><b>Primeiro cosplay:</b> ${escapeHtml(c.primeiroCosplay)}</p>`:''}
+          </div>
+        </details>`:''}
+        ${renderReacoesPerfil(c)}
         <div class="card-btns">
           <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
           <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
@@ -2944,6 +3017,9 @@ function openEdit(id,focusPost){
   document.getElementById('fMusica').value=c.musica||'';
   document.getElementById('fCosplaySonho').value=c.cosplaySonho||'';
   document.getElementById('fCosplayNao').value=c.cosplayNao||'';
+  document.getElementById('fSobreMim').value=c.sobreMim||'';
+  document.getElementById('fComoComecei').value=c.comoComecei||'';
+  document.getElementById('fPrimeiroCosplay').value=c.primeiroCosplay||'';
   document.getElementById('fFavoritoSlot').innerHTML=c.fotoFavorito
     ?`<img src="${c.fotoFavorito}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
     :`<i class="fas fa-heart" style="font-size:20px;opacity:.5"></i>`;
@@ -3353,6 +3429,11 @@ function saveProfile(){
     document.getElementById('fIdade').focus();
     return;
   }
+  if(idadeVal<14){
+    toast('😔 A comunidade é aberta a partir de 14 anos, com autorização dos responsáveis pra menores de 18. Não é possível cadastrar idade menor que essa.','err');
+    document.getElementById('fIdade').focus();
+    return;
+  }
   let responsavel=null;
   let precisaGerarPdf=false;
   if(idadeVal<18){
@@ -3461,6 +3542,9 @@ function saveProfile(){
   c.musica=document.getElementById('fMusica').value.trim();
   c.cosplaySonho=document.getElementById('fCosplaySonho').value.trim();
   c.cosplayNao=document.getElementById('fCosplayNao').value.trim();
+  c.sobreMim=document.getElementById('fSobreMim').value.trim();
+  c.comoComecei=document.getElementById('fComoComecei').value.trim();
+  c.primeiroCosplay=document.getElementById('fPrimeiroCosplay').value.trim();
   c.fotoFavorito=fotoFavoritoTemp; // sobe junto com as outras fotos no hospedarFotos, se for nova
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos','cEditor','cArtista','cMaquiadora','cStreamer'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
@@ -4214,6 +4298,78 @@ async function desfazerDuo(id){
   if(!ok){pendente=true;agendarSync(500)}
 }
 
+/* ===== REAÇÕES E ELOGIOS NO PERFIL ===== 
+   ✅ Comunidade interativa: qualquer pessoa cadastrada pode reagir com
+   coração e deixar um elogio curto no perfil de qualquer cosplayer.
+   Mesmo padrão já usado em Lojas, reaproveitado aqui. */
+function renderReacoesPerfil(c){
+  const me=getMe();
+  const reacoes=c.reacoesPerfil||{};
+  const meuCoracao=me&&(reacoes['❤️']||[]).includes(me.username);
+  const totalCoracoes=(reacoes['❤️']||[]).length;
+  const elogios=c.elogios||[];
+
+  return `<div class="reacoes-perfil">
+    <button class="bs ${meuCoracao?'indo':''}" onclick="event.stopPropagation();reagirPerfil(${c.id})" ${!me?'disabled':''}>
+      <i class="${meuCoracao?'fas':'far'} fa-heart" style="color:${meuCoracao?'#E4405F':''}"></i> ${totalCoracoes||''}
+    </button>
+    <button class="bs" onclick="event.stopPropagation();abrirElogios(${c.id})">
+      <i class="fas fa-comment-dots"></i> ${elogios.length?`${elogios.length} elogio${elogios.length>1?'s':''}`:'Elogiar'}
+    </button>
+  </div>`;
+}
+
+async function reagirPerfil(id){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro pra reagir','err');return}
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c)return;
+  if(!c.reacoesPerfil)c.reacoesPerfil={};
+  if(!c.reacoesPerfil['❤️'])c.reacoesPerfil['❤️']=[];
+
+  const idx=c.reacoesPerfil['❤️'].indexOf(me.username);
+  if(idx>=0)c.reacoesPerfil['❤️'].splice(idx,1);
+  else c.reacoesPerfil['❤️'].push(me.username);
+
+  save(false);renderCos();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
+}
+
+function abrirElogios(id){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c)return;
+  const me=getMe();
+  const elogios=c.elogios||[];
+
+  document.getElementById('elogiosTitulo').textContent=`💬 Elogios pra ${c.nome||c.username}`;
+  document.getElementById('elogiosLista').innerHTML=elogios.length
+    ? elogios.map(e=>`<div style="background:var(--s2);border-radius:8px;padding:.6rem .8rem;margin-bottom:.5rem;font-size:12.5px"><b>${e.author}:</b> ${escapeHtml(e.texto)}</div>`).join('')
+    : `<span class="hint">Ainda ninguém elogiou — seja o primeiro!</span>`;
+
+  const caixaNova=document.getElementById('elogioNovoBox');
+  caixaNova.style.display=me?'flex':'none';
+  document.getElementById('elogioInput').value='';
+  document.getElementById('elogioInput').dataset.perfilId=id;
+  openModal('mElogios');
+}
+
+async function enviarElogio(){
+  const me=getMe();if(!me)return;
+  const input=document.getElementById('elogioInput');
+  const texto=input.value.trim();
+  if(!texto)return;
+  const id=parseInt(input.dataset.perfilId,10);
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c)return;
+  if(!Array.isArray(c.elogios))c.elogios=[];
+  c.elogios.push({author:me.username,texto,data:new Date().toISOString()});
+  save(false);renderCos();
+  abrirElogios(id); // reabre já atualizado
+  toast('💬 Elogio enviado!','ok');
+  const ok=await cloudPush(false);
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
 function buscarPorGrupo(grupo){
   switchTab('cosplayers');
   document.getElementById('search').value=grupo;
@@ -4846,6 +5002,7 @@ function loadConfigFields(){
   const c=db.config||{};
   document.getElementById('cfgName').value=c.siteName||'DiaDeCosplay';
   document.getElementById('cfgWa').value=db.wa||'';
+  document.getElementById('cfgIgOficial').value=c.instagramOficial||'';
   document.getElementById('cfgAviso').value=c.aviso||'';
   document.getElementById('cfgCredito').value=c.credito||'@ofcvictorcorreia';
   document.getElementById('cfgWorker').value=CLOUD_URL;
@@ -4863,6 +5020,7 @@ async function saveConfig(){
   db.config=db.config||{};
   db.config.siteName=document.getElementById('cfgName').value.trim()||'DiaDeCosplay';
   db.wa=document.getElementById('cfgWa').value.trim();
+  db.config.instagramOficial=limparInstagramHandle(document.getElementById('cfgIgOficial').value.trim()||'').replace(/^@$/,'');
   db.config.aviso=document.getElementById('cfgAviso').value.trim();
   db.config.credito=document.getElementById('cfgCredito').value.trim();
   db.config.workerUrl=CLOUD_URL;
@@ -4880,6 +5038,14 @@ function applyConfig(){
   document.title=c.siteName||'DiaDeCosplay';
   const wa=document.getElementById('waLink');
   if(db.wa){wa.href=db.wa;wa.style.display='inline-flex'}else wa.style.display='none';
+  const igOficial=document.getElementById('igOficialLink');
+  if(c.instagramOficial){
+    igOficial.href=`https://instagram.com/${c.instagramOficial.replace('@','')}`;
+    igOficial.title='Instagram — '+c.instagramOficial;
+    igOficial.style.display='inline-flex';
+  }else{
+    igOficial.style.display='none';
+  }
   const av=document.getElementById('welcomeBox');
   av.innerHTML=c.aviso?`<div class="alert a-info"><i class="fas fa-bullhorn"></i><span>${c.aviso}</span></div>`:'';
   const cr=document.getElementById('creditBox');
@@ -6932,6 +7098,33 @@ setInterval(()=>{
     },300);
   });
 },5000);
+
+/* ✅ "Tela cheia de verdade" no celular — o navegador só permite isso se
+   o site for instalado como app (padrão de segurança, nenhum site
+   consegue forçar tela cheia sozinho sem a pessoa interagir). Isso
+   captura o momento em que o navegador permite instalar, e mostra um
+   convite discreto — se a pessoa já instalou ou já dispensou antes,
+   não mostra de novo. */
+let promptInstalacao=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  promptInstalacao=e;
+  if(localStorage.getItem('dc_instalar_dispensado'))return;
+  if(window.matchMedia('(display-mode: standalone)').matches)return; // já instalado
+  document.getElementById('faixaInstalar').classList.add('on');
+});
+
+async function instalarApp(){
+  if(!promptInstalacao){fecharFaixaInstalar();return}
+  promptInstalacao.prompt();
+  await promptInstalacao.userChoice;
+  promptInstalacao=null;
+  fecharFaixaInstalar();
+}
+function fecharFaixaInstalar(){
+  document.getElementById('faixaInstalar').classList.remove('on');
+  localStorage.setItem('dc_instalar_dispensado','1');
+}
 
 window.addEventListener('scroll',()=>{
   const btn=document.getElementById('btnTopo');
