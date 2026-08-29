@@ -38,7 +38,15 @@
 /* ✅ Tema manual — a pessoa escolhe, independente da preferência do celular/PC */
 html.tema-claro{--bg:#F8F7F5;--s1:#fff;--s2:#F2F1ED;--text:#1a1a1e;--text2:#696967;--border:#E5E5E5}
 html.tema-escuro{--bg:#0F0F12;--s1:#1a1a1e;--s2:#24242b;--text:#fff;--text2:#B0B0B5;--border:#3a3a42}
+html{scroll-behavior:smooth}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* ✅ Foco de teclado sempre visível — importante pra quem navega sem
+   mouse (tab pelo teclado, leitores de tela). Some no clique de mouse
+   normal, mas fica bem marcado ao navegar com Tab */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,.tab:focus-visible,.card:focus-visible{
+  outline:2px solid var(--primary);outline-offset:2px;border-radius:4px;
+}
 
 /* HEADER */
 .header{background:var(--s1);border-bottom:1px solid var(--border);padding:.9rem 1.5rem;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:.8rem}
@@ -96,6 +104,13 @@ html.admin .sync-badge{display:flex}
 .tab-ic{font-size:14px;margin-right:.3rem;display:inline-block}
 .tab-badge{display:none;min-width:16px;height:16px;padding:0 4px;background:var(--primary);color:#fff;font-size:10px;font-weight:800;border-radius:20px;align-items:center;justify-content:center;margin-left:.35rem;vertical-align:middle;box-shadow:0 0 0 2px var(--s1)}
 .tab-badge.on{display:inline-flex}
+
+/* ✅ Botão flutuante de voltar ao topo — só aparece depois de rolar um
+   pouco, some sozinho quando está perto do topo de novo */
+#btnTopo{position:fixed;bottom:1.3rem;right:1.3rem;width:46px;height:46px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer;z-index:90;opacity:0;pointer-events:none;transform:translateY(10px);transition:.25s}
+#btnTopo.on{opacity:1;pointer-events:auto;transform:translateY(0)}
+#btnTopo:hover{background:var(--secondary)}
+@media(max-width:480px){#btnTopo{bottom:1rem;right:1rem;width:42px;height:42px;font-size:14px}}
 .tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px;flex:0 0 auto}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab:hover{color:var(--text)}
@@ -175,6 +190,39 @@ html.admin .sync-badge{display:flex}
 .card:hover::after{left:130%}
 
 .card-img{width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,var(--primary),var(--secondary));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+/* ✅ "Efeito de carta animada" — não é IA nem 3D de verdade (isso exigiria
+   um servidor de geração de imagem, que o site não tem). É um efeito 100%
+   visual: a foto balança suavemente em 3D sozinha, e um brilho
+   holográfico atravessa a carta de tempos em tempos — dá aquela sensação
+   de "card colecionável de anime" só com CSS, sem custar nada pra rodar. */
+.efeito-3d{perspective:800px}
+.efeito-3d img,.efeito-3d .avatar-fallback{
+  animation:girar3d 6s ease-in-out infinite;
+  transform-style:preserve-3d;
+}
+.efeito-3d::after{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.35) 40%,rgba(255,255,255,.05) 48%,transparent 60%);
+  background-size:250% 250%;
+  animation:brilhoPassa 3.5s ease-in-out infinite;
+  pointer-events:none;
+  mix-blend-mode:overlay;
+}
+@keyframes girar3d{
+  0%,100%{transform:rotateY(0deg) rotateX(0deg)}
+  25%{transform:rotateY(-6deg) rotateX(2deg)}
+  75%{transform:rotateY(6deg) rotateX(-2deg)}
+}
+@keyframes brilhoPassa{
+  0%{background-position:120% -20%}
+  50%{background-position:-20% 120%}
+  100%{background-position:120% -20%}
+}
+@media(prefers-reduced-motion:reduce){
+  .efeito-3d img,.efeito-3d .avatar-fallback,.efeito-3d::after{animation:none}
+}
 .ph{font-size:40px;opacity:.35;color:#fff}
 .avatar-fallback{position:absolute;inset:0;align-items:center;justify-content:center;font-size:64px;font-weight:800;color:#fff;background:linear-gradient(135deg,#833AB4,#E4405F);text-shadow:0 2px 8px rgba(0,0,0,.25)}
 .precisa-foto{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);backdrop-filter:blur(6px);color:#fff;font-size:10px;font-weight:700;padding:.3rem .6rem;border-radius:20px;display:flex;align-items:center;gap:.3rem;white-space:nowrap;z-index:3}
@@ -318,6 +366,22 @@ html.admin .admin-only{display:flex!important}
 .item-meta{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:.4rem;padding-top:.6rem;border-top:1px solid var(--border);margin-top:.6rem}
 .tag{display:inline-block;background:var(--s1);border:1px solid var(--border);padding:.2rem .6rem;border-radius:20px;font-size:11px;font-weight:600;margin-right:.3rem}
 
+/* ✅ Cor por categoria de evento — identidade visual rápida, dá pra
+   reconhecer o tipo de longe sem precisar ler o texto */
+.tag-tipo-anime{background:rgba(228,64,95,.15);border-color:var(--primary);color:var(--primary)}
+.tag-tipo-geek{background:rgba(127,119,221,.15);border-color:var(--secondary);color:var(--secondary)}
+.tag-tipo-concurso{background:rgba(255,193,7,.15);border-color:var(--warn);color:var(--warn)}
+.tag-tipo-encontro{background:rgba(40,167,69,.15);border-color:var(--success);color:var(--success)}
+.tag-tipo-ensaio{background:rgba(29,158,117,.15);border-color:var(--accent);color:var(--accent)}
+.tag-tipo-outro{background:var(--s1);border-color:var(--border);color:var(--text2)}
+
+/* ✅ Cor por categoria de loja também, mesmo padrão visual */
+.tag-loja-tecido{background:rgba(228,64,95,.15);border-color:var(--primary);color:var(--primary)}
+.tag-loja-props{background:rgba(127,119,221,.15);border-color:var(--secondary);color:var(--secondary)}
+.tag-loja-peruca{background:rgba(255,193,7,.15);border-color:var(--warn);color:var(--warn)}
+.tag-loja-calcado{background:rgba(40,167,69,.15);border-color:var(--success);color:var(--success)}
+.tag-loja-geral{background:var(--s1);border-color:var(--border);color:var(--text2)}
+
 /* EVENTOS */
 .ev-item{padding:0;overflow:hidden;display:flex;flex-direction:column}
 .ev-img{width:100%;height:150px;overflow:hidden}
@@ -450,6 +514,7 @@ html.admin .admin-only{display:flex!important}
 </style>
 </head>
 <body>
+<button id="btnTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Voltar ao topo" aria-label="Voltar ao topo"><i class="fas fa-arrow-up"></i></button>
 
 <!-- ✅ TELA DE BOAS-VINDAS: primeira coisa que a pessoa vê ao entrar -->
 <div id="splash">
@@ -486,6 +551,7 @@ html.admin .admin-only{display:flex!important}
   <div class="tabs" id="tabsBar">
     <div class="tab active" data-tab="cosplayers"><span class="tab-ic">🎭</span> Cosplayers</div>
     <div class="tab" data-tab="eventos"><span class="tab-ic">📅</span> Eventos<span class="tab-badge" id="badge-eventos"></span></div>
+    <div class="tab" data-tab="animephoto"><span class="tab-ic">⛩️</span> Anime Photo</div>
     <div class="tab" data-tab="ideias"><span class="tab-ic">💡</span> Ideias<span class="tab-badge" id="badge-ideias"></span></div>
     <div class="tab" data-tab="cenas"><span class="tab-ic">🎬</span> Cenas<span class="tab-badge" id="badge-cenas"></span></div>
     <div class="tab" data-tab="colabs"><span class="tab-ic">🤝</span> Colabs<span class="tab-badge" id="badge-colabs"></span></div>
@@ -585,7 +651,67 @@ html.admin .admin-only{display:flex!important}
   <div id="evList" class="list"></div>
 </div></div>
 
-<!-- IDEIAS -->
+<!-- ANIME PHOTO -->
+<div id="animephoto" class="content"><div class="wrapper">
+  <div class="section-head">
+    <h2><i class="fas fa-clapperboard"></i> Anime Photo</h2>
+    <button class="btn btn-inline" onclick="abrirCriadorAnimePhoto()"><i class="fas fa-plus"></i> Criar a minha</button>
+  </div>
+  <div class="alert a-info"><i class="fas fa-circle-info"></i><span>Sobe sua foto + uma foto do personagem que você curte, conta qual é o anime, e o site cria uma mini animação alternando entre as duas — dá pra baixar em vídeo e postar no Instagram!</span></div>
+  <div id="animePhotoList" class="list"></div>
+</div></div>
+
+<!-- MODAL: CRIAR ANIME PHOTO -->
+<div id="mAnimePhoto" class="modal"><div class="mbox">
+  <button class="mclose" onclick="fecharCriadorAnimePhoto()">&times;</button>
+  <div class="mtitle">🎬 Criar Anime Photo</div>
+  <div id="apAuthor"></div>
+
+  <div class="fg">
+    <label class="fl">🎭 Qual anime/personagem?</label>
+    <input type="text" class="fi" id="apAnime" placeholder="Ex: Tanjiro (Demon Slayer)">
+  </div>
+
+  <div class="fg">
+    <label class="fl">📸 Sua foto</label>
+    <div class="foto-slot" id="apFotoSuaSlot" style="max-width:180px" onclick="document.getElementById('apFotoSua').click()">
+      <i class="fas fa-user" style="font-size:24px;opacity:.5"></i>
+    </div>
+    <input type="file" id="apFotoSua" accept="image/*" style="display:none" onchange="previewFotoAnimePhoto(this,'sua')">
+  </div>
+
+  <div class="fg">
+    <label class="fl">🖼️ Foto do personagem</label>
+    <div class="foto-slot" id="apFotoAnimeSlot" style="max-width:180px" onclick="document.getElementById('apFotoAnime').click()">
+      <i class="fas fa-image" style="font-size:24px;opacity:.5"></i>
+    </div>
+    <input type="file" id="apFotoAnime" accept="image/*" style="display:none" onchange="previewFotoAnimePhoto(this,'anime')">
+    <span class="hint">Uma imagem do personagem (print, fanart, capa do anime) — só pra referência visual mesmo, ela não sofre nenhuma alteração.</span>
+  </div>
+
+  <div class="fg" id="apPreviewBox" style="display:none">
+    <label class="fl">🎬 Prévia da animação</label>
+    <canvas id="apCanvas" width="500" height="500" style="width:100%;border-radius:12px;background:#000"></canvas>
+    <button class="btn sec" style="width:100%;margin-top:.7rem" onclick="gerarPreviaAnimePhoto()"><i class="fas fa-play"></i> Ver prévia</button>
+
+    <div style="background:var(--s2);border-radius:10px;padding:.8rem;margin-top:.8rem">
+      <label class="fl" style="font-size:12px">📥 Baixar pro seu aparelho</label>
+      <span class="hint" style="display:block;margin-bottom:.6rem">Funciona sozinho — não precisa publicar na galeria pra baixar. Fica só com você, salvo no seu celular ou computador.</span>
+      <button class="btn" style="width:100%" id="apBtnBaixar" onclick="baixarAnimePhoto()" disabled><i class="fas fa-download"></i> Baixar vídeo agora</button>
+    </div>
+    <span class="hint" id="apStatus" style="display:block;margin-top:.5rem"></span>
+  </div>
+
+  <div class="fg" style="margin-top:.5rem">
+    <label class="fl" style="font-size:12px">🌍 Publicar na galeria (opcional)</label>
+    <span class="hint" style="display:block;margin-bottom:.6rem">Além de baixar pra você, também pode deixar visível pra toda a comunidade ver na aba Anime Photo.</span>
+  </div>
+
+  <div class="bgrp">
+    <button class="btn sec" onclick="publicarAnimePhoto()"><i class="fas fa-globe"></i> Publicar na galeria também</button>
+    <button class="btn sec" onclick="fecharCriadorAnimePhoto()">Fechar</button>
+  </div>
+</div></div>
 <div id="ideias" class="content"><div class="wrapper">
   <div class="section-head">
     <h2><i class="fas fa-lightbulb"></i> Ideias de Cosplay</h2>
@@ -819,6 +945,10 @@ html.admin .admin-only{display:flex!important}
     <div class="switch-row">
       <label for="fSlide">🔄 Alternar as fotos sozinho (a cada 3s)</label>
       <div class="switch"><input type="checkbox" id="fSlide" checked><span onclick="document.getElementById('fSlide').click()"></span></div>
+    </div>
+    <div class="switch-row">
+      <label for="fEfeito3d">✨ Efeito de carta animada (brilho + giro 3D leve)</label>
+      <div class="switch"><input type="checkbox" id="fEfeito3d"><span onclick="document.getElementById('fEfeito3d').click()"></span></div>
     </div>
     <span class="hint">Pode mandar foto grande direto da câmera — o site otimiza sozinho.</span>
   </div>
@@ -1609,6 +1739,7 @@ function seed(){
   if(!Array.isArray(db.colabs))db.colabs=[];
   if(!Array.isArray(db.vitrine))db.vitrine=[];
   if(!Array.isArray(db.lojas))db.lojas=[];
+  if(!Array.isArray(db.animePhotos))db.animePhotos=[];
 
   // ✅ LIMPEZA DE DUPLICATAS: remove itens repetidos com o mesmo ID
   const dedupPorId=(arr)=>{
@@ -1900,6 +2031,22 @@ function seedEventosExternos(){
 
 function ehDataUrl(s){return typeof s==='string'&&s.startsWith('data:')}
 
+/* ✅ CORRIGIDO (bug crítico de compatibilidade): "AbortSignal.timeout()"
+   só existe em navegadores mais novos (Chrome/Edge atualizados). Em
+   Safari mais antigo, no navegador interno do Instagram/WhatsApp, ou em
+   qualquer navegador desatualizado, essa função nem existe — chamar ela
+   quebrava a busca/envio de dados na hora, silenciosamente, fazendo o
+   site parecer "travado" só pra quem não estava no Chrome. Essa versão
+   funciona em QUALQUER navegador, mesmo os bem antigos. */
+function timeoutSignal(ms){
+  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function'){
+    return AbortSignal.timeout(ms);
+  }
+  const controlador=new AbortController();
+  setTimeout(()=>controlador.abort(),ms);
+  return controlador.signal;
+}
+
 /* ✅ Transforma um título em texto de URL legível — "Time Naruto" vira
    "time-naruto". Usado pra deixar os links de compartilhar convidativos
    em vez de só um número (ex: .../ideia/time-naruto-123456 em vez de
@@ -1930,9 +2077,10 @@ function miniAvatarsHtml(usernames,max=6){
     const foto=cos&&((cos.photos&&cos.photos[0])||cos.photo);
     const inicial=(u||'?').replace('@','').charAt(0).toUpperCase();
     const titulo=cos?cos.username:u;
+    const clique=`onclick="event.stopPropagation();irParaPerfil('${String(u).replace(/'/g,"\\'")}')" style="cursor:pointer"`;
     return foto
-      ? `<img src="${foto}" alt="${titulo}" title="${titulo}" class="mini-avatar" onerror="this.outerHTML='<div class=\\'mini-avatar mini-avatar-letra\\' title=\\'${titulo}\\'>${inicial}</div>'">`
-      : `<div class="mini-avatar mini-avatar-letra" title="${titulo}">${inicial}</div>`;
+      ? `<img src="${foto}" alt="${titulo}" title="${titulo}" class="mini-avatar" ${clique} onerror="this.outerHTML='<div class=\\'mini-avatar mini-avatar-letra\\' title=\\'${titulo}\\' ${clique.replace(/"/g,'&quot;')}>${inicial}</div>'">`
+      : `<div class="mini-avatar mini-avatar-letra" title="${titulo}" ${clique}>${inicial}</div>`;
   }).join('');
 
   const mais=sobrando>0?`<div class="mini-avatar mini-avatar-mais">+${sobrando}</div>`:'';
@@ -1985,7 +2133,7 @@ async function subirFoto(dataUrl){
         headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},
         body:dataUrl,
         cache:'no-store',
-        signal:AbortSignal.timeout(20000)
+        signal:timeoutSignal(20000)
       });
       if(!r.ok){throw new Error(`Servidor respondeu ${r.status}`)}
 
@@ -2412,7 +2560,7 @@ function renderCos(){
   else if(filter!=='todos')arr=arr.filter(c=>(c.cats||[]).includes(filter));
 
   const q=document.getElementById('search').value.toLowerCase().trim();
-  if(q)arr=arr.filter(c=>c.username.toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q));
+  if(q)arr=arr.filter(c=>c.username.toLowerCase().includes(q)||(c.nome||'').toLowerCase().includes(q)||(c.grupo||'').toLowerCase().includes(q));
 
   // ✅ Peso do tempo de cosplay pra ordenação: quanto mais tempo, maior o peso
   const PESO_TEMPO={'10':5,'6':4,'3':3,'1':2,'0':1};
@@ -2480,12 +2628,12 @@ function renderCos(){
 
     const imgsHtml=fotos.length
       ? (fotos.length>1
-          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`).join('')+avatarFallback
-          : `<img src="${fotos[0]}" alt="${c.username}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`+avatarFallback)
+          ? fotos.map((f,i)=>`<img class="slide${i===0?' on':''}" src="${f}" alt="${c.username}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`).join('')+avatarFallback
+          : `<img src="${fotos[0]}" alt="${c.username}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`+avatarFallback)
       : `<i class="fab fa-instagram ph"></i><div class="precisa-foto"><i class="fas fa-camera"></i> Ainda sem foto</div>`;
 
     return `<div class="card ${t.cls} ${temPreview?'has-preview':''}">
-      <div class="card-img" ${gira?'data-slides="1"':''} data-id="${c.id}" onclick="cardTap(event,${c.id},'${ig}')" title="Ver no Instagram">
+      <div class="card-img${c.efeito3d?' efeito-3d':''}" ${gira?'data-slides="1"':''} data-id="${c.id}" onclick="cardTap(event,${c.id},'${ig}')" title="Ver no Instagram">
         ${imgsHtml}
         ${preview}
         ${fotos.length>1?`<div class="dots">${fotos.map((_,i)=>`<div class="dot-i${i===0?' on':''}"></div>`).join('')}</div>`:''}
@@ -2504,7 +2652,7 @@ function renderCos(){
           ${c.youtube?`<a href="https://youtube.com/${c.youtube}" target="_blank" title="YouTube"><i class="fab fa-youtube"></i></a>`:''}
         </div>`:''}
         ${(c.grupo||c.proximoCosplay||c.cosplayFavorito||c.fotoFavorito)?`<div class="card-extras">
-          ${c.grupo?`<div><i class="fas fa-users"></i> ${c.grupo}</div>`:''}
+          ${c.grupo?`<div><i class="fas fa-users"></i> <span onclick="buscarPorGrupo('${c.grupo.replace(/'/g,"\\'")}')" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px" title="Ver quem mais é desse grupo">${c.grupo}</span></div>`:''}
           ${c.proximoCosplay?`<div><i class="fas fa-wand-magic-sparkles"></i> Próximo: ${c.proximoCosplay}</div>`:''}
           ${(c.cosplayFavorito||c.fotoFavorito)?`<div class="card-favorito">
             ${c.fotoFavorito?`<img src="${c.fotoFavorito}" alt="Favorito" onerror="this.remove()">`:''}
@@ -2652,6 +2800,7 @@ function openEdit(id,focusPost){
   document.getElementById('cMaquiadora').checked=(c.cats||[]).includes('maquiadora');
   document.getElementById('cStreamer').checked=(c.cats||[]).includes('streamer');
   document.getElementById('fSlide').checked=c.slideshow!==false;
+  document.getElementById('fEfeito3d').checked=!!c.efeito3d;
   fotosTemp=(c.photos&&c.photos.length)?[...c.photos]:(c.photo?[c.photo]:[]);
   fotosTempTocado=false; // reseta a cada edição — só vira true se a pessoa mexer de propósito
   renderFotos();
@@ -3112,6 +3261,7 @@ function saveProfile(){
     c.photo=fotosTemp[0]||null;
   }
   c.slideshow=document.getElementById('fSlide').checked;
+  c.efeito3d=document.getElementById('fEfeito3d').checked;
   const novoPost=document.getElementById('fPost').value.trim();
   // ✅ Marca a hora em que a postagem virou "nova" — usado pra ela deixar
   // de aparecer como "nova postagem" sozinha depois de 24h
@@ -3453,7 +3603,7 @@ function renderIdeias(){
       </div>`).join('');
 
     return `<div class="item">
-    ${i.foto?`<img src="${i.foto}" alt="Foto de ${i.title}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
+    ${i.foto?`<img src="${i.foto}" alt="Foto de ${i.title}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" loading="lazy" onerror="this.remove()">`:''}
     <h3>${escapeHtml(i.title)}</h3>
     ${i.desc?`<p>${escapeHtml(i.desc)}</p>`:''}
     ${i.chars?`<div>${i.chars.split(',').map(c=>`<span class="tag">${c.trim()}</span>`).join('')}</div>`:''}
@@ -3696,8 +3846,26 @@ function abrirPorHash(){
   }
 
   // Link direto pra um PERFIL (ex: #ofcvictorcorreia) — comportamento original
-  const c=db.cosplayers.find(x=>x.username.toLowerCase().replace('@','')===h.toLowerCase().replace('@',''));
-  if(!c)return;
+  irParaPerfil(h);
+}
+
+/* ✅ Navega direto pro perfil de alguém, buscando e destacando o card —
+   reutilizável em qualquer lugar do site (mini-avatares, links, etc),
+   não só quando vem de um link com #hash */
+/* ✅ Clica no nome de um grupo e já filtra a lista pra ver só quem mais
+   é desse mesmo grupo — conecta perfis relacionados de um jeito rápido */
+function buscarPorGrupo(grupo){
+  switchTab('cosplayers');
+  document.getElementById('search').value=grupo;
+  filter='todos';
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('active',b.dataset.f==='todos'));
+  renderCos();
+  toast(`Mostrando quem é do grupo "${grupo}"`,'ok');
+}
+
+function irParaPerfil(username){
+  const c=db.cosplayers.find(x=>x.username.toLowerCase().replace('@','')===String(username).toLowerCase().replace('@',''));
+  if(!c){toast('Esse perfil não foi encontrado','err');return}
   switchTab('cosplayers');
   document.getElementById('search').value=c.username;
   renderCos();
@@ -3970,7 +4138,7 @@ function renderEventos(){
     const nPres=(e.presencas||[]).length;
     const euVou=me&&(e.presencas||[]).some(p=>p.email===me.email);
     return `<div class="item ev-item" ${pend?'style="border-color:var(--warn)"':''}>
-      ${e.img?`<div class="ev-img"><img src="${e.img}" alt="${e.title}"></div>`:''}
+      ${e.img?`<div class="ev-img"><img src="${e.img}" alt="${e.title}" loading="lazy"></div>`:''}
       <div class="ev-top">
         <div class="ev-date">
           <span class="ev-d">${String(dt.getDate()).padStart(2,'0')}</span>
@@ -3980,14 +4148,14 @@ function renderEventos(){
           <h3>${e.title}</h3>
           <div class="ev-meta">
             ${e.time?`<span><i class="fas fa-clock"></i> ${e.time}</span>`:''}
-            <span><i class="fas fa-location-dot"></i> ${e.local?e.local+' · ':''}${e.city}</span>
+            <span><i class="fas fa-location-dot"></i> <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e.local?e.local+', ':'')+e.city)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:2px" onclick="event.stopPropagation()">${e.local?e.local+' · ':''}${e.city}</a></span>
           </div>
         </div>
       </div>
       <div class="ev-tags">
         ${pend?`<span class="tag" style="background:var(--warn);border-color:var(--warn);color:#1a1a1e">⏳ AGUARDANDO APROVAÇÃO</span>`:''}
         ${conta&&!pend?`<span class="tag tag-hot">${conta}</span>`:''}
-        <span class="tag">${e.type}</span>
+        <span class="tag tag-tipo-${slugify(e.type)}">${EMOJI_TIPO_EVENTO[e.type]||'✨'} ${e.type}</span>
         ${e.price?`<span class="tag ${gratis?'tag-free':'tag-price'}">${gratis?'🆓 '+e.price:'💰 '+e.price}</span>`:'<span class="tag">preço a confirmar</span>'}
       </div>
       ${e.desc?`<p>${e.desc}</p>`:''}
@@ -4001,6 +4169,7 @@ function renderEventos(){
         </button>
       </div>`:''}
       ${nPres?`<div style="padding:0 1.1rem .8rem">${miniAvatarsHtml((e.presencas||[]).map(p=>p.user))}</div>`:''}
+      ${renderAvisosEvento(e,admin,me)}
       <div class="ev-actions">
         ${e.url?`<a href="${e.url}" target="_blank" class="bs"><i class="fas fa-arrow-up-right-from-square"></i> Ver no site</a>`:''}
         <button class="bs" onclick="compartilharEvento(${e.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
@@ -4011,7 +4180,283 @@ function renderEventos(){
     </div>`;
   }).join('');
 }
+/* ✅ Emoji específico por tipo de evento — cada um com significado real,
+   não genérico. Reconhece o tipo de longe, sem nem precisar ler o texto */
+const EMOJI_TIPO_EVENTO={
+  Anime:'⛩️',      // torii, remete direto a Japão/anime
+  Geek:'🕹️',       // controle de video game, geek/games
+  Concurso:'🏆',    // troféu, competição
+  Encontro:'🤝',    // aperto de mão, social/meetup
+  Ensaio:'📸',      // câmera com flash, sessão de fotos
+  Outro:'✨'
+};
+
 function delEvento(id){if(!confirm('Remover esse evento?'))return;db.eventos=db.eventos.filter(e=>e.id!==id);save();renderEventos();toast('Evento removido','ok')}
+
+/* ===== ANIME PHOTO ===== 
+   ✅ IMPORTANTE (honestidade técnica): isso NÃO usa inteligência
+   artificial pra "transformar" a foto da pessoa pra parecer com o
+   personagem — isso exigiria um serviço de IA pago, que o site não tem.
+   O que isso faz de verdade: cria uma animação real (transição estilosa
+   entre as duas fotos, com o nome do anime), desenhada ao vivo num
+   canvas, e grava ela como vídeo de verdade pra baixar — tudo rodando
+   no navegador da pessoa, sem custo nenhum de servidor. */
+let apFotoSuaTemp=null,apFotoAnimeTemp=null;
+
+function previewFotoAnimePhoto(input,tipo){
+  const f=input.files[0];
+  if(!f)return;
+  const slotId=tipo==='sua'?'apFotoSuaSlot':'apFotoAnimeSlot';
+  const slot=document.getElementById(slotId);
+  slot.innerHTML=`<i class="fas fa-spinner fa-spin"></i>`;
+  comprimirImagem(f,900,.85).then(dataUrl=>{
+    if(tipo==='sua')apFotoSuaTemp=dataUrl;else apFotoAnimeTemp=dataUrl;
+    slot.innerHTML=`<img src="${dataUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;
+    if(apFotoSuaTemp&&apFotoAnimeTemp){
+      document.getElementById('apPreviewBox').style.display='block';
+    }
+  }).catch(()=>{
+    toast('Não consegui processar essa foto — tenta outra','err');
+    slot.innerHTML=`<i class="fas fa-image" style="font-size:24px;opacity:.5"></i>`;
+  });
+}
+
+function abrirCriadorAnimePhoto(){
+  const me=getMe();
+  if(!me){toast('Cadastre seu email primeiro (aba Cosplayers → Editar)','err');switchTab('cosplayers');return}
+  document.getElementById('apAuthor').innerHTML=`<div class="alert a-ok"><i class="fas fa-user-check"></i><span>Criando como <b>${me.username}</b>.</span></div>`;
+  document.getElementById('apAnime').value='';
+  document.getElementById('apFotoSuaSlot').innerHTML=`<i class="fas fa-user" style="font-size:24px;opacity:.5"></i>`;
+  document.getElementById('apFotoAnimeSlot').innerHTML=`<i class="fas fa-image" style="font-size:24px;opacity:.5"></i>`;
+  document.getElementById('apFotoSua').value='';
+  document.getElementById('apFotoAnime').value='';
+  document.getElementById('apPreviewBox').style.display='none';
+  document.getElementById('apBtnBaixar').disabled=true;
+  document.getElementById('apStatus').textContent='';
+  apFotoSuaTemp=null;apFotoAnimeTemp=null;
+  openModal('mAnimePhoto');
+}
+function fecharCriadorAnimePhoto(){apAnimando=false;closeModal('mAnimePhoto')}
+
+/* Carrega uma dataURL como elemento <img> pronto pra desenhar no canvas */
+function carregarImg(src){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve(img);
+    img.onerror=()=>reject(new Error('Não consegui carregar essa imagem'));
+    img.src=src;
+  });
+}
+
+/* Desenha uma imagem "cobrindo" o canvas todo (igual object-fit:cover) */
+function desenharCover(ctx,img,w,h){
+  const escala=Math.max(w/img.width,h/img.height);
+  const iw=img.width*escala,ih=img.height*escala;
+  const ix=(w-iw)/2,iy=(h-ih)/2;
+  ctx.drawImage(img,ix,iy,iw,ih);
+}
+
+let apAnimando=false;
+
+async function gerarPreviaAnimePhoto(){
+  if(!apFotoSuaTemp||!apFotoAnimeTemp){toast('Sobe as duas fotos primeiro','err');return}
+  const canvas=document.getElementById('apCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const anime=document.getElementById('apAnime').value.trim()||'Meu personagem favorito';
+
+  document.getElementById('apStatus').textContent='Carregando fotos...';
+  let imgSua,imgAnime;
+  try{
+    [imgSua,imgAnime]=await Promise.all([carregarImg(apFotoSuaTemp),carregarImg(apFotoAnimeTemp)]);
+  }catch(e){
+    toast('Erro ao carregar as fotos','err');return;
+  }
+
+  apAnimando=true;
+  document.getElementById('apBtnBaixar').disabled=false;
+  document.getElementById('apStatus').textContent='▶️ Prévia rodando — clica em "Baixar vídeo" quando gostar!';
+
+  const duracaoCiclo=3000; // 3s pra cada foto aparecer
+  const inicio=performance.now();
+
+  function desenharFrame(agora){
+    if(!apAnimando)return;
+    const t=(agora-inicio)%(duracaoCiclo*2);
+    const fase=t<duracaoCiclo?0:1; // 0 = mostrando "sua foto", 1 = mostrando "anime"
+    const progresso=(t%duracaoCiclo)/duracaoCiclo;
+
+    // crossfade suave no meio da transição
+    const transicao=Math.min(1,Math.max(0,(progresso-0.8)/0.2));
+
+    ctx.clearRect(0,0,W,H);
+    desenharCover(ctx,fase===0?imgSua:imgAnime,W,H);
+    if(transicao>0){
+      ctx.globalAlpha=transicao;
+      desenharCover(ctx,fase===0?imgAnime:imgSua,W,H);
+      ctx.globalAlpha=1;
+    }
+
+    // legenda com o nome do anime, sempre visível
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.fillRect(0,H-56,W,56);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 22px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('🎭 '+anime,W/2,H-20);
+
+    requestAnimationFrame(desenharFrame);
+  }
+  requestAnimationFrame(desenharFrame);
+}
+
+async function baixarAnimePhoto(){
+  if(!apAnimando){toast('Clica em "Ver prévia" primeiro','err');return}
+  const canvas=document.getElementById('apCanvas');
+
+  if(!canvas.captureStream){
+    toast('Seu navegador não consegue gravar vídeo — tenta no Chrome ou Firefox mais atual','err');
+    return;
+  }
+
+  document.getElementById('apStatus').textContent='🔴 Gravando... aguenta 6 segundos';
+  const stream=canvas.captureStream(30);
+  const tipoSuportado=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));
+  if(!tipoSuportado){toast('Seu navegador não suporta gravar nesse formato','err');return}
+
+  const gravador=new MediaRecorder(stream,{mimeType:tipoSuportado});
+  const pedacos=[];
+  gravador.ondataavailable=e=>{if(e.data.size>0)pedacos.push(e.data)};
+
+  gravador.onstop=()=>{
+    const blob=new Blob(pedacos,{type:tipoSuportado});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`animephoto-${slugify(document.getElementById('apAnime').value||'meu-anime')}.webm`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    document.getElementById('apStatus').textContent='✅ Vídeo baixado! Já pode postar no Instagram.';
+  };
+
+  gravador.start();
+  setTimeout(()=>gravador.stop(),6000); // grava 1 ciclo completo (ida + volta)
+}
+
+async function publicarAnimePhoto(){
+  const me=getMe();if(!me)return;
+  const anime=document.getElementById('apAnime').value.trim();
+  if(!anime){toast('Diz qual é o anime/personagem','err');return}
+  if(!apFotoSuaTemp||!apFotoAnimeTemp){toast('Sobe as duas fotos primeiro','err');return}
+
+  toast('📤 Enviando fotos...');
+  let urlSua,urlAnime;
+  try{
+    urlSua=await subirFoto(apFotoSuaTemp);
+    urlAnime=await subirFoto(apFotoAnimeTemp);
+  }catch(e){
+    toast('❌ Não consegui subir as fotos agora — tenta de novo em instantes','err');
+    return;
+  }
+
+  if(!Array.isArray(db.animePhotos))db.animePhotos=[];
+  db.animePhotos.unshift({id:Date.now(),anime,fotoSua:urlSua,fotoAnime:urlAnime,author:me.username,email:me.email,date:new Date().toISOString()});
+
+  save(false);renderAnimePhotos();closeModal('mAnimePhoto');
+  const ok=await cloudPush(false);
+  toast(ok?'🎬 Publicado na galeria!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+function renderAnimePhotos(){
+  const el=document.getElementById('animePhotoList');
+  if(!el)return;
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const arr=[...(db.animePhotos||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  if(!arr.length){
+    el.innerHTML=`<div class="empty"><i class="fas fa-clapperboard"></i><b>Nenhuma Anime Photo ainda</b>Seja o primeiro a criar a sua!</div>`;
+    return;
+  }
+
+  el.innerHTML=arr.map(ap=>`<div class="item">
+    <div style="display:flex;gap:.5rem">
+      <img src="${ap.fotoSua}" alt="Foto de ${ap.author}" loading="lazy" style="width:50%;aspect-ratio:1/1;object-fit:cover;border-radius:8px" onerror="this.style.opacity=.2">
+      <img src="${ap.fotoAnime}" alt="${escapeHtml(ap.anime)}" loading="lazy" style="width:50%;aspect-ratio:1/1;object-fit:cover;border-radius:8px" onerror="this.style.opacity=.2">
+    </div>
+    <h3 style="margin-top:.6rem">🎭 ${escapeHtml(ap.anime)}</h3>
+    <p style="font-size:11px;color:var(--text2)">${miniAvatarsHtml([ap.author],1)} ${ap.author}</p>
+    ${(admin||(me&&ap.email===me.email))?`<button class="bs del" onclick="delAnimePhoto(${ap.id})"><i class="fas fa-trash"></i> Remover</button>`:''}
+  </div>`).join('');
+}
+
+function delAnimePhoto(id){
+  if(!confirm('Remover essa Anime Photo?'))return;
+  db.animePhotos=(db.animePhotos||[]).filter(a=>a.id!==id);
+  save();renderAnimePhotos();toast('Removido','ok');
+}
+
+/* ===== AVISOS DO EVENTO — quem organizou (ou admin) pode postar avisos
+   organizados, tipo "mudou o local", "cancelado por causa da chuva",
+   "chegar 30 min antes" — aparece pra todo mundo que vai, de forma
+   organizada, sem precisar editar a descrição toda vez. ===== */
+function podeGerenciarAvisos(e,admin,me){
+  return admin||(me&&e.by&&e.by===me.username);
+}
+
+function renderAvisosEvento(e,admin,me){
+  const avisos=e.avisos||[];
+  const podeGerenciar=podeGerenciarAvisos(e,admin,me);
+  if(!avisos.length&&!podeGerenciar)return '';
+
+  const listaHtml=avisos.map((a,i)=>{
+    const ehNovo=(new Date()-new Date(a.data))<24*60*60*1000;
+    return `
+    <div style="background:var(--s1);border-left:3px solid var(--warn);border-radius:6px;padding:.6rem .8rem;margin-bottom:.4rem">
+      <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:start">
+        <div style="font-size:12.5px">${ehNovo?'<span class="tag" style="background:var(--error);border-color:var(--error);color:#fff;font-size:9px;padding:.1rem .4rem;margin-right:.4rem;vertical-align:middle">NOVO</span>':''}${escapeHtml(a.texto)}</div>
+        ${podeGerenciar?`<button class="bs del" style="flex:0 0 auto;padding:.25rem .5rem" onclick="removerAvisoEvento(${e.id},${i})" title="Remover aviso"><i class="fas fa-xmark"></i></button>`:''}
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:.3rem">${new Date(a.data).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>
+  `;}).join('');
+
+  return `<div style="padding:0 1.1rem .8rem">
+    ${avisos.length?`<label class="fl" style="font-size:11px;display:block;margin-bottom:.4rem"><i class="fas fa-bullhorn"></i> Avisos do evento</label>${listaHtml}`:''}
+    ${podeGerenciar?`
+      <div style="display:flex;gap:.4rem;margin-top:.3rem">
+        <input type="text" class="fi" id="avisoNovo${e.id}" placeholder="Ex: Mudamos o local, chegar 30min antes..." style="font-size:12px;padding:.5rem .7rem" maxlength="200">
+        <button class="bs" style="flex:0 0 auto" onclick="adicionarAvisoEvento(${e.id})"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    `:''}
+  </div>`;
+}
+
+async function adicionarAvisoEvento(id){
+  const input=document.getElementById('avisoNovo'+id);
+  const texto=input.value.trim();
+  if(!texto)return;
+  const e=db.eventos.find(x=>x.id===id);
+  if(!e)return;
+  if(!Array.isArray(e.avisos))e.avisos=[];
+  e.avisos.unshift({texto,data:new Date().toISOString()});
+  save(false);renderEventos();
+  toast('📤 Publicando aviso...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Aviso publicado!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+async function removerAvisoEvento(id,indice){
+  const e=db.eventos.find(x=>x.id===id);
+  if(!e||!Array.isArray(e.avisos))return;
+  if(!confirm('Remover esse aviso?'))return;
+  e.avisos.splice(indice,1);
+  save(false);renderEventos();
+  const ok=await cloudPush(false);
+  if(!ok){pendente=true;agendarSync(500)}
+}
 
 function compartilharEvento(id){
   const e=db.eventos.find(x=>x.id===id);if(!e)return;
@@ -4280,7 +4725,7 @@ async function checarFotosQuebradas(){
   resultado.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Checando fotos (perfis, eventos e ideias), pode levar um instante...</div>`;
 
   const testarUrl=(url)=>new Promise(resolve=>{
-    fetch(url,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(8000)})
+    fetch(url,{method:'GET',cache:'no-store',signal:timeoutSignal(8000)})
       .then(r=>resolve(r.status===404?'quebrada':'ok'))
       .catch(()=>resolve('indefinido')); // falha de rede não confirma quebrado — só timeout/erro real de servidor conta
   });
@@ -4469,6 +4914,41 @@ function admRenderLojas(){
   }).join('');
 }
 
+/* ✅ Gerenciador rápido de avisos, direto do Painel Admin — mostra os
+   avisos atuais do evento e deixa adicionar um novo ou remover, sem
+   precisar sair do admin e ir procurar o card na aba Eventos */
+function admGerenciarAvisos(id){
+  const e=db.eventos.find(x=>x.id===id);
+  if(!e)return;
+  const avisos=e.avisos||[];
+
+  const lista=avisos.length
+    ? avisos.map((a,i)=>`${i+1}. ${a.texto} (${new Date(a.data).toLocaleDateString('pt-BR')})`).join('\n')
+    : '(nenhum aviso ainda)';
+
+  const acao=prompt(
+    `📢 Avisos de "${e.title}":\n\n${lista}\n\n— Pra ADICIONAR um aviso novo, digita o texto dele aqui embaixo\n— Pra REMOVER, digita "remover 1" (ou o número do aviso que quer tirar)\n— Deixa vazio e cancela pra só fechar`
+  );
+  if(!acao||!acao.trim())return;
+
+  const textoLimpo=acao.trim();
+  const remover=textoLimpo.match(/^remover\s+(\d+)$/i);
+
+  if(remover){
+    const indice=parseInt(remover[1],10)-1;
+    if(indice<0||indice>=avisos.length){toast('Número inválido','err');return}
+    avisos.splice(indice,1);
+    toast('Aviso removido','ok');
+  }else{
+    if(!Array.isArray(e.avisos))e.avisos=[];
+    e.avisos.unshift({texto:textoLimpo,data:new Date().toISOString()});
+    toast('Aviso adicionado','ok');
+  }
+
+  save(false);admRenderAll();renderEventos();
+  cloudPush(false).then(ok=>{if(!ok){pendente=true;agendarSync(500)}});
+}
+
 function admRenderEv(){
   const el=document.getElementById('admEvList');
   if(!db.eventos.length){el.innerHTML='<div class="adm-empty">Nenhum evento</div>';return}
@@ -4482,10 +4962,11 @@ function admRenderEv(){
 
   const linha=(e,destaque)=>`<div class="adm-row"${destaque?' style="border-color:var(--warn);background:rgba(255,193,7,.06)"':''}>
     <div class="nome">${e.status==='pendente'?'⏳ ':''}${e.title}
-      <div class="sub">${new Date(e.date+'T12:00').toLocaleDateString('pt-BR')} · ${e.city}${e.price?' · '+e.price:''}${e.by?' · por '+e.by:''}</div>
+      <div class="sub">${new Date(e.date+'T12:00').toLocaleDateString('pt-BR')} · ${e.city}${e.price?' · '+e.price:''}${e.by?' · por '+e.by:''}${(e.avisos&&e.avisos.length)?` · 📢 ${e.avisos.length} aviso(s)`:''}</div>
     </div>
     <div class="acts">
       ${e.status==='pendente'?`<button class="adm-btn ok" onclick="aprovarEvento(${e.id});admRenderAll()" title="Aprovar"><i class="fas fa-check"></i></button>`:''}
+      <button class="adm-btn" onclick="admGerenciarAvisos(${e.id})" title="Avisos do evento"><i class="fas fa-bullhorn"></i></button>
       <button class="adm-btn" onclick="closeModal('mAdmin');switchTab('eventos');editEvento(${e.id})" title="Editar"><i class="fas fa-pen"></i></button>
       <button class="adm-btn dg" onclick="delEvento(${e.id});admRenderAll()" title="Remover"><i class="fas fa-trash"></i></button>
     </div>
@@ -5028,7 +5509,7 @@ async function cloudPush(auto=false){
       headers:{'Content-Type':'application/json','X-Write-Key':c.writeKey},
       body:JSON.stringify(db),
       cache:'no-store',
-      signal: AbortSignal.timeout(25000) // 25 segundos - dá mais margem pra conexões lentas/pacotes maiores
+      signal: timeoutSignal(25000) // 25 segundos - dá mais margem pra conexões lentas/pacotes maiores
     });
     
     if(r.status===401){
@@ -5124,7 +5605,7 @@ async function cloudPull(auto=false){
   try{
     const r=await fetch(c.workerUrl+'?t='+Date.now(),{
       cache:'no-store',
-      signal: AbortSignal.timeout(20000) // 20 segundos - mesma margem extra do cloudPush
+      signal: timeoutSignal(20000) // 20 segundos - mesma margem extra do cloudPush
     });
     
     if(!r.ok){
@@ -5210,6 +5691,7 @@ async function cloudPull(auto=false){
       renderColabGate();
       renderVitrine();
       renderLojas();
+      renderAnimePhotos();
       atualizarBadgesNovidades();
       if(document.documentElement.classList.contains('admin'))admRenderAll();
     }
@@ -5387,7 +5869,7 @@ function renderVitrine(){
       </div>`).join('');
 
     return `<div class="item">
-      ${v.foto?`<img src="${v.foto}" alt="Foto de ${v.author}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
+      ${v.foto?`<img src="${v.foto}" alt="Foto de ${v.author}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" loading="lazy" onerror="this.remove()">`:''}
       <h3>${v.author}</h3>
       <p style="font-size:12.5px"><b>📊 Seguidores:</b> ${v.seguidores}</p>
       <p style="font-size:12.5px"><b>🎭 Perfil:</b> ${v.perfil}</p>
@@ -5596,7 +6078,7 @@ function renderLojas(){
       </div>`).join('');
 
     return `<div class="item">
-      ${l.foto?`<img src="${l.foto}" alt="Foto de ${l.nome}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" onerror="this.remove()">`:''}
+      ${l.foto?`<img src="${l.foto}" alt="Foto de ${l.nome}" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-bottom:.7rem" loading="lazy" onerror="this.remove()">`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;gap:.6rem">
         <div style="display:flex;align-items:center;gap:.5rem">
           ${(l.logoDominio||l.logo)?`<img src="${l.logoDominio?logoUrlDoDominio(l.logoDominio):l.logo}" alt="Logo ${l.nome}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:1px solid var(--border);background:#fff" onerror="this.remove()">`:''}
@@ -5604,7 +6086,7 @@ function renderLojas(){
         </div>
       </div>
       <div style="margin:.4rem 0 .4rem">${estrelasHtml(l.nota)}</div>
-      <div style="margin-bottom:.5rem"><span class="tag">${CAT_LABEL[l.categoria]||l.categoria}</span></div>
+      <div style="margin-bottom:.5rem"><span class="tag tag-loja-${l.categoria}">${CAT_LABEL[l.categoria]||l.categoria}</span></div>
       <a href="${l.link}" target="_blank" rel="noopener" style="font-size:12.5px;color:var(--primary);word-break:break-all"><i class="fas fa-link"></i> ${l.link}</a>
       ${l.desc?`<p style="margin-top:.5rem">${l.desc}</p>`:''}
       <p style="font-size:11px;color:var(--text2);margin-top:.5rem"><i class="fas fa-user"></i> Avaliado por ${l.author}</p>
@@ -6009,7 +6491,7 @@ function init(){
   document.getElementById('fSchedule').oninput=schedInfo;
   document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active')});
 
-  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();
+  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();renderAnimePhotos();
   atualizarBadgesNovidades();
 
   // RELÓGIO: publica automaticamente as postagens agendadas quando chega a hora
@@ -6065,6 +6547,12 @@ function init(){
     }
   });
 }
+// ✅ Mostra o botão "voltar ao topo" só depois de rolar um pouco pra baixo
+window.addEventListener('scroll',()=>{
+  const btn=document.getElementById('btnTopo');
+  if(btn)btn.classList.toggle('on',window.scrollY>400);
+},{passive:true});
+
 window.addEventListener('DOMContentLoaded',init);
 
 // ✅ PWA: registra o service worker pra o site funcionar mesmo offline
