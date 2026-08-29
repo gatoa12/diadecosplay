@@ -1223,6 +1223,13 @@ html.admin .admin-only{display:flex!important}
     </div>
 
     <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem">
+      <label class="fl">🖼️ Checar fotos quebradas</label>
+      <span class="hint">Confere, uma por uma, se as fotos que os perfis apontam realmente existem na nuvem (às vezes um link fica "órfão" de testes antigos). Fotos confirmadas como quebradas são removidas do perfil — a pessoa só precisa subir de novo.</span>
+      <button class="btn sec" style="margin-top:.6rem" onclick="checarFotosQuebradas()"><i class="fas fa-magnifying-glass"></i> Checar agora</button>
+      <div id="resultadoFotosQuebradas" style="margin-top:.7rem"></div>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem">
       <label class="fl">🔍 Checar @ duplicados ou parecidos</label>
       <span class="hint">Procura @ exatamente iguais (que não deveriam existir) e @ bem parecidos (que podem ser a mesma pessoa cadastrada duas vezes por engano).</span>
       <button class="btn sec" style="margin-top:.6rem" onclick="checarDuplicados()"><i class="fas fa-magnifying-glass"></i> Checar agora</button>
@@ -2000,7 +2007,12 @@ async function hospedarFotos(c){
   c.photos=novas.length?novas:[];
   c.photo=novas[0]||null;
 
-  if(c.media&&ehDataUrl(c.media)){
+  // ✅ CORRIGIDO: vídeo NUNCA tenta subir pro endpoint de fotos — ele fica
+  // guardado embutido de propósito (é grande demais pra comprimir como
+  // imagem). Sem essa checagem de mediaType, o site tentava enviar vídeo
+  // pro "/f/" pra sempre, a cada 15s, sempre falhando do mesmo jeito
+  // ("Não é uma imagem") — um retry que nunca teria como dar certo.
+  if(c.media&&c.mediaType!=='video'&&ehDataUrl(c.media)){
     try{
       c.media=await subirFoto(c.media);
     }catch(e){
@@ -2021,6 +2033,13 @@ async function hospedarFotos(c){
 }
 
 /* varre o site atrás de fotos que ficaram só no navegador e sobe pra nuvem */
+/* ✅ Guarda quantas vezes cada perfil falhou seguido nesse ciclo de
+   reenvio — depois de muitas falhas seguidas, para de insistir sozinho
+   (evita martelar a rede pra sempre com algo que nunca vai dar certo) e
+   deixa pro "Corrigir tudo agora" ou pra pessoa resolver manualmente. */
+const TENTATIVAS_MAX_FOTO=5;
+const tentativasFotoPorId=new Map();
+
 async function reenviarFotosPendentes(){
   // ✅ CORREÇÃO CRÍTICA: se essa aba ficou aberta um tempo (ou é uma aba
   // "esquecida" de antes), os dados dela podem estar desatualizados —
@@ -2035,15 +2054,25 @@ async function reenviarFotosPendentes(){
 
   let mudou=false;
   for(const c of db.cosplayers){
-    const pend=(c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media);
-    if(pend){
-      try{
-        await hospedarFotos(c);
-        mudou=true;
-      }catch(e){
-        // ✅ se falhar pra uma pessoa, não trava a migração das outras —
-        // essa pessoa só tenta de novo no próximo ciclo
-        console.warn(`Migração de foto pendente falhou pra ${c.username}: ${e.message}`);
+    const pend=(c.photos||[]).some(ehDataUrl)||(c.mediaType!=='video'&&ehDataUrl(c.media));
+    if(!pend)continue;
+
+    const tentativas=tentativasFotoPorId.get(c.id)||0;
+    if(tentativas>=TENTATIVAS_MAX_FOTO){
+      continue; // já tentou demais seguido — não martela mais sozinho
+    }
+
+    try{
+      await hospedarFotos(c);
+      mudou=true;
+      tentativasFotoPorId.delete(c.id); // deu certo, zera o contador
+    }catch(e){
+      const novaContagem=tentativas+1;
+      tentativasFotoPorId.set(c.id,novaContagem);
+      if(novaContagem>=TENTATIVAS_MAX_FOTO){
+        console.warn(`⚠️ Desisti de tentar automaticamente pra ${c.username} depois de ${TENTATIVAS_MAX_FOTO} tentativas seguidas: ${e.message}`);
+      }else{
+        console.warn(`Migração de foto pendente falhou pra ${c.username} (tentativa ${novaContagem}/${TENTATIVAS_MAX_FOTO}): ${e.message}`);
       }
     }
   }
@@ -3083,7 +3112,7 @@ function saveProfile(){
       // o que não conseguir subir agora fica pendente e tenta de novo
       // sozinho, em segundo plano, sem precisar de mais nada da pessoa.
       let fotosPendentes=false;
-      if((c.photos||[]).some(ehDataUrl)||ehDataUrl(c.media)||ehDataUrl(c.fotoFavorito)){
+      if((c.photos||[]).some(ehDataUrl)||(c.mediaType!=='video'&&ehDataUrl(c.media))||ehDataUrl(c.fotoFavorito)){
         toast('📤 Enviando fotos...');
         fotosPendentes=await hospedarFotos(c);
       }
@@ -4198,6 +4227,77 @@ async function rodarCorrecaoManual(){
   }
 }
 
+/* ✅ Testa CADA foto hospedada de verdade (não confia só no que está
+   escrito no perfil) — faz um pedido de rede real pra cada uma e só
+   remove as que o servidor confirma que realmente não existem mais
+   (404). Isso limpa fotos "órfãs" de testes antigos sem arriscar tirar
+   foto de gente que só está com internet lenta na hora. */
+async function checarFotosQuebradas(){
+  const resultado=document.getElementById('resultadoFotosQuebradas');
+  const c=db.config||{};
+  if(!c.workerUrl){toast('Conexão não configurada','err');return}
+
+  resultado.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Checando fotos, pode levar um instante...</div>`;
+
+  const testarUrl=(url)=>new Promise(resolve=>{
+    fetch(url,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(8000)})
+      .then(r=>resolve(r.status===404?'quebrada':'ok'))
+      .catch(()=>resolve('indefinido')); // falha de rede não confirma quebrado — só timeout/erro real de servidor conta
+  });
+
+  const quebradas=[]; // {cosplayer, campo, url}
+  for(const cos of db.cosplayers){
+    const fotos=[...(cos.photos||[])];
+    for(let i=0;i<fotos.length;i++){
+      const url=fotos[i];
+      if(!url||!url.includes('/f/'))continue;
+      const status=await testarUrl(url);
+      if(status==='quebrada')quebradas.push({cosplayerId:cos.id,campo:'photos',indice:i,url,nome:cos.username});
+    }
+    if(cos.fotoFavorito&&cos.fotoFavorito.includes('/f/')){
+      const status=await testarUrl(cos.fotoFavorito);
+      if(status==='quebrada')quebradas.push({cosplayerId:cos.id,campo:'fotoFavorito',url:cos.fotoFavorito,nome:cos.username});
+    }
+  }
+
+  if(!quebradas.length){
+    resultado.innerHTML=`<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Nenhuma foto quebrada encontrada!</span></div>`;
+    return;
+  }
+
+  resultado.innerHTML=`
+    <div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>${quebradas.length} foto(s) confirmadas como quebradas (link não existe mais na nuvem):</span></div>
+    ${quebradas.map(q=>`<div style="font-size:12px;padding:.3rem 0">${q.nome} — ${q.campo}</div>`).join('')}
+    <button class="btn" style="margin-top:.6rem;background:var(--error)" onclick="limparFotosQuebradas()"><i class="fas fa-trash"></i> Remover essas ${quebradas.length} foto(s) quebrada(s)</button>
+  `;
+  window._fotosQuebradasEncontradas=quebradas; // guarda pra função de limpeza usar
+}
+
+async function limparFotosQuebradas(){
+  const quebradas=window._fotosQuebradasEncontradas||[];
+  if(!quebradas.length)return;
+  if(!confirm(`Remover ${quebradas.length} foto(s) quebrada(s) dos perfis? As pessoas podem subir de novo depois.`))return;
+
+  quebradas.forEach(q=>{
+    const cos=db.cosplayers.find(x=>x.id===q.cosplayerId);
+    if(!cos)return;
+    if(q.campo==='photos'&&Array.isArray(cos.photos)){
+      cos.photos=cos.photos.filter(f=>f!==q.url);
+      cos.photo=cos.photos[0]||null;
+    }else if(q.campo==='fotoFavorito'){
+      cos.fotoFavorito=null;
+    }
+  });
+
+  save(false);renderCos();admRenderAll();
+  document.getElementById('resultadoFotosQuebradas').innerHTML='';
+  window._fotosQuebradasEncontradas=null;
+  toast('📤 Enviando limpeza...');
+  const ok=await cloudPush(false);
+  toast(ok?'✅ Fotos quebradas removidas e já no ar!':'✅ Removido! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
 function checarDuplicados(){
   const el=document.getElementById('listaDuplicados');
   const arr=db.cosplayers;
@@ -4863,7 +4963,7 @@ async function cloudPush(auto=false){
       headers:{'Content-Type':'application/json','X-Write-Key':c.writeKey},
       body:JSON.stringify(db),
       cache:'no-store',
-      signal: AbortSignal.timeout(15000) // 15 segundos
+      signal: AbortSignal.timeout(25000) // 25 segundos - dá mais margem pra conexões lentas/pacotes maiores
     });
     
     if(r.status===401){
@@ -4959,7 +5059,7 @@ async function cloudPull(auto=false){
   try{
     const r=await fetch(c.workerUrl+'?t='+Date.now(),{
       cache:'no-store',
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(20000) // 20 segundos - mesma margem extra do cloudPush
     });
     
     if(!r.ok){
