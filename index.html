@@ -28,6 +28,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;overflow-wrap:break-word}
 :root{
@@ -43,7 +44,7 @@
 html.tema-claro{--bg:#F8F7F5;--s1:#fff;--s2:#F2F1ED;--text:#1a1a1e;--text2:#696967;--border:#E5E5E5}
 html.tema-escuro{--bg:#0F0F12;--s1:#1a1a1e;--s2:#24242b;--text:#fff;--text2:#B0B0B5;--border:#3a3a42}
 html{scroll-behavior:smooth}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);background-image:radial-gradient(circle at 15% 0%,rgba(228,64,95,.06),transparent 40%),radial-gradient(circle at 85% 20%,rgba(131,58,180,.05),transparent 40%);background-attachment:fixed;color:var(--text);line-height:1.6;overflow-x:hidden}
 
 /* ✅ Foco de teclado sempre visível — importante pra quem navega sem
    mouse (tab pelo teclado, leitores de tela). Some no clique de mouse
@@ -519,6 +520,25 @@ html.admin .admin-only{display:flex!important}
 .adm-pane{display:none}
 .adm-pane.active{display:block;animation:fade .25s}
 .adm-stats{background:var(--s2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:10px;padding:1.1rem 1.2rem;font-size:13px;line-height:2.1;margin-bottom:1.2rem}
+
+/* ✅ Dashboard visual — grid de cards com número grande, cor e ícone */
+.adm-dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.7rem;margin-bottom:1.2rem}
+
+/* ✅ Banner de destaque do dia */
+.destaque-banner{display:flex;align-items:center;gap:.8rem;background:linear-gradient(135deg,rgba(131,58,180,.15),rgba(228,64,95,.15));border:1px solid var(--primary);border-radius:14px;padding:.8rem 1rem;margin-bottom:1.2rem;cursor:pointer;transition:.2s}
+.destaque-banner:hover{transform:translateY(-2px)}
+.destaque-banner img{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:2px solid var(--primary)}
+.destaque-info{flex:1;display:flex;flex-direction:column;min-width:0}
+.destaque-tag{font-size:10px;color:var(--primary);font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.destaque-info b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.destaque-info span:last-child{font-size:11px;color:var(--text2)}
+.dash-card{background:var(--s2);border:1px solid var(--border);border-top:3px solid;border-radius:10px;padding:.9rem .6rem;text-align:center;transition:.2s}
+.dash-card:hover{transform:translateY(-2px)}
+.dash-card i{font-size:16px;margin-bottom:.4rem}
+.dash-num{font-size:24px;font-weight:800;line-height:1.1}
+.dash-label{font-size:10px;color:var(--text2);margin-top:.2rem;text-transform:uppercase;letter-spacing:.03em}
+.dash-aviso{font-size:9px;color:var(--warn);margin-top:.3rem;font-weight:700}
+@media(max-width:480px){.adm-dashboard{grid-template-columns:repeat(3,1fr)}.dash-num{font-size:20px}}
 .adm-stats b{color:var(--primary);font-size:14px}
 .adm-list{max-height:290px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--s2)}
 .adm-row{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-bottom:1px solid var(--border);font-size:13px}
@@ -619,6 +639,7 @@ html.admin .admin-only{display:flex!important}
 <!-- COSPLAYERS -->
 <div id="cosplayers" class="content active"><div class="wrapper">
   <div id="welcomeBox"></div>
+  <div id="destaqueBanner"></div>
   <div class="controls">
     <input type="text" class="search" id="search" placeholder="🔍 Buscar cosplayer...">
   </div>
@@ -717,6 +738,14 @@ html.admin .admin-only{display:flex!important}
 
 <!-- MODAL: CRIAR ANIME PHOTO -->
 <!-- MODAL: ELOGIOS DO PERFIL -->
+<!-- MODAL: QR CODE DO PERFIL -->
+<div id="mQrCode" class="modal"><div class="mbox" style="text-align:center">
+  <button class="mclose" onclick="closeModal('mQrCode')">&times;</button>
+  <div class="mtitle">📱 QR Code do perfil</div>
+  <span class="hint" style="display:block;margin-bottom:1rem">Mostra a tela pra alguém escanear com a câmera do celular — abre seu perfil na hora. Ótimo pra eventos presenciais!</span>
+  <div id="qrCodeBox" style="background:#fff;padding:1rem;border-radius:12px;display:inline-block"></div>
+</div></div>
+
 <div id="mElogios" class="modal"><div class="mbox">
   <button class="mclose" onclick="closeModal('mElogios')">&times;</button>
   <div class="mtitle" id="elogiosTitulo">💬 Elogios</div>
@@ -1406,6 +1435,8 @@ html.admin .admin-only{display:flex!important}
     Rodando <b style="color:var(--primary)" id="versaoAtualLabel"></b> — se você acabou de subir uma atualização e esse número não mudou, o navegador ainda está com a versão antiga em cache
   </div>
 
+  <div id="admDashboard" class="adm-dashboard"></div>
+
   <button class="btn" style="width:100%;margin-bottom:1.2rem;background:linear-gradient(135deg,#833AB4,#E4405F)" onclick="rodarDiagnosticoCompleto()"><i class="fas fa-stethoscope"></i> Diagnóstico completo (testar tudo agora)</button>
   <div id="resultadoDiagnostico" style="margin-bottom:1.2rem"></div>
 
@@ -1696,7 +1727,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v74';
+const SITE_VERSION='v78';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -1824,6 +1855,15 @@ function limparErrosCapturados(){
   toast('Lista de erros limpa','ok');
 }
 const SITE_BUILD_DATE='2026-08-29';
+
+/* ✅ CORRIGIDO (bug real, reportado): o endereço do site nunca deve
+   depender de "location.origin"/"location.pathname" (o endereço ATUAL
+   do navegador) — em certos contextos isso pode vir errado (ex: dentro
+   de uma pré-visualização, moldura incorporada, ou navegador que
+   restringe esse acesso), gerando links quebrados tipo
+   "nullsrcdoc#..." em vez do site de verdade. Usar esse endereço FIXO
+   elimina esse risco por completo, em qualquer situação. */
+const SITE_URL_FIXA='https://diadecosplay.pages.dev';
 
 const CLOUD_URL='https://diadecosplay-api.joao-victor-correia10.workers.dev';
 const CLOUD_KEY='diadecosplay2026';
@@ -2942,7 +2982,8 @@ function renderCos(){
           <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
           <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
           <a href="https://ig.me/m/${c.username.replace('@','')}" target="_blank" class="bs full msg"><i class="fas fa-paper-plane"></i> Enviar mensagem</a>
-          <button class="bs full share" onclick="compartilhar(${c.id})"><i class="fas fa-share-nodes"></i> Compartilhar carta</button>
+          <button class="bs share" onclick="compartilhar(${c.id})"><i class="fas fa-share-nodes"></i> Compartilhar</button>
+          <button class="bs share" onclick="event.stopPropagation();abrirQrCode(${c.id})"><i class="fas fa-qrcode"></i> QR Code</button>
           ${live&&c.post
             ? (mine
                 ? `<div class="bs-row">
@@ -3264,8 +3305,7 @@ function gerarPdfAutorizacao(cosplayer,responsavel){
   const {jsPDF}=window.jspdf;
   const doc=new jsPDF({unit:'mm',format:'a4'});
   const dataAgora=new Date().toLocaleString('pt-BR');
-  const SITE_URL='https://diadecosplay.pages.dev';
-  const linkPerfil=`${SITE_URL}/#${cosplayer.username.replace('@','')}`;
+  const linkPerfil=`${SITE_URL_FIXA}/#${cosplayer.username.replace('@','')}`;
   // ✅ código de referência do documento — liga esse PDF específico ao
   // perfil e ao momento em que foi assinado, pra facilitar conferência
   const codigoDoc=`DC-${cosplayer.id}-${Date.now().toString(36).toUpperCase()}`;
@@ -3816,7 +3856,7 @@ function compartilharCena(id){
   const conf=db.config||{};
   if(!conf.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${location.origin}/cena/${slugify(c.title)}-${c.id}`;
+  const url=`${SITE_URL_FIXA}/cena/${slugify(c.title)}-${c.id}`;
   const txt=`🎬 ${c.title}`;
 
   if(navigator.share){
@@ -3948,7 +3988,7 @@ function compartilharIdeia(id){
   const c=db.config||{};
   if(!c.workerUrl){toast('Conexão não configurada','err');return}
 
-  const url=`${location.origin}/ideia/${slugify(i.title)}-${i.id}`;
+  const url=`${SITE_URL_FIXA}/ideia/${slugify(i.title)}-${i.id}`;
   const txt=`💡 ${i.title}`;
 
   if(navigator.share){
@@ -4108,7 +4148,7 @@ function copiarFaltantes(){
 function copiarLinkGrupo(){
   const prontos=db.cosplayers.filter(c=>c.email&&c.idade).length;
   const total=db.cosplayers.length;
-  const link=location.origin+location.pathname;
+  const link=SITE_URL_FIXA+'/';
   const txt=`🎭 *DiaDeCosplay* já está no ar!\n\n${prontos} de ${total} já montaram a carta completa. Falta a sua!\n\n👉 Entre no link, ache seu @, clique em *Editar* e coloque seu email e sua idade. Depois é só escolher suas fotos, seu emoji e o que você faz (Cosplay, WigMaker, PropMaker ou CosMaker).\n\n${link}`;
   navigator.clipboard.writeText(txt).then(()=>toast('Recado copiado! Cole no grupo.','ok'));
 }
@@ -4121,7 +4161,7 @@ function compartilhar(id){
 
   // ✅ Link no PRÓPRIO domínio do site agora (não mais no domínio do
   // Worker) — as Cloudflare Pages Functions rodam nesse mesmo endereço
-  const url=`${location.origin}/perfil/${slugify(c.username)}-${c.id}`;
+  const url=`${SITE_URL_FIXA}/perfil/${slugify(c.username)}-${c.id}`;
 
   if(navigator.share){
     navigator.share({title:'DiaDeCosplay',text:txt,url}).catch(()=>{});
@@ -4129,6 +4169,22 @@ function compartilhar(id){
     navigator.clipboard.writeText(url).then(()=>toast('Link da carta copiado!','ok'))
       .catch(()=>toast('Link: '+url));
   }
+}
+
+/* ✅ QR Code do perfil — vai DIRETO pro site (sem passar pela página de
+   prévia intermediária que existe só pra redes sociais mostrarem foto +
+   descrição). Pra um QR Code escaneado na hora, isso não faz sentido —
+   a pessoa escaneia e já cai direto no perfil de verdade, vendo o
+   Instagram e o botão de mensagem, sem nenhum passo a mais no meio. */
+function abrirQrCode(id){
+  const c=db.cosplayers.find(x=>x.id===id);if(!c)return;
+  if(typeof QRCode==='undefined'){toast('Não consegui carregar o gerador de QR Code agora — tenta de novo','err');return}
+
+  const url=`${SITE_URL_FIXA}/#${c.username.replace('@','')}`;
+  const caixa=document.getElementById('qrCodeBox');
+  caixa.innerHTML='';
+  new QRCode(caixa,{text:url,width:220,height:220,colorDark:'#000',colorLight:'#fff'});
+  openModal('mQrCode');
 }
 
 function abrirPorHash(){
@@ -4368,6 +4424,35 @@ async function enviarElogio(){
   toast('💬 Elogio enviado!','ok');
   const ok=await cloudPush(false);
   if(!ok){pendente=true;agendarSync(500)}
+}
+
+/* ✅ Banner de destaque — mostra sempre alguém diferente (escolhido de
+   forma pseudo-aleatória mas estável durante o dia, baseado na data, pra
+   não ficar mudando toda hora que a página recarrega) entre quem tem
+   foto cadastrada. Dá visibilidade pra galera de forma justa e rotativa. */
+function renderDestaqueBanner(){
+  const el=document.getElementById('destaqueBanner');
+  if(!el)return;
+  const candidatos=db.cosplayers.filter(c=>(c.photos&&c.photos.length)||c.photo);
+  if(!candidatos.length){el.innerHTML='';return}
+
+  // ✅ "aleatório" estável por dia — todo mundo vê o MESMO destaque no
+  // mesmo dia, mas muda naturalmente dia após dia
+  const diaDoAno=Math.floor(Date.now()/86400000);
+  const escolhido=candidatos[diaDoAno%candidatos.length];
+  const foto=(escolhido.photos&&escolhido.photos[0])||escolhido.photo;
+
+  el.innerHTML=`
+    <div class="destaque-banner" onclick="irParaPerfil('${escolhido.username.replace(/'/g,"\\'")}')">
+      <img src="${foto}" alt="${escolhido.username}" loading="lazy">
+      <div class="destaque-info">
+        <span class="destaque-tag">✨ Destaque de hoje</span>
+        <b>${escolhido.nome||escolhido.username}</b>
+        <span>${escolhido.username}</span>
+      </div>
+      <i class="fas fa-chevron-right"></i>
+    </div>
+  `;
 }
 
 function buscarPorGrupo(grupo){
@@ -4979,7 +5064,7 @@ function compartilharEvento(id){
   const dataFmt=new Date(e.date+'T12:00').toLocaleDateString('pt-BR');
   const txt=`🎭 ${e.title}\n📅 ${dataFmt}${e.time?' às '+e.time:''}\n📍 ${e.city}\n\n${e.desc||''}`;
   if(navigator.share){
-    navigator.share({title:e.title,text:txt,url:e.url||location.origin+location.pathname}).catch(()=>{});
+    navigator.share({title:e.title,text:txt,url:e.url||SITE_URL_FIXA+'/'}).catch(()=>{});
   }else{
     navigator.clipboard.writeText(txt).then(()=>toast('Detalhes do evento copiados!','ok'))
       .catch(()=>toast('Não consegui copiar — tenta de novo'));
@@ -4995,6 +5080,7 @@ function openAdmin(){
   const vLabel=document.getElementById('versaoAtualLabel');
   if(vLabel)vLabel.textContent=`${SITE_VERSION} (build ${SITE_BUILD_DATE})`;
   renderErrosCapturados();
+  renderAdmDashboard();
   openModal('mAdmin');
 }
 
@@ -5052,6 +5138,36 @@ function applyConfig(){
   if(cr)cr.innerHTML=c.credito?`Idealizado por <a href="https://instagram.com/${(c.credito||'').replace('@','')}" target="_blank">${c.credito}</a>`:'';
 }
 
+/* ✅ Dashboard visual — cards grandes e coloridos com os números mais
+   importantes, de relance, antes de entrar em qualquer aba específica */
+function renderAdmDashboard(){
+  const el=document.getElementById('admDashboard');
+  if(!el)return;
+  const d=db;
+  const comFoto=d.cosplayers.filter(c=>(c.photos&&c.photos.length)||c.photo).length;
+  const pendentesEv=d.eventos.filter(e=>e.status==='pendente').length;
+  let erros=[];
+  try{erros=JSON.parse(localStorage.getItem('dc_erros')||'[]')}catch(e){}
+
+  const cards=[
+    {icone:'fa-users',cor:'#E4405F',numero:d.cosplayers.length,label:'Cosplayers'},
+    {icone:'fa-camera',cor:'#833AB4',numero:comFoto,label:'Com foto'},
+    {icone:'fa-calendar-days',cor:'#25D366',numero:d.eventos.length,label:'Eventos',aviso:pendentesEv?`${pendentesEv} aguardando`:null},
+    {icone:'fa-lightbulb',cor:'#FFC107',numero:d.ideias.length,label:'Ideias'},
+    {icone:'fa-film',cor:'#1D9E75',numero:d.cenas.length,label:'Cenas'},
+    {icone:'fa-bug',cor:erros.length?'#dc3545':'#6c757d',numero:erros.length,label:'Erros recentes'},
+  ];
+
+  el.innerHTML=cards.map(c=>`
+    <div class="dash-card" style="border-top-color:${c.cor}">
+      <i class="fas ${c.icone}" style="color:${c.cor}"></i>
+      <div class="dash-num">${c.numero}</div>
+      <div class="dash-label">${c.label}</div>
+      ${c.aviso?`<div class="dash-aviso">${c.aviso}</div>`:''}
+    </div>
+  `).join('');
+}
+
 function admStats(){
   const d=db;
   const menores=d.cosplayers.filter(c=>c.menorDeIdade);
@@ -5078,7 +5194,7 @@ function admStats(){
   }
 }
 
-function admRenderAll(){admStats();admRenderCos();admRenderEv();admRenderConteudo();admRenderLojas();admRenderAjuda();renderSnapshots();checarPWA();setTimeout(recalcularSombrasTabs,100)}
+function admRenderAll(){admStats();renderAdmDashboard();admRenderCos();admRenderEv();admRenderConteudo();admRenderLojas();admRenderAjuda();renderSnapshots();checarPWA();setTimeout(recalcularSombrasTabs,100)}
 
 /* --- COSPLAYERS --- */
 /* ✅ Limpa "1 - ", "74-", "74) " etc que vêm coladas antes do @ quando a
@@ -7023,7 +7139,7 @@ function init(){
   document.getElementById('fSchedule').oninput=schedInfo;
   document.querySelectorAll('.modal').forEach(m=>m.onclick=e=>{if(e.target===m)m.classList.remove('active')});
 
-  applyConfig();renderAjuda();renderMe();renderCos();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();renderAnimePhotos();
+  applyConfig();renderAjuda();renderMe();renderCos();renderDestaqueBanner();renderEventos();renderEvGate();renderColabs();renderColabGate();renderIdeias();renderCenas();renderGates();renderVitrine();renderLojas();renderAnimePhotos();
   atualizarBadgesNovidades();
 
   // RELÓGIO: publica automaticamente as postagens agendadas quando chega a hora
