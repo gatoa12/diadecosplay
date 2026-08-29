@@ -342,6 +342,16 @@ html.admin .sync-badge{display:flex}
 .socials{display:flex;gap:.5rem;font-size:13px}
 .card-extras{display:flex;flex-direction:column;gap:.35rem;font-size:11px;color:var(--text2);margin:.5rem 0;padding:.5rem .6rem;background:var(--s2);border-radius:8px}
 
+/* ✅ Ticker de curiosidades — alterna sozinho a cada 5s (JS controla o
+   texto, isso só cuida da transição suave de troca) */
+.ticker-curiosidade{font-size:11px;color:var(--text2);padding:.5rem .6rem;margin:.4rem 0;background:linear-gradient(90deg,rgba(228,64,95,.08),rgba(131,58,180,.08));border-radius:8px;border-left:2px solid var(--primary);transition:opacity .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ticker-curiosidade.trocando{opacity:0}
+
+/* ✅ Caixa do Duo no card - foto do parceiro + tipo (casal/rival) */
+.duo-box{display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;margin:.4rem 0;background:var(--s2);border-radius:8px;cursor:pointer;font-size:11.5px}
+.duo-box img{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.duo-box:hover{background:var(--border)}
+
 /* ✅ Grupinho de mini-fotos sobrepostas (quem confirmou/participou) */
 .mini-avatars-grupo{display:flex;align-items:center}
 .mini-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--s1);margin-left:-8px;flex:0 0 auto;box-shadow:0 1px 3px rgba(0,0,0,.3)}
@@ -718,6 +728,7 @@ html.admin .admin-only{display:flex!important}
     <button class="btn btn-inline" onclick="tryAdd('ideia')"><i class="fas fa-plus"></i> Propor Ideia</button>
   </div>
   <div id="ideiaGate"></div>
+  <input type="text" class="fi search" id="ideiaSearch" placeholder="🔍 Buscar por título, personagem..." oninput="renderIdeias()" style="margin-bottom:1rem">
   <div id="ideiaList" class="list"></div>
 </div></div>
 
@@ -728,6 +739,7 @@ html.admin .admin-only{display:flex!important}
     <button class="btn btn-inline" onclick="tryAdd('cena')"><i class="fas fa-plus"></i> Sugerir Cena</button>
   </div>
   <div id="cenaGate"></div>
+  <input type="text" class="fi search" id="cenaSearch" placeholder="🔍 Buscar por título, obra, personagem..." oninput="renderCenas()" style="margin-bottom:1rem">
   <div id="cenaList" class="list"></div>
 </div></div>
 
@@ -887,6 +899,30 @@ html.admin .admin-only{display:flex!important}
     </div>
     <input type="file" id="fFotoFavorito" accept="image/*" style="display:none" onchange="previewFavorito(this)">
     <span class="hint">Pode contar qual foi (texto) e/ou colocar a foto dele — o que preferir.</span>
+  </div>
+
+  <div class="fg">
+    <label class="fl">🎲 Curiosidades (opcional) <span style="font-weight:400;color:var(--text2)">— aparecem alternando no seu card</span></label>
+    <input type="text" class="fi" id="fMusica" placeholder="🎵 Música que anda ouvindo" style="margin-bottom:.5rem">
+    <input type="text" class="fi" id="fCosplaySonho" placeholder="✨ Cosplay dos sonhos que você faria um dia" style="margin-bottom:.5rem">
+    <input type="text" class="fi" id="fCosplayNao" placeholder="🚫 Cosplay que você nunca faria">
+    <span class="hint">Preenche quantos quiser — só os que você escrever aparecem, alternando a cada 5 segundos no seu card.</span>
+  </div>
+
+  <div class="fg" id="boxDuoPedidoRecebido" style="display:none"></div>
+
+  <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem">
+    <label class="fl">💞 Duo <span style="font-weight:400;color:var(--text2)">(opcional)</span></label>
+    <span class="hint" style="display:block;margin-bottom:.6rem">Escolhe outra pessoa da comunidade pra aparecer ao seu lado no card — como Casal ou como Rival/Oposto. A outra pessoa precisa aceitar antes de aparecer pros dois.</span>
+    <div id="duoAtualBox"></div>
+    <div id="duoFormBox" style="display:flex;gap:.5rem;margin-top:.5rem">
+      <input type="text" class="fi" id="fDuoUser" placeholder="@ da pessoa" style="flex:1">
+      <select class="fs" id="fDuoTipo" style="flex:0 0 130px">
+        <option value="casal">💑 Casal</option>
+        <option value="rival">⚔️ Rival</option>
+      </select>
+      <button class="bs" style="flex:0 0 auto" onclick="proporDuo()"><i class="fas fa-paper-plane"></i></button>
+    </div>
   </div>
 
   <div class="fg" id="boxResponsavel" style="display:none;border:1px solid var(--warn);border-radius:12px;padding:1rem;background:rgba(255,193,7,.06)">
@@ -1303,6 +1339,12 @@ html.admin .admin-only{display:flex!important}
 <div id="mAdmin" class="modal"><div class="mbox adminbox">
   <button class="mclose" onclick="closeModal('mAdmin')">&times;</button>
   <div class="mtitle">⚙️ Painel Admin</div>
+  <div style="text-align:center;font-size:11px;color:var(--text2);margin-bottom:1rem;padding:.4rem;background:var(--s2);border-radius:8px">
+    Rodando <b style="color:var(--primary)" id="versaoAtualLabel"></b> — se você acabou de subir uma atualização e esse número não mudou, o navegador ainda está com a versão antiga em cache
+  </div>
+
+  <button class="btn" style="width:100%;margin-bottom:1.2rem;background:linear-gradient(135deg,#833AB4,#E4405F)" onclick="rodarDiagnosticoCompleto()"><i class="fas fa-stethoscope"></i> Diagnóstico completo (testar tudo agora)</button>
+  <div id="resultadoDiagnostico" style="margin-bottom:1.2rem"></div>
 
   <div class="tabs-wrap" id="admTabsWrap" style="background:transparent;border-bottom:none;border-radius:10px;margin-bottom:1.3rem">
     <button class="tabs-arrow left" id="admTabsArrowLeft" onclick="rolarTabs('admTabsBar',-1)" aria-label="Rolar pra esquerda"><i class="fas fa-chevron-left"></i></button>
@@ -1327,6 +1369,14 @@ html.admin .admin-only{display:flex!important}
     <div class="fg"><label class="fl">Idealizador (rodapé da Ajuda)</label><input type="text" class="fi" id="cfgCredito" placeholder="@ofcvictorcorreia"></div>
     <div id="admStats" class="adm-stats"></div>
     <div id="admTamanhoAviso" style="margin-bottom:1.1rem"></div>
+
+    <div class="fg" style="border:1px solid var(--error);border-radius:12px;padding:1rem">
+      <label class="fl">🐛 Erros capturados automaticamente</label>
+      <span class="hint" style="display:block;margin-bottom:.7rem">O site guarda sozinho os últimos erros que acontecerem no navegador de qualquer pessoa (só localmente, ninguém mais vê) — assim, se algo der problema, é só abrir aqui e copiar, sem precisar abrir o F12 e catar linha por linha.</span>
+      <div id="listaErrosCapturados"><span class="hint">Nenhum erro registrado nesse navegador ainda — bom sinal!</span></div>
+      <button class="btn sec" style="margin-top:.6rem" onclick="copiarErrosCapturados()"><i class="fas fa-copy"></i> Copiar tudo</button>
+      <button class="btn sec" style="margin-top:.6rem" onclick="limparErrosCapturados()"><i class="fas fa-broom"></i> Limpar lista</button>
+    </div>
 
     <div class="fg" style="border:1px solid var(--primary);border-radius:12px;padding:1rem">
       <label class="fl">🚀 Forçar todas as fotos e dados a aparecerem</label>
@@ -1578,6 +1628,139 @@ let filter='todos', editId=null;
 const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rogerio_peixotosw','@Zel_Coss','@freakybbs__','@zack_cosplayerr','@denjiro.cos','@inosukenatalense','@larii.olivra','@_ysii.dftl','@cos_alexs','@giovanna_fogassa','@Vitor.chainsaw','@santxz_dzn','@cosplay_hinaa','@deadpool4parede','@guhmi._','@deadmaid99','@melanybastos_','@kon.cosplay','@y.bonnie_0','@moon_summy','@valdecirjunior99','@ninik.cos','@sakana.coss','@the_.cosplay','@elaquefez','@mah4swaran','@sawako.cos_','@ketsukai','@nohaka_desu','@mariteocos','@newdyelim','@siricuticos.dub','@yuyu.coss','@Yukke.elaris','@NextEvee','@joaovitorqzn','@weslley_pereir','@joaovictor.diniz.77','@alrakcosplay','@mar_cosplayy','@kamenridernordestino','@lunna_hime','@_postc0s','@ayane.coss','@k4zucos','@sunflowerbro.art_','@Kura.cosp','@cosk1ng','@cosplay_delta','@ark.cosplayer','@_liam.h1a0','@raiju.cos','@etsukocosplay_','@kaian.emanoel','@retrowave_cosplay','@j0j00x','@naaayrin','@bibs.cos','@cos.celsius','@Rackie.cos','@danielsantospenha','@LunaroCosplayer','@kamui_dante','@7aramil'];
 
 /* ===== CONEXÃO COM A NUVEM (já configurada) ===== */
+/* ✅ Versão do site — muda esse número toda vez que uma atualização real
+   é publicada. Aparece no Painel Admin e no console (F12), pra você
+   conseguir confirmar NA HORA se o deploy que você fez realmente entrou
+   no ar, sem precisar adivinhar ou ficar comparando código. */
+const SITE_VERSION='v70';
+
+/* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
+   acontecerem nesse navegador (só localmente, em localStorage — nunca
+   sobe pra nuvem, ninguém mais vê). Existe pra facilitar demais o
+   diagnóstico: em vez de precisar abrir o F12 e copiar linha por linha
+   toda vez que algo dá errado, é só abrir o Painel Admin e copiar dali.
+   Guarda no máximo os últimos 30 erros, pra nunca crescer demais. */
+const MAX_ERROS_GUARDADOS=30;
+function registrarErro(origem,mensagem,detalhe){
+  try{
+    const lista=JSON.parse(localStorage.getItem('dc_erros')||'[]');
+    lista.unshift({
+      quando:new Date().toISOString(),
+      versao:SITE_VERSION,
+      origem,
+      mensagem:String(mensagem).slice(0,500),
+      detalhe:detalhe?String(detalhe).slice(0,500):''
+    });
+    localStorage.setItem('dc_erros',JSON.stringify(lista.slice(0,MAX_ERROS_GUARDADOS)));
+  }catch(e){/* se nem isso der certo, não faz nada — não pode quebrar o site por causa do log */}
+}
+
+window.addEventListener('error',(e)=>{
+  registrarErro('JS',e.message,e.filename?`${e.filename}:${e.lineno}`:'');
+});
+window.addEventListener('unhandledrejection',(e)=>{
+  registrarErro('Promise',e.reason&&e.reason.message?e.reason.message:String(e.reason));
+});
+
+function renderErrosCapturados(){
+  const el=document.getElementById('listaErrosCapturados');
+  if(!el)return;
+  let lista=[];
+  try{lista=JSON.parse(localStorage.getItem('dc_erros')||'[]')}catch(e){}
+
+  if(!lista.length){
+    el.innerHTML=`<span class="hint">Nenhum erro registrado nesse navegador ainda — bom sinal!</span>`;
+    return;
+  }
+
+  el.innerHTML=lista.map(err=>`
+    <div style="background:var(--s2);border-left:3px solid var(--error);border-radius:6px;padding:.5rem .7rem;margin-bottom:.4rem;font-size:11px">
+      <div style="color:var(--text2)">${new Date(err.quando).toLocaleString('pt-BR')} · ${err.versao} · ${err.origem}</div>
+      <div style="margin-top:.2rem;font-family:monospace">${escapeHtml(err.mensagem)}</div>
+      ${err.detalhe?`<div style="margin-top:.2rem;color:var(--text2);font-family:monospace">${escapeHtml(err.detalhe)}</div>`:''}
+    </div>
+  `).join('');
+}
+
+/* ✅ DIAGNÓSTICO COMPLETO: testa, num clique só, tudo que já causou
+   problema real nessa jornada — conexão com o Worker, se o KV
+   (armazenamento) responde de verdade, quantas fotos existem vs quantas
+   estão quebradas, se tem duplicata sobrando, e a versão que está
+   rodando. Junta em UM relatório só, em vez de precisar clicar em 5
+   ferramentas separadas pra entender "está tudo bem?". */
+async function rodarDiagnosticoCompleto(){
+  const el=document.getElementById('resultadoDiagnostico');
+  el.innerHTML=`<div class="alert a-info"><i class="fas fa-spinner fa-spin"></i><span>Rodando diagnóstico, aguenta uns segundos...</span></div>`;
+
+  const c=db.config||{};
+  const resultados=[];
+
+  // 1) Worker está de pé?
+  try{
+    const r=await fetch(c.workerUrl+'?diag='+Date.now(),{cache:'no-store',signal:timeoutSignal(10000)});
+    resultados.push({ok:r.ok,label:'Conexão com o Worker',detalhe:r.ok?`Respondeu OK (status ${r.status})`:`Respondeu com erro (status ${r.status})`});
+  }catch(e){
+    resultados.push({ok:false,label:'Conexão com o Worker',detalhe:e.message});
+  }
+
+  // 2) Consegue realmente ESCREVER e LER de volta? (testa o KV de ponta a ponta)
+  try{
+    const idTeste='diag_'+Date.now();
+    const fotoTeste='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+    const postR=await fetch(c.workerUrl+'/f/'+idTeste,{method:'POST',headers:{'Content-Type':'text/plain','X-Write-Key':c.writeKey},body:fotoTeste,signal:timeoutSignal(10000)});
+    const postOk=postR.ok;
+    let getOk=false;
+    if(postOk){
+      const getR=await fetch(c.workerUrl+'/f/'+idTeste+'?v='+Date.now(),{cache:'no-store',signal:timeoutSignal(10000)});
+      getOk=getR.ok;
+    }
+    resultados.push({ok:postOk&&getOk,label:'Gravação e leitura de fotos (KV)',detalhe:postOk?(getOk?'Escreve e lê de volta perfeitamente':'Escreveu mas não conseguiu ler de volta'):'Não conseguiu nem escrever'});
+  }catch(e){
+    resultados.push({ok:false,label:'Gravação e leitura de fotos (KV)',detalhe:e.message});
+  }
+
+  // 3) Saúde geral dos dados (sem precisar testar rede de novo)
+  const totalFotos=db.cosplayers.reduce((n,c)=>n+((c.photos||[]).length),0);
+  resultados.push({ok:true,label:'Cosplayers cadastrados',detalhe:`${db.cosplayers.length} pessoas · ${totalFotos} fotos no total`});
+  resultados.push({ok:true,label:'Eventos, ideias e cenas',detalhe:`${db.eventos.length} eventos · ${db.ideias.length} ideias · ${db.cenas.length} cenas`});
+
+  const semEmail=db.cosplayers.filter(c=>!c.email).length;
+  resultados.push({ok:semEmail===0,label:'Perfis sem email (não editáveis)',detalhe:semEmail?`${semEmail} perfil(is) ainda sem dono definido`:'Todos os perfis já têm dono'});
+
+  // 4) Versão e erros recentes
+  let errosRecentes=[];
+  try{errosRecentes=JSON.parse(localStorage.getItem('dc_erros')||'[]')}catch(e){}
+  resultados.push({ok:errosRecentes.length===0,label:'Erros registrados nesse navegador',detalhe:errosRecentes.length?`${errosRecentes.length} erro(s) guardado(s) — confere a seção "Erros capturados" embaixo`:'Nenhum'});
+
+  const tudoOk=resultados.every(r=>r.ok);
+  el.innerHTML=`
+    <div class="alert ${tudoOk?'a-ok':'a-warn'}" style="margin-bottom:.6rem"><i class="fas ${tudoOk?'fa-circle-check':'fa-triangle-exclamation'}"></i><span>${tudoOk?'Tudo funcionando normalmente!':'Achei alguma coisa pra prestar atenção — vê os detalhes embaixo:'}</span></div>
+    ${resultados.map(r=>`
+      <div style="display:flex;align-items:start;gap:.5rem;padding:.4rem 0;font-size:12px;border-bottom:1px solid var(--border)">
+        <i class="fas ${r.ok?'fa-circle-check':'fa-circle-xmark'}" style="color:${r.ok?'var(--success)':'var(--error)'};margin-top:.15rem"></i>
+        <div><b>${r.label}:</b> ${r.detalhe}</div>
+      </div>
+    `).join('')}
+    <div style="font-size:10px;color:var(--text2);margin-top:.6rem">Testado em ${new Date().toLocaleString('pt-BR')} · ${SITE_VERSION}</div>
+  `;
+}
+
+function copiarErrosCapturados(){
+  let lista=[];
+  try{lista=JSON.parse(localStorage.getItem('dc_erros')||'[]')}catch(e){}
+  if(!lista.length){toast('Não tem nenhum erro guardado pra copiar','err');return}
+  const texto=lista.map(err=>`[${err.quando}] ${err.versao} · ${err.origem}: ${err.mensagem} ${err.detalhe}`).join('\n');
+  navigator.clipboard.writeText(texto).then(()=>toast('Copiado! Pode colar pra pedir ajuda.','ok'))
+    .catch(()=>toast('Não consegui copiar — seleciona o texto na tela','err'));
+}
+
+function limparErrosCapturados(){
+  localStorage.removeItem('dc_erros');
+  renderErrosCapturados();
+  toast('Lista de erros limpa','ok');
+}
+const SITE_BUILD_DATE='2026-08-29';
+
 const CLOUD_URL='https://diadecosplay-api.joao-victor-correia10.workers.dev';
 const CLOUD_KEY='diadecosplay2026';
 
@@ -2175,6 +2358,7 @@ async function hospedarFotos(c){
         // site tenta de novo sozinho em segundo plano, sem precisar você
         // fazer nada nem ver mensagem de erro nenhuma.
         console.warn('⚠️ Foto ficará pendente, tentando de novo automaticamente:',e.message);
+        registrarErro('subirFoto',e.message,`perfil=${c.username}`);
         novas.push(f);
         algumaPendente=true;
       }
@@ -2196,6 +2380,7 @@ async function hospedarFotos(c){
       c.media=await subirFoto(c.media);
     }catch(e){
       console.warn('⚠️ Mídia ficará pendente, tentando de novo automaticamente:',e.message);
+      registrarErro('subirFoto-media',e.message,`perfil=${c.username}`);
       algumaPendente=true;
     }
   }
@@ -2205,6 +2390,7 @@ async function hospedarFotos(c){
       c.fotoFavorito=await subirFoto(c.fotoFavorito);
     }catch(e){
       console.warn('⚠️ Foto favorita ficará pendente, tentando de novo automaticamente:',e.message);
+      registrarErro('subirFoto-favorita',e.message,`perfil=${c.username}`);
       algumaPendente=true;
     }
   }
@@ -2659,6 +2845,26 @@ function renderCos(){
             <span><i class="fas fa-heart"></i> ${c.cosplayFavorito||'Favorito'}</span>
           </div>`:''}
         </div>`:''}
+        ${(()=>{
+          const curiosidades=[];
+          if(c.musica)curiosidades.push(`🎵 Ouvindo: ${escapeHtml(c.musica)}`);
+          if(c.cosplaySonho)curiosidades.push(`✨ Faria um dia: ${escapeHtml(c.cosplaySonho)}`);
+          if(c.cosplayNao)curiosidades.push(`🚫 Nunca faria: ${escapeHtml(c.cosplayNao)}`);
+          if(!curiosidades.length)return '';
+          return `<div class="ticker-curiosidade" data-itens='${JSON.stringify(curiosidades).replace(/'/g,"&#39;")}'>${curiosidades[0]}</div>`;
+        })()}
+        ${(()=>{
+          if(!c.duo)return '';
+          const parceiro=db.cosplayers.find(x=>x.username.toLowerCase()===c.duo.username.toLowerCase());
+          if(!parceiro)return '';
+          const foto=(parceiro.photos&&parceiro.photos[0])||parceiro.photo;
+          const tipoLabel=c.duo.tipo==='rival'?'⚔️ Rival':'💑 Casal';
+          const inicial=parceiro.username.replace('@','').charAt(0).toUpperCase();
+          return `<div class="duo-box" onclick="event.stopPropagation();irParaPerfil('${parceiro.username.replace(/'/g,"\\'")}')">
+            ${foto?`<img src="${foto}" alt="${parceiro.username}" loading="lazy">`:`<div class="mini-avatar-letra" style="width:36px;height:36px;font-size:14px">${inicial}</div>`}
+            <span>${tipoLabel} de <b>${parceiro.username}</b></span>
+          </div>`;
+        })()}
         <div class="card-btns">
           <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
           <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
@@ -2735,6 +2941,9 @@ function openEdit(id,focusPost){
   document.getElementById('fGrupo').value=c.grupo||'';
   document.getElementById('fProximoCosplay').value=c.proximoCosplay||'';
   document.getElementById('fCosplayFavorito').value=c.cosplayFavorito||'';
+  document.getElementById('fMusica').value=c.musica||'';
+  document.getElementById('fCosplaySonho').value=c.cosplaySonho||'';
+  document.getElementById('fCosplayNao').value=c.cosplayNao||'';
   document.getElementById('fFavoritoSlot').innerHTML=c.fotoFavorito
     ?`<img src="${c.fotoFavorito}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
     :`<i class="fas fa-heart" style="font-size:20px;opacity:.5"></i>`;
@@ -2801,6 +3010,7 @@ function openEdit(id,focusPost){
   document.getElementById('cStreamer').checked=(c.cats||[]).includes('streamer');
   document.getElementById('fSlide').checked=c.slideshow!==false;
   document.getElementById('fEfeito3d').checked=!!c.efeito3d;
+  renderBoxDuo(c);
   fotosTemp=(c.photos&&c.photos.length)?[...c.photos]:(c.photo?[c.photo]:[]);
   fotosTempTocado=false; // reseta a cada edição — só vira true se a pessoa mexer de propósito
   renderFotos();
@@ -3248,6 +3458,9 @@ function saveProfile(){
   c.grupo=document.getElementById('fGrupo').value.trim();
   c.proximoCosplay=document.getElementById('fProximoCosplay').value.trim();
   c.cosplayFavorito=document.getElementById('fCosplayFavorito').value.trim();
+  c.musica=document.getElementById('fMusica').value.trim();
+  c.cosplaySonho=document.getElementById('fCosplaySonho').value.trim();
+  c.cosplayNao=document.getElementById('fCosplayNao').value.trim();
   c.fotoFavorito=fotoFavoritoTemp; // sobe junto com as outras fotos no hospedarFotos, se for nova
   c.emoji=getPickedEmoji();
   c.cats=['cCosplay','cWig','cProp','cCos','cEditor','cArtista','cMaquiadora','cStreamer'].filter(i=>document.getElementById(i).checked).map(i=>document.getElementById(i).value);
@@ -3578,9 +3791,18 @@ async function saveCena(){
 function renderIdeias(){
   const me=getMe();
   const el=document.getElementById('ideiaList');
-  if(!db.ideias.length){el.innerHTML=`<div class="empty"><i class="fas fa-lightbulb"></i><b>Nenhuma ideia ainda</b>Seja o primeiro a propor</div>`;return}
+  const q=(document.getElementById('ideiaSearch')?.value||'').toLowerCase().trim();
+  let base=[...db.ideias];
+  if(q)base=base.filter(i=>(i.title||'').toLowerCase().includes(q)||(i.desc||'').toLowerCase().includes(q)||(i.chars||'').toLowerCase().includes(q));
+
+  if(!base.length){
+    el.innerHTML=q
+      ?`<div class="empty"><i class="fas fa-magnifying-glass"></i><b>Nada encontrado pra "${escapeHtml(q)}"</b>Tenta buscar outra coisa</div>`
+      :`<div class="empty"><i class="fas fa-lightbulb"></i><b>Nenhuma ideia ainda</b>Seja o primeiro a propor</div>`;
+    return;
+  }
   // organiza: as minhas primeiro, depois mais recentes
-  const arr=[...db.ideias].sort((a,b)=>{
+  const arr=base.sort((a,b)=>{
     if(me){if(a.email===me.email&&b.email!==me.email)return -1;if(b.email===me.email&&a.email!==me.email)return 1}
     return new Date(b.date)-new Date(a.date);
   });
@@ -3709,8 +3931,17 @@ function enviarContraIdeia(id){
 function renderCenas(){
   const me=getMe();
   const el=document.getElementById('cenaList');
-  if(!db.cenas.length){el.innerHTML=`<div class="empty"><i class="fas fa-film"></i><b>Nenhuma cena ainda</b>Seja o primeiro a sugerir</div>`;return}
-  const arr=[...db.cenas].sort((a,b)=>{
+  const q=(document.getElementById('cenaSearch')?.value||'').toLowerCase().trim();
+  let base=[...db.cenas];
+  if(q)base=base.filter(c=>(c.title||'').toLowerCase().includes(q)||(c.source||'').toLowerCase().includes(q)||(c.desc||'').toLowerCase().includes(q)||(c.chars||'').toLowerCase().includes(q));
+
+  if(!base.length){
+    el.innerHTML=q
+      ?`<div class="empty"><i class="fas fa-magnifying-glass"></i><b>Nada encontrado pra "${escapeHtml(q)}"</b>Tenta buscar outra coisa</div>`
+      :`<div class="empty"><i class="fas fa-film"></i><b>Nenhuma cena ainda</b>Seja o primeiro a sugerir</div>`;
+    return;
+  }
+  const arr=base.sort((a,b)=>{
     if(me){if(a.email===me.email&&b.email!==me.email)return -1;if(b.email===me.email&&a.email!==me.email)return 1}
     return new Date(b.date)-new Date(a.date);
   });
@@ -3854,6 +4085,135 @@ function abrirPorHash(){
    não só quando vem de um link com #hash */
 /* ✅ Clica no nome de um grupo e já filtra a lista pra ver só quem mais
    é desse mesmo grupo — conecta perfis relacionados de um jeito rápido */
+/* ===== SISTEMA DE DUO ===== 
+   ✅ Precisa de confirmação mútua: quando A propõe B como duo, fica
+   "pendente" só no lado de A. B só vê o pedido quando abre o PRÓPRIO
+   perfil pra editar, com botão de aceitar/recusar. Só depois de aceito
+   é que aparece publicamente pros dois no card. Isso evita alguém virar
+   "casal" ou "rival" de outra pessoa sem ela saber ou concordar. */
+
+function renderBoxDuo(c){
+  const me=getMe();
+  const admin=document.documentElement.classList.contains('admin');
+  const souDono=me&&c.email&&me.email.toLowerCase()===c.email.toLowerCase();
+
+  // Pedido de duo RECEBIDO (alguém propôs esse perfil como duo delas)
+  const boxRecebido=document.getElementById('boxDuoPedidoRecebido');
+  if(souDono||admin){
+    const proponente=db.cosplayers.find(x=>x.duoPendente&&x.duoPendente.username.toLowerCase()===c.username.toLowerCase());
+    if(proponente){
+      const tipoLabel=proponente.duoPendente.tipo==='rival'?'⚔️ Rival':'💑 Casal';
+      boxRecebido.style.display='block';
+      boxRecebido.innerHTML=`<div class="alert a-info">
+        <i class="fas fa-heart-circle-check"></i>
+        <span><b>${proponente.username}</b> te propôs como <b>${tipoLabel}</b>! Aceita?
+          <div style="display:flex;gap:.5rem;margin-top:.5rem">
+            <button class="bs" style="background:var(--success);border-color:var(--success);color:#fff" onclick="aceitarDuo(${c.id},${proponente.id})">Aceitar</button>
+            <button class="bs" onclick="recusarDuo(${proponente.id})">Recusar</button>
+          </div>
+        </span>
+      </div>`;
+    }else{
+      boxRecebido.style.display='none';boxRecebido.innerHTML='';
+    }
+  }else{
+    boxRecebido.style.display='none';
+  }
+
+  // Duo atual ou pedido pendente enviado
+  const atualBox=document.getElementById('duoAtualBox');
+  const formBox=document.getElementById('duoFormBox');
+  if(c.duo){
+    const tipoLabel=c.duo.tipo==='rival'?'⚔️ Rival':'💑 Casal';
+    atualBox.innerHTML=`<div class="alert a-ok"><i class="fas fa-heart"></i><span>Seu ${tipoLabel} confirmado: <b>${c.duo.username}</b></span>
+      ${souDono||admin?`<button class="bs del" style="margin-top:.5rem" onclick="desfazerDuo(${c.id})">Desfazer duo</button>`:''}
+    </div>`;
+    formBox.style.display='none';
+  }else if(c.duoPendente){
+    atualBox.innerHTML=`<div class="alert a-warn"><i class="fas fa-clock"></i><span>Pedido enviado pra <b>${c.duoPendente.username}</b>, esperando aceitar...</span>
+      ${souDono||admin?`<button class="bs del" style="margin-top:.5rem" onclick="cancelarPedidoDuo(${c.id})">Cancelar pedido</button>`:''}
+    </div>`;
+    formBox.style.display='none';
+  }else{
+    atualBox.innerHTML='';
+    formBox.style.display=(souDono||admin)?'flex':'none';
+  }
+}
+
+async function proporDuo(){
+  const me=getMe();if(!me||!editId)return;
+  const c=db.cosplayers.find(x=>x.id===editId);
+  if(!c)return;
+
+  let alvo=document.getElementById('fDuoUser').value.trim();
+  if(!alvo){toast('Digita o @ da pessoa','err');return}
+  if(!alvo.startsWith('@'))alvo='@'+alvo;
+  const tipo=document.getElementById('fDuoTipo').value;
+
+  if(alvo.toLowerCase()===c.username.toLowerCase()){toast('Não dá pra escolher você mesmo(a)','err');return}
+  const destino=db.cosplayers.find(x=>x.username.toLowerCase()===alvo.toLowerCase());
+  if(!destino){toast('Não achei ninguém com esse @ na lista','err');return}
+
+  c.duoPendente={username:destino.username,tipo};
+  save(false);renderBoxDuo(c);
+  toast('📤 Enviando pedido...');
+  const ok=await cloudPush(false);
+  toast(ok?`Pedido enviado pra ${destino.username}!`:'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+async function aceitarDuo(meuId,proponenteId){
+  const eu=db.cosplayers.find(x=>x.id===meuId);
+  const proponente=db.cosplayers.find(x=>x.id===proponenteId);
+  if(!eu||!proponente||!proponente.duoPendente)return;
+
+  const tipo=proponente.duoPendente.tipo;
+  eu.duo={username:proponente.username,tipo};
+  proponente.duo={username:eu.username,tipo};
+  proponente.duoPendente=null;
+
+  save(false);renderBoxDuo(eu);renderCos();
+  toast('📤 Confirmando duo...');
+  const ok=await cloudPush(false);
+  toast(ok?'💞 Duo confirmado!':'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+async function recusarDuo(proponenteId){
+  const proponente=db.cosplayers.find(x=>x.id===proponenteId);
+  if(!proponente)return;
+  proponente.duoPendente=null;
+  save(false);
+  const eu=db.cosplayers.find(x=>x.id===editId);
+  if(eu)renderBoxDuo(eu);
+  toast('Pedido recusado','ok');
+  const ok=await cloudPush(false);
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+async function cancelarPedidoDuo(id){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c)return;
+  c.duoPendente=null;
+  save(false);renderBoxDuo(c);
+  toast('Pedido cancelado','ok');
+  const ok=await cloudPush(false);
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
+async function desfazerDuo(id){
+  const c=db.cosplayers.find(x=>x.id===id);
+  if(!c||!c.duo)return;
+  if(!confirm(`Desfazer o duo com ${c.duo.username}?`))return;
+  const outro=db.cosplayers.find(x=>x.username.toLowerCase()===c.duo.username.toLowerCase());
+  if(outro)outro.duo=null;
+  c.duo=null;
+  save(false);renderBoxDuo(c);renderCos();
+  toast('Duo desfeito','ok');
+  const ok=await cloudPush(false);
+  if(!ok){pendente=true;agendarSync(500)}
+}
+
 function buscarPorGrupo(grupo){
   switchTab('cosplayers');
   document.getElementById('search').value=grupo;
@@ -4476,6 +4836,9 @@ function openAdmin(){
   loadConfigFields();
   admRenderAll();
   document.getElementById('workerCode').textContent=codigoWorkerAtual();
+  const vLabel=document.getElementById('versaoAtualLabel');
+  if(vLabel)vLabel.textContent=`${SITE_VERSION} (build ${SITE_BUILD_DATE})`;
+  renderErrosCapturados();
   openModal('mAdmin');
 }
 
@@ -5547,6 +5910,7 @@ async function cloudPush(auto=false){
     return true;
   }catch(e){
     console.error('❌ Erro sync:',e.message);
+    registrarErro('cloudPush',e.message,`cosplayers=${(db.cosplayers||[]).length} eventos=${(db.eventos||[]).length}`);
     syncBadge('off',e.message);
     if(!auto){
       cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Tente de novo ou recarregue o site</small></span></div>`);
@@ -5706,6 +6070,7 @@ async function cloudPull(auto=false){
     return true;
   }catch(e){
     console.error('❌ Erro pull:',e.message);
+    registrarErro('cloudPull',e.message);
     syncBadge('off',e.message);
     if(!auto){
       cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-triangle-exclamation"></i><span>⚠️ ${e.message}<br><small>Dados locais continuam seguros!</small></span></div>`);
@@ -6406,6 +6771,7 @@ function toast(msg,type=''){
 
 /* ===== INIT ===== */
 function init(){
+  console.log(`%c🎭 DiaDeCosplay ${SITE_VERSION} %c(build ${SITE_BUILD_DATE})`,'background:#E4405F;color:#fff;padding:4px 8px;border-radius:4px;font-weight:bold','color:#888');
   load();seed();
   if(sessionStorage.getItem('dc_admin'))document.documentElement.classList.add('admin');
   aplicarTemaSalvo();
@@ -6548,6 +6914,25 @@ function init(){
   });
 }
 // ✅ Mostra o botão "voltar ao topo" só depois de rolar um pouco pra baixo
+/* ✅ Um intervalo SÓ pra todos os cards da tela (em vez de um timer por
+   card, que seria pesado com muita gente cadastrada) — troca o texto de
+   cada ticker de curiosidade a cada 5 segundos, com um fade suave */
+setInterval(()=>{
+  document.querySelectorAll('.ticker-curiosidade').forEach(el=>{
+    let itens;
+    try{itens=JSON.parse(el.dataset.itens)}catch(e){return}
+    if(!itens||itens.length<2)return; // só 1 item = nada pra alternar
+    let i=parseInt(el.dataset.i||'0',10);
+    i=(i+1)%itens.length;
+    el.dataset.i=i;
+    el.classList.add('trocando');
+    setTimeout(()=>{
+      el.textContent=itens[i];
+      el.classList.remove('trocando');
+    },300);
+  });
+},5000);
+
 window.addEventListener('scroll',()=>{
   const btn=document.getElementById('btnTopo');
   if(btn)btn.classList.toggle('on',window.scrollY>400);
