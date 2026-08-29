@@ -293,6 +293,13 @@ html.admin .sync-badge{display:flex}
 .bs.del:hover{background:var(--error);color:#fff}
 .socials{display:flex;gap:.5rem;font-size:13px}
 .card-extras{display:flex;flex-direction:column;gap:.35rem;font-size:11px;color:var(--text2);margin:.5rem 0;padding:.5rem .6rem;background:var(--s2);border-radius:8px}
+
+/* ✅ Grupinho de mini-fotos sobrepostas (quem confirmou/participou) */
+.mini-avatars-grupo{display:flex;align-items:center}
+.mini-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid var(--s1);margin-left:-8px;flex:0 0 auto;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.mini-avatars-grupo .mini-avatar:first-child{margin-left:0}
+.mini-avatar-letra{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#833AB4,#E4405F);color:#fff;font-size:10px;font-weight:800}
+.mini-avatar-mais{display:flex;align-items:center;justify-content:center;background:var(--border);color:var(--text2);font-size:9px;font-weight:800}
 .card-extras i{width:14px;color:var(--primary)}
 .card-favorito{display:flex;align-items:center;gap:.4rem}
 .card-favorito img{width:26px;height:26px;border-radius:6px;object-fit:cover;flex:0 0 auto}
@@ -1223,8 +1230,8 @@ html.admin .admin-only{display:flex!important}
     </div>
 
     <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem">
-      <label class="fl">🖼️ Checar fotos quebradas</label>
-      <span class="hint">Confere, uma por uma, se as fotos que os perfis apontam realmente existem na nuvem (às vezes um link fica "órfão" de testes antigos). Fotos confirmadas como quebradas são removidas do perfil — a pessoa só precisa subir de novo.</span>
+      <label class="fl">🖼️ Checar fotos quebradas (perfis, eventos e ideias)</label>
+      <span class="hint">Confere, uma por uma, se as fotos que os perfis, cartazes de eventos e ideias apontam realmente existem na nuvem (às vezes um link fica "órfão" de testes antigos). Fotos confirmadas como quebradas são removidas — a pessoa/evento/ideia só precisa receber uma foto nova depois.</span>
       <button class="btn sec" style="margin-top:.6rem" onclick="checarFotosQuebradas()"><i class="fas fa-magnifying-glass"></i> Checar agora</button>
       <div id="resultadoFotosQuebradas" style="margin-top:.7rem"></div>
     </div>
@@ -1906,6 +1913,30 @@ function slugify(texto){
     .replace(/[^a-z0-9]+/g,'-') // qualquer coisa que não seja letra/número vira hífen
     .replace(/^-+|-+$/g,'') // tira hífen sobrando nas pontas
     .slice(0,50);
+}
+
+/* ✅ Monta um "grupinho" de mini-fotos sobrepostas (tipo "fulano e mais 5
+   confirmaram") usando a foto de verdade de cada pessoa quando ela tem
+   uma — sem foto, cai na letra inicial colorida, igual ao card grande.
+   Reutilizável em Eventos, Ideias, Colabs, Cenas — qualquer lista de @. */
+function miniAvatarsHtml(usernames,max=6){
+  if(!usernames||!usernames.length)return '';
+  const vistos=[...new Set(usernames)]; // sem repetir a mesma pessoa 2x
+  const mostrar=vistos.slice(0,max);
+  const sobrando=vistos.length-mostrar.length;
+
+  const bolhas=mostrar.map(u=>{
+    const cos=db.cosplayers.find(c=>c.username.toLowerCase()===String(u).toLowerCase());
+    const foto=cos&&((cos.photos&&cos.photos[0])||cos.photo);
+    const inicial=(u||'?').replace('@','').charAt(0).toUpperCase();
+    const titulo=cos?cos.username:u;
+    return foto
+      ? `<img src="${foto}" alt="${titulo}" title="${titulo}" class="mini-avatar" onerror="this.outerHTML='<div class=\\'mini-avatar mini-avatar-letra\\' title=\\'${titulo}\\'>${inicial}</div>'">`
+      : `<div class="mini-avatar mini-avatar-letra" title="${titulo}">${inicial}</div>`;
+  }).join('');
+
+  const mais=sobrando>0?`<div class="mini-avatar mini-avatar-mais">+${sobrando}</div>`:'';
+  return `<div class="mini-avatars-grupo">${bolhas}${mais}</div>`;
 }
 
 /* ✅ Escapa texto livre digitado por qualquer pessoa antes de mostrar na
@@ -3426,13 +3457,13 @@ function renderIdeias(){
     <h3>${escapeHtml(i.title)}</h3>
     ${i.desc?`<p>${escapeHtml(i.desc)}</p>`:''}
     ${i.chars?`<div>${i.chars.split(',').map(c=>`<span class="tag">${c.trim()}</span>`).join('')}</div>`:''}
-    <div class="item-meta"><i class="fas fa-user"></i> ${i.author} ${me&&i.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
+    <div class="item-meta">${miniAvatarsHtml([i.author],1)} ${i.author} ${me&&i.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
       <button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="compartilharIdeia(${i.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
       ${(me&&i.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="padding:.3rem .6rem" onclick="editarIdeia(${i.id})" title="Editar"><i class="fas fa-pen"></i></button>
       <button class="bs del" style="padding:.3rem .6rem" onclick="delIdeia(${i.id})" title="Excluir"><i class="fas fa-trash"></i></button>`:''}
     </div>
 
-    ${vaoFazer.length?`<div style="font-size:11.5px;color:var(--text2);margin-top:.5rem"><i class="fas fa-people-arrows"></i> ${vaoFazer.map(v=>v.username).join(', ')} ${vaoFazer.length>1?'vão fazer':'vai fazer'} esse cosplay!</div>`:''}
+    ${vaoFazer.length?`<div style="display:flex;align-items:center;gap:.5rem;margin-top:.5rem">${miniAvatarsHtml(vaoFazer.map(v=>v.username))}<span style="font-size:11.5px;color:var(--text2)"><i class="fas fa-people-arrows"></i> ${vaoFazer.length>1?'vão fazer':'vai fazer'} esse cosplay!</span></div>`:''}
 
     <div style="display:flex;gap:.4rem;margin-top:.7rem;align-items:center;flex-wrap:wrap">
       ${chipsReacao}
@@ -3538,7 +3569,7 @@ function renderCenas(){
     ${c.source?`<p><b>${escapeHtml(c.source)}</b></p>`:''}
     ${c.desc?`<p>${escapeHtml(c.desc)}</p>`:''}
     <div><span class="tag">${c.diff}</span>${c.chars?c.chars.split(',').map(x=>`<span class="tag">${escapeHtml(x.trim())}</span>`).join(''):''}</div>
-    <div class="item-meta"><i class="fas fa-user"></i> ${c.author} ${me&&c.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
+    <div class="item-meta">${miniAvatarsHtml([c.author],1)} ${c.author} ${me&&c.email===me.email?'<span class="tag" style="border-color:var(--success);color:var(--success)">sua</span>':''}
       <button class="bs" style="margin-left:auto;padding:.3rem .6rem" onclick="compartilharCena(${c.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
       ${(me&&c.email===me.email)||document.documentElement.classList.contains('admin')?`<button class="bs" style="padding:.3rem .6rem" onclick="editarCena(${c.id})" title="Editar"><i class="fas fa-pen"></i></button>
       <button class="bs del" style="padding:.3rem .6rem" onclick="delCena(${c.id})" title="Excluir"><i class="fas fa-trash"></i></button>`:''}
@@ -3969,6 +4000,7 @@ function renderEventos(){
           <i class="fas fa-users"></i> ${nPres}
         </button>
       </div>`:''}
+      ${nPres?`<div style="padding:0 1.1rem .8rem">${miniAvatarsHtml((e.presencas||[]).map(p=>p.user))}</div>`:''}
       <div class="ev-actions">
         ${e.url?`<a href="${e.url}" target="_blank" class="bs"><i class="fas fa-arrow-up-right-from-square"></i> Ver no site</a>`:''}
         <button class="bs" onclick="compartilharEvento(${e.id})" title="Compartilhar"><i class="fas fa-share-nodes"></i></button>
@@ -4245,7 +4277,7 @@ async function checarFotosQuebradas(){
   const c=db.config||{};
   if(!c.workerUrl){toast('Conexão não configurada','err');return}
 
-  resultado.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Checando fotos, pode levar um instante...</div>`;
+  resultado.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Checando fotos (perfis, eventos e ideias), pode levar um instante...</div>`;
 
   const testarUrl=(url)=>new Promise(resolve=>{
     fetch(url,{method:'GET',cache:'no-store',signal:AbortSignal.timeout(8000)})
@@ -4253,29 +4285,46 @@ async function checarFotosQuebradas(){
       .catch(()=>resolve('indefinido')); // falha de rede não confirma quebrado — só timeout/erro real de servidor conta
   });
 
-  const quebradas=[]; // {cosplayer, campo, url}
+  const quebradas=[]; // {tipo, id, campo, url, nome}
+
   for(const cos of db.cosplayers){
     const fotos=[...(cos.photos||[])];
     for(let i=0;i<fotos.length;i++){
       const url=fotos[i];
       if(!url||!url.includes('/f/'))continue;
       const status=await testarUrl(url);
-      if(status==='quebrada')quebradas.push({cosplayerId:cos.id,campo:'photos',indice:i,url,nome:cos.username});
+      if(status==='quebrada')quebradas.push({tipo:'cosplayer',id:cos.id,campo:'photos',url,nome:cos.username});
     }
     if(cos.fotoFavorito&&cos.fotoFavorito.includes('/f/')){
       const status=await testarUrl(cos.fotoFavorito);
-      if(status==='quebrada')quebradas.push({cosplayerId:cos.id,campo:'fotoFavorito',url:cos.fotoFavorito,nome:cos.username});
+      if(status==='quebrada')quebradas.push({tipo:'cosplayer',id:cos.id,campo:'fotoFavorito',url:cos.fotoFavorito,nome:cos.username});
+    }
+  }
+
+  // ✅ Como pedido: a checagem agora também vale pra eventos (cartaz) e
+  // ideias (foto de referência) — mesma lógica, só muda onde procura
+  for(const ev of db.eventos){
+    if(ev.img&&ev.img.includes('/f/')){
+      const status=await testarUrl(ev.img);
+      if(status==='quebrada')quebradas.push({tipo:'evento',id:ev.id,campo:'img',url:ev.img,nome:ev.title});
+    }
+  }
+  for(const idea of db.ideias){
+    if(idea.foto&&idea.foto.includes('/f/')){
+      const status=await testarUrl(idea.foto);
+      if(status==='quebrada')quebradas.push({tipo:'ideia',id:idea.id,campo:'foto',url:idea.foto,nome:idea.title});
     }
   }
 
   if(!quebradas.length){
-    resultado.innerHTML=`<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Nenhuma foto quebrada encontrada!</span></div>`;
+    resultado.innerHTML=`<div class="alert a-ok"><i class="fas fa-circle-check"></i><span>Nenhuma foto quebrada encontrada (perfis, eventos e ideias)!</span></div>`;
     return;
   }
 
+  const ROTULO_TIPO={cosplayer:'👤 Perfil',evento:'📅 Evento',ideia:'💡 Ideia'};
   resultado.innerHTML=`
     <div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>${quebradas.length} foto(s) confirmadas como quebradas (link não existe mais na nuvem):</span></div>
-    ${quebradas.map(q=>`<div style="font-size:12px;padding:.3rem 0">${q.nome} — ${q.campo}</div>`).join('')}
+    ${quebradas.map(q=>`<div style="font-size:12px;padding:.3rem 0">${ROTULO_TIPO[q.tipo]||q.tipo} — ${q.nome}</div>`).join('')}
     <button class="btn" style="margin-top:.6rem;background:var(--error)" onclick="limparFotosQuebradas()"><i class="fas fa-trash"></i> Remover essas ${quebradas.length} foto(s) quebrada(s)</button>
   `;
   window._fotosQuebradasEncontradas=quebradas; // guarda pra função de limpeza usar
@@ -4284,20 +4333,28 @@ async function checarFotosQuebradas(){
 async function limparFotosQuebradas(){
   const quebradas=window._fotosQuebradasEncontradas||[];
   if(!quebradas.length)return;
-  if(!confirm(`Remover ${quebradas.length} foto(s) quebrada(s) dos perfis? As pessoas podem subir de novo depois.`))return;
+  if(!confirm(`Remover ${quebradas.length} foto(s) quebrada(s)? As pessoas/eventos/ideias podem receber foto nova depois.`))return;
 
   quebradas.forEach(q=>{
-    const cos=db.cosplayers.find(x=>x.id===q.cosplayerId);
-    if(!cos)return;
-    if(q.campo==='photos'&&Array.isArray(cos.photos)){
-      cos.photos=cos.photos.filter(f=>f!==q.url);
-      cos.photo=cos.photos[0]||null;
-    }else if(q.campo==='fotoFavorito'){
-      cos.fotoFavorito=null;
+    if(q.tipo==='cosplayer'){
+      const cos=db.cosplayers.find(x=>x.id===q.id);
+      if(!cos)return;
+      if(q.campo==='photos'&&Array.isArray(cos.photos)){
+        cos.photos=cos.photos.filter(f=>f!==q.url);
+        cos.photo=cos.photos[0]||null;
+      }else if(q.campo==='fotoFavorito'){
+        cos.fotoFavorito=null;
+      }
+    }else if(q.tipo==='evento'){
+      const ev=db.eventos.find(x=>x.id===q.id);
+      if(ev)ev.img=null;
+    }else if(q.tipo==='ideia'){
+      const idea=db.ideias.find(x=>x.id===q.id);
+      if(idea)idea.foto=null;
     }
   });
 
-  save(false);renderCos();admRenderAll();
+  save(false);renderCos();renderEventos();renderIdeias();admRenderAll();
   document.getElementById('resultadoFotosQuebradas').innerHTML='';
   window._fotosQuebradasEncontradas=null;
   toast('📤 Enviando limpeza...');
@@ -5220,7 +5277,7 @@ function renderColabs(){
       <h3>${c.tipo.replace(/-/g,' ').toUpperCase()}</h3>
       <p>${c.desc}</p>
       ${c.chars?`<p style="font-size:13px;color:var(--text2)"><b>Personagens:</b> ${c.chars}</p>`:''}
-      <p style="font-size:12px;color:var(--text2)"><i class="fas fa-user"></i> ${c.author}</p>
+      <p style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:.4rem">${miniAvatarsHtml([c.author],1)} ${c.author}</p>
       ${c.contato&&(admin||me?.username===c.author)?`<p style="font-size:11px"><i class="fas fa-envelope"></i> ${c.contato}</p>`:''}
       ${admin?`<div class="acts"><button class="bs" onclick="editarColab(${c.id})"><i class="fas fa-pen"></i></button><button class="bs del" onclick="delColab(${c.id})"><i class="fas fa-trash"></i></button></div>`:''}
     </div>`;
@@ -5827,6 +5884,10 @@ function dataDoItem(item){
 
 function marcarAbaVista(name){
   if(!ABAS_COM_NOVIDADE.includes(name))return;
+  // ✅ Some com o selo NA HORA (sem esperar recalcular nada) — feedback
+  // visual instantâneo assim que a pessoa clica na aba
+  const badge=document.getElementById('badge-'+name);
+  if(badge)badge.classList.remove('on');
   localStorage.setItem('dc_visto_'+name,String(Date.now()));
   atualizarBadgesNovidades();
 }
