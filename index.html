@@ -3896,7 +3896,15 @@ function renderEventos(){
     console.warn(`🧹 Removidas ${db.eventos.length-semDuplicata.length} duplicata(s) de evento`);
     db.eventos=semDuplicata;
     save();
-    setTimeout(()=>cloudPush(true),800); // reenvia já limpo, some de vez da nuvem
+    // ✅ CORRIGIDO: essa função (renderEventos) roda toda hora — em toda
+    // atualização de tela, muitas vezes ANTES de uma busca fresca da
+    // nuvem ter terminado. Enviar pra nuvem sozinho daqui era o MESMO
+    // bug perigoso já corrigido em outros lugares (seed/corrigirTudoAgora):
+    // uma tela ainda com dados desatualizados podia reintroduzir a
+    // duplicata na nuvem por cima da correção de outra pessoa, criando
+    // um looping sem fim de "detecta → limpa → volta → detecta de novo".
+    // Agora só limpa a EXIBIÇÃO local — o envio de verdade só acontece
+    // pelo botão manual "Corrigir tudo agora" no Admin.
   }
   let arr=[...db.eventos];
 
