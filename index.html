@@ -1727,7 +1727,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v78';
+const SITE_VERSION='v81';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -2979,8 +2979,8 @@ function renderCos(){
         </details>`:''}
         ${renderReacoesPerfil(c)}
         <div class="card-btns">
-          <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Instagram</a>
-          <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Editar</button>
+          <a href="${ig}" target="_blank" class="bs"><i class="fab fa-instagram"></i> Insta</a>
+          <button class="bs" onclick="openEdit(${c.id})"><i class="fas fa-pen"></i> Edite</button>
           <a href="https://ig.me/m/${c.username.replace('@','')}" target="_blank" class="bs full msg"><i class="fas fa-paper-plane"></i> Enviar mensagem</a>
           <button class="bs share" onclick="compartilhar(${c.id})"><i class="fas fa-share-nodes"></i> Compartilhar</button>
           <button class="bs share" onclick="event.stopPropagation();abrirQrCode(${c.id})"><i class="fas fa-qrcode"></i> QR Code</button>
@@ -4501,6 +4501,8 @@ function newEvento(){
     switchTab('cosplayers');return;
   }
   evEditId=null;
+  eventoImagemTemp=null;
+  document.getElementById('fetchStatus').innerHTML='';
   document.getElementById('evModalTitle').textContent=admin?'Novo Evento':'Sugerir Evento';
   document.getElementById('evSubmitLabel').textContent=admin?'Publicar':'Enviar sugestão';
   document.getElementById('evSuggestNote').innerHTML=admin?'':
@@ -4549,12 +4551,24 @@ function editEvento(id){
 }
 
 /* PUXAR DADOS DO SITE — tenta ler a página via leitor público */
+let eventoImagemTemp=null;
+
 async function fetchEvento(){
   const url=document.getElementById('eUrl').value.trim();
   const box=document.getElementById('fetchStatus');
   if(!url){toast('Cole o link primeiro','err');return}
 
   box.innerHTML=`<div class="alert a-info" style="margin:.7rem 0 0"><i class="fas fa-spinner fa-spin"></i><span>Lendo o site...</span></div>`;
+  eventoImagemTemp=null;
+
+  // ✅ Busca a FOTO do evento em paralelo, usando a rota do Worker (que
+  // lê o HTML de verdade — o outro método abaixo só lê texto puro e por
+  // isso nunca conseguia trazer imagem nenhuma)
+  const c=db.config||{};
+  const buscaFoto=c.workerUrl
+    ? fetch(`${c.workerUrl}/importar-evento?url=${encodeURIComponent(url)}`,{signal:timeoutSignal(12000)})
+        .then(r=>r.ok?r.json():null).catch(()=>null)
+    : Promise.resolve(null);
 
   try{
     const r=await fetch('https://r.jina.ai/'+url,{headers:{'Accept':'text/plain'}});
@@ -4598,12 +4612,38 @@ async function fetchEvento(){
     else if(/mossor[óo]/i.test(txt))document.getElementById('eCity').value='Mossoró';
     else if(/parnamirim/i.test(txt))document.getElementById('eCity').value='Parnamirim';
 
+    // ✅ Processa a foto que estava sendo buscada em paralelo
+    const resultadoFoto=await buscaFoto;
+    let fotoHtml='';
+    if(resultadoFoto&&resultadoFoto.imagem){
+      eventoImagemTemp=resultadoFoto.imagem;
+      found.push('foto');
+      fotoHtml=`<img src="${resultadoFoto.imagem}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-top:.6rem" onerror="this.remove()">`;
+      // se o título ainda não tem nada bom, usa o da foto (geralmente mais confiável, vem de tag própria do site)
+      if(resultadoFoto.titulo&&!document.getElementById('eTitle').value){
+        document.getElementById('eTitle').value=resultadoFoto.titulo.slice(0,90);
+      }
+    }
+
     box.innerHTML=found.length
-      ? `<div class="alert a-ok" style="margin:.7rem 0 0"><i class="fas fa-circle-check"></i><span>Puxei: <b>${found.join(', ')}</b>. Confira e corrija o que precisar antes de salvar.</span></div>`
+      ? `<div class="alert a-ok" style="margin:.7rem 0 0"><i class="fas fa-circle-check"></i><span>Puxei: <b>${found.join(', ')}</b>. Confira e corrija o que precisar antes de salvar.</span>${fotoHtml}</div>`
       : `<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-triangle-exclamation"></i><span>Li o site mas não achei os dados no formato esperado. Preenche na mão que funciona igual.</span></div>`;
 
   }catch(err){
-    box.innerHTML=`<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-triangle-exclamation"></i><span>Não consegui ler esse site (muitos bloqueiam leitura automática). Preenche na mão — o link fica salvo do mesmo jeito e o botão "Ver no site" vai funcionar normal.</span></div>`;
+    // ✅ Mesmo se a leitura de texto falhar, a foto pode ter vindo certa
+    // (são buscas independentes) — não descarta ela por causa disso
+    const resultadoFoto=await buscaFoto;
+    let fotoHtml='';
+    if(resultadoFoto&&resultadoFoto.imagem){
+      eventoImagemTemp=resultadoFoto.imagem;
+      fotoHtml=`<img src="${resultadoFoto.imagem}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-top:.6rem" onerror="this.remove()">`;
+      if(resultadoFoto.titulo&&!document.getElementById('eTitle').value){
+        document.getElementById('eTitle').value=resultadoFoto.titulo.slice(0,90);
+      }
+      box.innerHTML=`<div class="alert a-ok" style="margin:.7rem 0 0"><i class="fas fa-circle-check"></i><span>Consegui puxar a <b>foto</b> pelo menos! O resto dos dados não veio — preenche na mão.</span>${fotoHtml}</div>`;
+    }else{
+      box.innerHTML=`<div class="alert a-warn" style="margin:.7rem 0 0"><i class="fas fa-triangle-exclamation"></i><span>Não consegui ler esse site (muitos bloqueiam leitura automática). Preenche na mão — o link fica salvo do mesmo jeito e o botão "Ver no site" vai funcionar normal.</span></div>`;
+    }
   }
 }
 
@@ -4626,7 +4666,7 @@ function saveEvento(){
     type:document.getElementById('eType').value,
     url:document.getElementById('eUrl').value.trim(),
     desc:document.getElementById('eDesc').value.trim(),
-    img:old?old.img:null,
+    img:eventoImagemTemp||(old?old.img:null),
     status:admin?'aprovado':'pendente',
     by:old?old.by:(admin?'':(me?me.username:''))
   };
@@ -5947,28 +5987,42 @@ const WORKER_CODE=`export default {
     const path = url.pathname;
     const key = request.headers.get("X-Write-Key") || url.searchParams.get("k");
 
+    // ✅ URL pública do site — pra onde as páginas de prévia redirecionam
     const SITE_URL = "https://diadecosplay.pages.dev/";
     const escapar = (s) => (s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+    // ✅ Monta a página de prévia (foto + descrição pro WhatsApp/Instagram
+    // mostrarem antes de clicar) e redireciona pro lugar certo do site.
+    // Reutilizável — serve de modelo pra qualquer coisa nova no futuro.
     function paginaDePrevia(titulo, descricaoBruta, imagem, hashDestino) {
       const descricao = escapar((descricaoBruta || "").length > 200 ? descricaoBruta.slice(0, 197) + "..." : (descricaoBruta || ""));
       const tituloEscapado = escapar(titulo);
       const destino = SITE_URL + (hashDestino ? "#" + hashDestino : "");
-      const html = \`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>\${tituloEscapado}</title>
-<meta property="og:title" content="\${tituloEscapado}"><meta property="og:description" content="\${descricao}">
+      const html = \`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>\${tituloEscapado}</title>
+<meta property="og:title" content="\${tituloEscapado}">
+<meta property="og:description" content="\${descricao}">
 \${imagem ? \`<meta property="og:image" content="\${escapar(imagem)}">\` : ""}
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="\${imagem ? "summary_large_image" : "summary"}">
-<meta name="twitter:title" content="\${tituloEscapado}"><meta name="twitter:description" content="\${descricao}">
+<meta name="twitter:title" content="\${tituloEscapado}">
+<meta name="twitter:description" content="\${descricao}">
 \${imagem ? \`<meta name="twitter:image" content="\${escapar(imagem)}">\` : ""}
 <meta http-equiv="refresh" content="0;url=\${destino}">
-<style>body{background:#0F0F12;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:1rem}</style></head>
-<body><p>Abrindo o DiaDeCosplay... <a href="\${destino}" style="color:#E4405F">clique aqui se não for redirecionado</a></p>
-<script>window.location.replace(\${JSON.stringify(destino)});<\/script></body></html>\`;
+<style>body{background:#0F0F12;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:1rem}</style>
+</head>
+<body>
+  <p>Abrindo o DiaDeCosplay... <a href="\${destino}" style="color:#E4405F">clique aqui se não for redirecionado</a></p>
+  <script>window.location.replace(\${JSON.stringify(destino)});<\\/script>
+</body>
+</html>\`;
       return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=UTF-8" } });
     }
 
-    // ===== FOTOS: /f/<id> =====
+    // ===== FOTOS: /f/<id> ===== (sem nenhuma mudança — igual já estava)
     if (path.startsWith("/f/")) {
       const id = "foto:" + path.slice(3);
 
@@ -6002,30 +6056,35 @@ const WORKER_CODE=`export default {
       }
     }
 
-    // ===== PRÉVIA RICA DE IDEIA/CENA/PERFIL (compartilhamento) =====
+    // ===== NOVO: PRÉVIA RICA DE IDEIA/CENA/PERFIL — só leitura, não mexe
+    // em nada do que já existe, só usa os dados que já estão salvos =====
     if (request.method === "GET" && (path.startsWith("/ideia/") || path.startsWith("/cena/") || path.startsWith("/perfil/"))) {
       const dadosTexto = await env.DC_KV.get("dados");
       const dados = dadosTexto ? JSON.parse(dadosTexto) : {};
 
       if (path.startsWith("/ideia/")) {
-        const id = path.split("/").pop();
+        const id = (path.split("/").pop().match(/(\\d+)$/) || [])[1] || path.split("/").pop();
         const ideia = (dados.ideias || []).find(i => String(i.id) === String(id));
         const titulo = ideia ? \`💡 \${ideia.title}\` : "💡 Ideia de Cosplay — DiaDeCosplay";
         const desc = ideia?.desc || "Confira essa ideia de cosplay na comunidade DiaDeCosplay!";
         return paginaDePrevia(titulo, desc, ideia?.foto || "", ideia ? \`ideia-\${ideia.id}\` : "ideias");
       }
+
       if (path.startsWith("/cena/")) {
-        const id = path.split("/").pop();
+        const id = (path.split("/").pop().match(/(\\d+)$/) || [])[1] || path.split("/").pop();
         const cena = (dados.cenas || []).find(c => String(c.id) === String(id));
         const titulo = cena ? \`🎬 \${cena.title}\` : "🎬 Cena de Cosplay — DiaDeCosplay";
         const desc = cena?.desc || (cena?.source ? \`Cena de \${cena.source}\` : "Confira essa cena sugerida na comunidade DiaDeCosplay!");
         return paginaDePrevia(titulo, desc, "", cena ? \`cena-\${cena.id}\` : "cenas");
       }
+
       if (path.startsWith("/perfil/")) {
-        const id = path.split("/").pop();
+        const id = (path.split("/").pop().match(/(\\d+)$/) || [])[1] || path.split("/").pop();
         const cos = (dados.cosplayers || []).find(c => String(c.id) === String(id));
         const CAT_LABEL = { cosplay: "Cosplay", wigmaker: "WigMaker", propmaker: "PropMaker", cosmaker: "CosMaker", editor: "Editor(a)", artista: "Artista", maquiadora: "Maquiador(a)", streamer: "Streamer" };
+
         if (!cos) return paginaDePrevia("DiaDeCosplay — Comunidade de Natal/RN", "Confira esse perfil na comunidade DiaDeCosplay!", "", "cosplayers");
+
         const titulo = \`🎭 \${cos.nome ? cos.nome + " — " : ""}\${cos.username}\`;
         const categorias = (cos.cats || []).map(c => CAT_LABEL[c] || c).join(", ");
         const partes = [];
@@ -6037,7 +6096,54 @@ const WORKER_CODE=`export default {
       }
     }
 
-    // ===== DADOS DO SITE =====
+    // ===== IMPORTAR EVENTO DE UM LINK =====
+    // ✅ O navegador do visitante NÃO consegue ler outro site diretamente
+    // (bloqueio de segurança chamado CORS) — mas o Worker, rodando no
+    // servidor da Cloudflare, não tem essa restrição. Aqui ele busca a
+    // página do link que o admin colou, lê as tags "Open Graph" (que
+    // praticamente todo site usa pra ficar bonito quando compartilhado)
+    // e devolve título, foto e descrição prontos pra preencher o
+    // formulário de evento sozinho.
+    // ⚠️ Precisa vir ANTES da rota genérica "GET /" logo abaixo, senão
+    // aquela rota (que não filtra por caminho) pega essa requisição
+    // primeiro e essa nunca seria alcançada.
+    if (request.method === "GET" && path === "/importar-evento") {
+      const alvo = url.searchParams.get("url");
+      if (!alvo) return new Response(JSON.stringify({ error: "Falta o parâmetro url" }), { status: 400, headers: cors });
+
+      try {
+        const resposta = await fetch(alvo, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; DiaDeCosplayBot/1.0; +https://diadecosplay.pages.dev)" }
+        });
+        if (!resposta.ok) {
+          return new Response(JSON.stringify({ error: \`O site de destino respondeu \${resposta.status}\` }), { status: 502, headers: cors });
+        }
+
+        const html = await resposta.text();
+        const pegar = (propriedade) => {
+          const re1 = new RegExp(\`<meta[^>]+property=["']\${propriedade}["'][^>]+content=["']([^"']*)["']\`, "i");
+          const re2 = new RegExp(\`<meta[^>]+content=["']([^"']*)["'][^>]+property=["']\${propriedade}["']\`, "i");
+          const m = html.match(re1) || html.match(re2);
+          return m ? m[1] : "";
+        };
+        const pegarTitleTag = () => {
+          const m = html.match(/<title[^>]*>([^<]*)<\\/title>/i);
+          return m ? m[1].trim() : "";
+        };
+
+        const dados = {
+          titulo: pegar("og:title") || pegarTitleTag() || "",
+          descricao: pegar("og:description") || "",
+          imagem: pegar("og:image") || "",
+        };
+
+        return new Response(JSON.stringify(dados), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: "Não consegui acessar esse link: " + error.message }), { status: 500, headers: cors });
+      }
+    }
+
+    // ===== DADOS DO SITE ===== (sem nenhuma mudança — igual já estava)
     if (request.method === "GET") {
       const data = await env.DC_KV.get("dados", { cacheTtl: 60 });
       return new Response(data || "{}", { headers: { ...cors, ...noCache } });
@@ -6067,7 +6173,8 @@ const WORKER_CODE=`export default {
 
     return new Response("Metodo nao suportado", { status: 405, headers: cors });
   }
-};`;
+};
+`;
 
 function copyWorker(){
   navigator.clipboard.writeText(codigoWorkerAtual())
@@ -7217,18 +7324,47 @@ setInterval(()=>{
 
 /* ✅ "Tela cheia de verdade" no celular — o navegador só permite isso se
    o site for instalado como app (padrão de segurança, nenhum site
-   consegue forçar tela cheia sozinho sem a pessoa interagir). Isso
-   captura o momento em que o navegador permite instalar, e mostra um
-   convite discreto — se a pessoa já instalou ou já dispensou antes,
-   não mostra de novo. */
+   consegue forçar tela cheia sozinho sem a pessoa interagir).
+
+   ⚠️ IMPORTANTE: Android/Chrome e iPhone/Safari funcionam de formas
+   BEM diferentes aqui:
+   - Android/Chrome: o navegador oferece um botão de instalação
+     automática (evento "beforeinstallprompt") — clica e pronto.
+   - iPhone/Safari: NÃO EXISTE instalação automática — isso é uma
+     limitação da Apple, nenhum site consegue contornar isso. A pessoa
+     precisa tocar em Compartilhar → Adicionar à Tela de Início,
+     manualmente. Por isso mostramos instruções em vez de um botão. */
 let promptInstalacao=null;
+const ehIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+const jaInstalado=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+
 window.addEventListener('beforeinstallprompt',(e)=>{
   e.preventDefault();
   promptInstalacao=e;
-  if(localStorage.getItem('dc_instalar_dispensado'))return;
-  if(window.matchMedia('(display-mode: standalone)').matches)return; // já instalado
-  document.getElementById('faixaInstalar').classList.add('on');
+  if(localStorage.getItem('dc_instalar_dispensado')||jaInstalado)return;
+  mostrarFaixaInstalar(false);
 });
+
+// ✅ No iPhone, o evento acima nunca dispara (Safari não tem essa API) —
+// então mostramos as instruções manuais direto, sem esperar nenhum evento
+if(ehIOS&&!jaInstalado&&!localStorage.getItem('dc_instalar_dispensado')){
+  mostrarFaixaInstalar(true);
+}
+
+function mostrarFaixaInstalar(iOS){
+  const faixa=document.getElementById('faixaInstalar');
+  const texto=faixa.querySelector('span');
+  const botao=faixa.querySelector('button:not(.fechar)');
+  if(iOS){
+    texto.innerHTML='📱 Instala o DiaDeCosplay no seu iPhone: toque em <b><i class="fas fa-arrow-up-from-bracket"></i> Compartilhar</b> (embaixo do Safari) e depois em <b>"Adicionar à Tela de Início"</b>.';
+    botao.style.display='none'; // no iPhone não tem botão — é manual mesmo
+  }else{
+    texto.textContent='📱 Instala o DiaDeCosplay na sua tela inicial — abre em tela cheia, sem barra do navegador!';
+    botao.style.display='inline-block';
+    botao.textContent='Instalar';
+  }
+  faixa.classList.add('on');
+}
 
 async function instalarApp(){
   if(!promptInstalacao){fecharFaixaInstalar();return}
