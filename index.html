@@ -1514,9 +1514,10 @@ html.admin .admin-only{display:flex!important}
   <div class="adm-pane" id="at-cosplayers">
     <div class="fg">
       <label class="fl">➕ Adicionar cosplayers</label>
-      <textarea class="ft" id="admNovosCos" placeholder="@fulano&#10;@ciclano&#10;@beltrano"></textarea>
-      <span class="hint">Um @ por linha. Pode colar a lista inteira que ele ignora os repetidos.</span>
+      <textarea class="ft" id="admNovosCos" placeholder="@fulano&#10;@ciclano&#10;https://instagram.com/beltrano"></textarea>
+      <span class="hint">Um por linha — pode ser só o @, ou o link completo do Instagram. Pode colar a lista inteira que ele ignora os repetidos sozinho.</span>
       <button class="btn" onclick="admAddCos()" style="margin-top:.6rem"><i class="fas fa-plus"></i> Adicionar</button>
+      <div id="admRelatorioLote" style="margin-top:.8rem"></div>
     </div>
     <div class="fg">
       <label class="fl">📢 Cobrar quem falta</label>
@@ -1815,7 +1816,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v86';
+const SITE_VERSION='v87';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -5484,24 +5485,35 @@ async function admAddCos(){
   const nomes=txt.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean).map(limparPrefixoNumerico);
   const existentes=db.cosplayers.map(c=>c.username.toLowerCase());
   let maxId=db.cosplayers.reduce((m,c)=>Math.max(m,c.id),0);
-  let add=0,ignorados=0;
+  const adicionados=[],jaExistiam=[];
   nomes.forEach(u=>{
     if(!existentes.includes(u.toLowerCase())){
       db.cosplayers.push({id:++maxId,username:u,nome:'',email:'',cats:[],photos:[],slideshow:true,photo:null,post:'',media:null,mediaType:'',schedule:'',emoji:'',tiktok:'',twitter:'',youtube:'',userTrocado:false,qtdTrocasUser:0,nomeTrocado:false});
-      existentes.push(u.toLowerCase());add++;
+      existentes.push(u.toLowerCase());adicionados.push(u);
     }else{
-      ignorados++;
+      jaExistiam.push(u);
     }
   });
   save(false);document.getElementById('admNovosCos').value='';
   admRenderAll();renderCos();
-  if(add){
+
+  // ✅ Relatório completo — mostra os @ de verdade, não só um número, pra
+  // não sobrar dúvida de quem foi adicionado e quem já estava na lista
+  const boxRelatorio=document.getElementById('admRelatorioLote');
+  if(boxRelatorio){
+    boxRelatorio.innerHTML=`
+      ${adicionados.length?`<div class="alert a-ok" style="margin-bottom:.5rem"><i class="fas fa-circle-check"></i><span><b>${adicionados.length} adicionado(s) agora:</b><br>${adicionados.join(', ')}</span></div>`:''}
+      ${jaExistiam.length?`<div class="alert a-info"><i class="fas fa-circle-info"></i><span><b>${jaExistiam.length} já estavam na lista</b> (por isso não foram duplicados):<br>${jaExistiam.join(', ')}</span></div>`:''}
+    `;
+  }
+
+  if(adicionados.length){
     toast('📤 Enviando pra nuvem...');
     const ok=await cloudPush(false);
-    toast(ok?`✅ ${add} adicionado(s) e já no ar!${ignorados?` · ${ignorados} já existiam (ignorados)`:''}`:'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
+    toast(ok?`✅ ${adicionados.length} adicionado(s) e já no ar!`:'✅ Salvo! Confirmando com a nuvem, aparece em instantes.','ok');
     if(!ok){pendente=true;agendarSync(500)}
   }else{
-    toast('Todos já estavam na lista','ok');
+    toast('Todos já estavam na lista — veja o relatório abaixo','ok');
   }
 }
 
