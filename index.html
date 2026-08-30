@@ -1815,7 +1815,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v84';
+const SITE_VERSION='v86';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -5408,6 +5408,15 @@ function admRenderAll(){admStats();renderAdmDashboard();admRenderCos();admRender
 function limparPrefixoNumerico(raw){
   let t=raw.trim();
   t=t.replace(/^[\d\s\-\).]+/,''); // remove qualquer número/hífen/parêntese/ponto no começo
+
+  // ✅ Reconhece um link completo do Instagram colado (com ou sem
+  // https://, com ou sem www.) e extrai só o @ de dentro dele —
+  // "https://instagram.com/fulano" vira "@fulano"
+  const linkMatch=t.match(/(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)\/?/i);
+  if(linkMatch){
+    t=linkMatch[1];
+  }
+
   if(!t.startsWith('@'))t='@'+t;
   return t;
 }
@@ -6484,26 +6493,41 @@ async function cloudPush(auto=false){
     return false;
   }
 
-  // ✅ TRAVA ANTI-PERDA CRÍTICA: nunca envia se os dados locais parecem
-  // suspeitosamente menores do que o maior número já visto de cosplayers
-  // OU de eventos. Isso impede que uma aba "vazia" (que ainda não
-  // terminou de puxar da nuvem) apague o trabalho de todo mundo.
-  const maiorJaVisto=parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
+  // ✅ TRAVA ANTI-PERDA CRÍTICA — CORRIGIDA: antes essa proteção confiava
+  // na "memória" desse navegador específico (localStorage). Se alguém
+  // limpasse o cache (ex: pra resolver outro problema), essa memória
+  // zerava e a proteção ficava sem efeito nenhum bem na hora que mais
+  // precisava — foi exatamente isso que causou fotos sumindo de verdade.
+  // Agora, em vez de confiar só na memória local, busca o estado ATUAL
+  // de verdade na nuvem, na hora, e compara com isso — funciona igual
+  // em qualquer navegador, mesmo um que acabou de ser limpo.
+  let compararCom=null;
+  try{
+    const rCheck=await fetch(c.workerUrl+'?anti-perda='+Date.now(),{cache:'no-store',signal:timeoutSignal(8000)});
+    if(rCheck.ok){
+      const dadosNuvem=await rCheck.json();
+      compararCom={
+        cosplayers:(dadosNuvem.cosplayers||[]).length,
+        eventos:(dadosNuvem.eventos||[]).length,
+        fotos:(dadosNuvem.cosplayers||[]).reduce((n,x)=>n+((x.photos||[]).length),0)
+      };
+    }
+  }catch(e){/* se não conseguir checar a nuvem agora, cai pro método antigo (localStorage) como plano B, mais abaixo */}
+
   const atual=(db.cosplayers||[]).length;
-  const maiorEventosJaVisto=parseInt(localStorage.getItem('dc_max_eventos')||'0',10);
   const atualEventos=(db.eventos||[]).length;
-
-  // ✅ NOVA CAMADA: mesma quantidade de PESSOAS não significa mesma
-  // quantidade de FOTOS — um envio podia manter todo mundo cadastrado
-  // mas zerar as fotos de todos, sem a trava acima perceber nada de
-  // errado (o número de pessoas continuava igual). Agora conta as fotos
-  // de verdade também.
   const totalFotosAgora=(db.cosplayers||[]).reduce((n,c)=>n+((c.photos||[]).length),0);
-  const maiorFotosJaVisto=parseInt(localStorage.getItem('dc_max_fotos')||'0',10);
 
-  if(atual>maiorJaVisto)localStorage.setItem('dc_max_cosplayers',String(atual));
-  if(atualEventos>maiorEventosJaVisto)localStorage.setItem('dc_max_eventos',String(atualEventos));
-  if(totalFotosAgora>maiorFotosJaVisto)localStorage.setItem('dc_max_fotos',String(totalFotosAgora));
+  // ✅ Fonte de comparação: prioriza o estado FRESCO da nuvem; se não
+  // conseguiu buscar agora, cai pro maior valor já visto neste navegador
+  // (plano B, mantido por compatibilidade e por segurança extra)
+  const maiorJaVisto=compararCom?compararCom.cosplayers:parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10);
+  const maiorEventosJaVisto=compararCom?compararCom.eventos:parseInt(localStorage.getItem('dc_max_eventos')||'0',10);
+  const maiorFotosJaVisto=compararCom?compararCom.fotos:parseInt(localStorage.getItem('dc_max_fotos')||'0',10);
+
+  if(atual>parseInt(localStorage.getItem('dc_max_cosplayers')||'0',10))localStorage.setItem('dc_max_cosplayers',String(atual));
+  if(atualEventos>parseInt(localStorage.getItem('dc_max_eventos')||'0',10))localStorage.setItem('dc_max_eventos',String(atualEventos));
+  if(totalFotosAgora>parseInt(localStorage.getItem('dc_max_fotos')||'0',10))localStorage.setItem('dc_max_fotos',String(totalFotosAgora));
 
   const perdeuCosplayers=maiorJaVisto>0&&atual<maiorJaVisto*0.7;
   const perdeuEventos=maiorEventosJaVisto>0&&atualEventos<maiorEventosJaVisto*0.7;
@@ -6511,7 +6535,7 @@ async function cloudPush(auto=false){
 
   if(perdeuCosplayers||perdeuEventos||perdeuFotos){
     console.error(`🛑 BLOQUEADO: envio recusado. Cosplayers: ${atual}/${maiorJaVisto} · Eventos: ${atualEventos}/${maiorEventosJaVisto} · Fotos: ${totalFotosAgora}/${maiorFotosJaVisto}. Isso pareceria perda de dados.`);
-    registrarErro('trava-anti-perda',`Envio bloqueado: cosplayers=${atual}/${maiorJaVisto} eventos=${atualEventos}/${maiorEventosJaVisto} fotos=${totalFotosAgora}/${maiorFotosJaVisto}`);
+    registrarErro('trava-anti-perda',`Envio bloqueado (fonte: ${compararCom?'nuvem ao vivo':'memória local'}): cosplayers=${atual}/${maiorJaVisto} eventos=${atualEventos}/${maiorEventosJaVisto} fotos=${totalFotosAgora}/${maiorFotosJaVisto}`);
     syncBadge('off','Envio bloqueado (proteção anti-perda)');
     if(!auto){
       cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-shield-halved"></i><span>⚠️ Envio bloqueado por segurança: os dados daqui estão bem menores que o esperado. Clica em "Puxar agora" pra atualizar antes de tentar de novo.</span></div>`);
