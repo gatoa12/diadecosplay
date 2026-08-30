@@ -126,6 +126,12 @@ html.admin .sync-badge{display:flex}
 #faixaInstalar span{flex:1;font-size:12.5px}
 #faixaInstalar button{flex:0 0 auto;background:#fff;color:var(--primary);border:none;padding:.5rem 1rem;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer}
 #faixaInstalar .fechar{background:transparent;color:#fff;padding:.5rem;font-size:16px}
+
+/* ✅ Faixa de "tem versão nova" — verde pra diferenciar da roxa/rosa de
+   instalar, aparece no topo (instalar fica embaixo) */
+#faixaNovaVersao{position:fixed;left:0;right:0;top:0;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;padding:.7rem 1rem;display:none;align-items:center;justify-content:center;gap:.8rem;z-index:210;box-shadow:0 4px 14px rgba(0,0,0,.3);font-size:12.5px}
+#faixaNovaVersao.on{display:flex}
+#faixaNovaVersao button{flex:0 0 auto;background:#fff;color:#128C7E;border:none;padding:.4rem .9rem;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer}
 .tab{padding:.9rem 1.3rem;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;transition:.25s;white-space:nowrap;font-weight:600;font-size:14px;flex:0 0 auto}
 .tab.active{color:var(--primary);border-bottom-color:var(--primary)}
 .tab:hover{color:var(--text)}
@@ -379,6 +385,16 @@ html.admin .sync-badge{display:flex}
 
 /* ✅ Mini biografia — expansível (clica pra abrir), não polui o card */
 .bio-box{margin:.5rem 0;background:var(--s2);border-radius:8px;overflow:hidden}
+
+/* ✅ Tutorial passo a passo, expansível */
+.tutorial-passo{margin-top:.6rem;background:var(--s2);border-radius:8px;overflow:hidden}
+.tutorial-passo summary{padding:.7rem .9rem;font-size:13px;cursor:pointer;list-style:none}
+.tutorial-passo summary::-webkit-details-marker{display:none}
+.tutorial-passo[open] summary{border-bottom:1px solid var(--border)}
+.tutorial-conteudo{padding:.8rem .9rem;font-size:12.5px;color:var(--text2);line-height:1.7}
+.tutorial-conteudo ol{padding-left:1.2rem}
+.tutorial-conteudo li{margin-bottom:.5rem}
+.tutorial-conteudo b{color:var(--text)}
 .bio-box summary{padding:.6rem .8rem;font-size:12px;font-weight:600;cursor:pointer;list-style:none;display:flex;align-items:center;gap:.4rem}
 .bio-box summary::-webkit-details-marker{display:none}
 .bio-box[open] summary{border-bottom:1px solid var(--border)}
@@ -587,6 +603,11 @@ html.admin .admin-only{display:flex!important}
   <span>📱 Instala o DiaDeCosplay na sua tela inicial — abre em tela cheia, sem barra do navegador!</span>
   <button onclick="instalarApp()">Instalar</button>
   <button class="fechar" onclick="fecharFaixaInstalar()"><i class="fas fa-xmark"></i></button>
+</div>
+
+<div id="faixaNovaVersao">
+  <span><i class="fas fa-rocket"></i> Tem uma versão nova do site! Atualiza pra ver as novidades.</span>
+  <button onclick="location.reload()">Atualizar agora</button>
 </div>
 
 <!-- ✅ TELA DE BOAS-VINDAS: primeira coisa que a pessoa vê ao entrar -->
@@ -1440,6 +1461,13 @@ html.admin .admin-only{display:flex!important}
   <button class="btn" style="width:100%;margin-bottom:1.2rem;background:linear-gradient(135deg,#833AB4,#E4405F)" onclick="rodarDiagnosticoCompleto()"><i class="fas fa-stethoscope"></i> Diagnóstico completo (testar tudo agora)</button>
   <div id="resultadoDiagnostico" style="margin-bottom:1.2rem"></div>
 
+  <div class="fg" style="border:1px solid var(--warn);border-radius:12px;padding:1rem;margin-bottom:1.2rem">
+    <label class="fl">🕐 Backups automáticos (recuperação de emergência)</label>
+    <span class="hint" style="display:block;margin-bottom:.7rem">O Worker guarda uma cópia dos dados de cada dia, por 14 dias. Se algo parecer perdido agora, dá pra ver o que tinha num dia anterior e restaurar — sem perder nada que foi adicionado depois sem querer, é só uma segurança extra.</span>
+    <button class="btn sec" style="width:100%" onclick="listarBackups()"><i class="fas fa-clock-rotate-left"></i> Ver backups disponíveis</button>
+    <div id="listaBackupsBox" style="margin-top:.7rem"></div>
+  </div>
+
   <div class="tabs-wrap" id="admTabsWrap" style="background:transparent;border-bottom:none;border-radius:10px;margin-bottom:1.3rem">
     <button class="tabs-arrow left" id="admTabsArrowLeft" onclick="rolarTabs('admTabsBar',-1)" aria-label="Rolar pra esquerda"><i class="fas fa-chevron-left"></i></button>
     <div class="adm-tabs" id="admTabsBar">
@@ -1451,6 +1479,7 @@ html.admin .admin-only{display:flex!important}
       <button class="adm-tab" data-at="ajuda"><span class="tab-ic">❓</span> Ajuda</button>
       <button class="adm-tab" data-at="dados"><span class="tab-ic">💾</span> Dados</button>
       <button class="adm-tab" data-at="cloud"><span class="tab-ic">☁️</span> Cloudflare</button>
+      <button class="adm-tab" data-at="deploy"><span class="tab-ic">📦</span> Deploy</button>
     </div>
     <button class="tabs-arrow right" id="admTabsArrowRight" onclick="rolarTabs('admTabsBar',1)" aria-label="Rolar pra direita"><i class="fas fa-chevron-right"></i></button>
   </div>
@@ -1709,6 +1738,65 @@ html.admin .admin-only{display:flex!important}
     </div>
   </div>
 
+  <!-- DEPLOY -->
+  <div class="adm-pane" id="at-deploy">
+    <div class="alert a-info" style="margin-bottom:1.2rem"><i class="fas fa-circle-info"></i><span>Baixa os arquivos aqui embaixo e sobe nos dois lugares (GitHub e Cloudflare) — o tutorial passo a passo está logo abaixo, pra quem nunca fez isso antes.</span></div>
+
+    <div class="fg" style="border:1px solid var(--primary);border-radius:12px;padding:1rem;margin-bottom:1rem">
+      <label class="fl">📄 Arquivo do site (index.html)</label>
+      <span class="hint" style="display:block;margin-bottom:.7rem">Baixa uma cópia exata do site como ele está rodando agora nesse navegador — pronta pra subir no GitHub.</span>
+      <button class="btn" style="width:100%" onclick="baixarSiteAtual()"><i class="fas fa-download"></i> Baixar index.html</button>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--secondary);border-radius:12px;padding:1rem;margin-bottom:1.2rem">
+      <label class="fl">⚙️ Arquivo do Worker (worker.js)</label>
+      <span class="hint" style="display:block;margin-bottom:.7rem">Baixa a referência do Worker guardada aqui dentro (a mesma que aparece em "Ver código do Worker" na aba Cloudflare) — pronta pra colar no Cloudflare.</span>
+      <button class="btn sec" style="width:100%" onclick="baixarWorkerAtual()"><i class="fas fa-download"></i> Baixar worker.js</button>
+    </div>
+
+    <div class="fg" style="border:1px solid var(--border);border-radius:12px;padding:1rem">
+      <label class="fl">📋 Tutorial passo a passo (pra quem nunca fez isso)</label>
+
+      <details class="tutorial-passo" open>
+        <summary><b>1.</b> Atualizar o site no GitHub</summary>
+        <div class="tutorial-conteudo">
+          <ol>
+            <li>Clica em <b>"Baixar index.html"</b> acima — o arquivo vai pra pasta de Downloads do seu celular/computador</li>
+            <li>Entra no site <b>github.com</b> e abre o repositório do seu site</li>
+            <li>Clica no arquivo <b>index.html</b> que já existe lá</li>
+            <li>Clica no ícone de <b>lápis (editar)</b> no canto superior direito do arquivo</li>
+            <li>Apaga tudo que está escrito ali (Ctrl+A depois Delete)</li>
+            <li>Abre o arquivo que você baixou num editor de texto, copia tudo (Ctrl+A, Ctrl+C) e cola no lugar (Ctrl+V)</li>
+            <li>Desce a página, escreve uma mensagem curta tipo "atualização" embaixo, e clica em <b>"Commit changes"</b></li>
+            <li>Pronto — em 1 ou 2 minutos o Cloudflare Pages atualiza sozinho</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="tutorial-passo">
+        <summary><b>2.</b> Atualizar o Worker no Cloudflare</summary>
+        <div class="tutorial-conteudo">
+          <ol>
+            <li>Clica em <b>"Baixar worker.js"</b> acima, ou usa o botão "Copiar" na aba Cloudflare</li>
+            <li>Entra em <b>dash.cloudflare.com</b></li>
+            <li>Vai em <b>Workers e Pages</b> → clica no seu Worker (o de nome parecido com "diadecosplay-api")</li>
+            <li>Procura o botão <b>"Edit code"</b> (ou o ícone de lápis)</li>
+            <li>Apaga tudo que está escrito ali e cola o conteúdo do arquivo que baixou</li>
+            <li>Clica em <b>"Save and deploy"</b> (ou "Salvar e implantar")</li>
+            <li>Pronto — fica no ar na hora, sem esperar nada</li>
+          </ol>
+        </div>
+      </details>
+
+      <details class="tutorial-passo">
+        <summary><b>3.</b> Como confirmar que deu certo</summary>
+        <div class="tutorial-conteudo">
+          <p>Depois de atualizar o site, espera 1-2 minutos, recarrega essa página do zero (puxa a tela pra baixo no celular, ou aperta Ctrl+Shift+R no computador), abre esse Painel Admin de novo e confere se o número <b>"Rodando vXX"</b> no topo bateu com a versão que você acabou de subir.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
   <div class="bgrp">
     <button class="btn sec" onclick="closeModal('mAdmin')">Fechar</button>
     <button class="btn sec" onclick="logout()"><i class="fas fa-right-from-bracket"></i> Sair</button>
@@ -1727,7 +1815,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v81';
+const SITE_VERSION='v84';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -1783,6 +1871,83 @@ function renderErrosCapturados(){
    estão quebradas, se tem duplicata sobrando, e a versão que está
    rodando. Junta em UM relatório só, em vez de precisar clicar em 5
    ferramentas separadas pra entender "está tudo bem?". */
+/* ===== BACKUPS DE EMERGÊNCIA =====
+   ✅ O Worker guarda uma cópia dos dados de cada dia (14 dias). Essas
+   funções deixam o admin ver o que tinha num dia anterior — e, se
+   precisar, restaurar aquele estado, sem precisar mexer em nada no
+   Cloudflare diretamente. */
+async function listarBackups(){
+  const c=db.config||{};
+  const box=document.getElementById('listaBackupsBox');
+  if(!c.workerUrl){toast('Conexão não configurada','err');return}
+
+  box.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Buscando backups...</div>`;
+  try{
+    const r=await fetch(`${c.workerUrl}/backups`,{cache:'no-store',signal:timeoutSignal(10000)});
+    if(!r.ok)throw new Error('Servidor respondeu '+r.status);
+    const {datas}=await r.json();
+    if(!datas||!datas.length){
+      box.innerHTML=`<div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>Nenhum backup encontrado ainda (só existem depois de pelo menos 1 envio de dados).</span></div>`;
+      return;
+    }
+    box.innerHTML=datas.map(d=>{
+      const dataLegivel=new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+      return `<div style="display:flex;align-items:center;gap:.5rem;padding:.5rem 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:12.5px">📅 ${dataLegivel}</span>
+        <button class="bs" onclick="verBackup('${d}')">Ver o que tinha</button>
+      </div>`;
+    }).join('');
+  }catch(e){
+    box.innerHTML=`<div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>Não consegui buscar os backups: ${e.message}</span></div>`;
+  }
+}
+
+async function verBackup(data){
+  const c=db.config||{};
+  const box=document.getElementById('listaBackupsBox');
+  box.innerHTML=`<div class="hint"><i class="fas fa-spinner fa-spin"></i> Carregando o backup de ${data}...</div>`;
+  try{
+    const r=await fetch(`${c.workerUrl}/backup/${data}`,{cache:'no-store',signal:timeoutSignal(10000)});
+    if(!r.ok)throw new Error('Servidor respondeu '+r.status);
+    const dados=await r.json();
+    const totalFotosBackup=(dados.cosplayers||[]).reduce((n,x)=>n+((x.photos||[]).length),0);
+    const totalFotosAgora=(db.cosplayers||[]).reduce((n,x)=>n+((x.photos||[]).length),0);
+
+    box.innerHTML=`
+      <div class="alert a-info" style="margin-bottom:.6rem"><i class="fas fa-circle-info"></i><span>Backup de ${data}:</span></div>
+      <div style="font-size:12.5px;line-height:1.9">
+        👤 ${(dados.cosplayers||[]).length} cosplayers <span style="color:var(--text2)">(agora: ${db.cosplayers.length})</span><br>
+        📸 ${totalFotosBackup} fotos no total <span style="color:var(--text2)">(agora: ${totalFotosAgora})</span><br>
+        📅 ${(dados.eventos||[]).length} eventos <span style="color:var(--text2)">(agora: ${db.eventos.length})</span>
+      </div>
+      <button class="btn" style="width:100%;margin-top:.7rem;background:var(--error)" onclick="restaurarBackup('${data}')"><i class="fas fa-clock-rotate-left"></i> Restaurar esse backup (substitui tudo de agora)</button>
+      <button class="btn sec" style="width:100%;margin-top:.5rem" onclick="listarBackups()">Voltar pra lista</button>
+    `;
+  }catch(e){
+    box.innerHTML=`<div class="alert a-warn"><i class="fas fa-triangle-exclamation"></i><span>Não consegui abrir esse backup: ${e.message}</span></div>`;
+  }
+}
+
+async function restaurarBackup(data){
+  if(!confirm(`⚠️ ATENÇÃO: isso vai SUBSTITUIR TUDO que está na nuvem agora pelo backup de ${data}.\n\nQualquer coisa adicionada depois desse dia (cadastros novos, fotos novas) vai se perder.\n\nTem certeza que quer continuar?`))return;
+  if(!confirm('Confirma mesmo? Essa é a última chance de cancelar.'))return;
+
+  const c=db.config||{};
+  toast('📤 Restaurando backup...');
+  try{
+    const r=await fetch(`${c.workerUrl}/restaurar/${data}`,{
+      method:'POST',
+      headers:{'X-Write-Key':c.writeKey},
+      signal:timeoutSignal(15000)
+    });
+    if(!r.ok)throw new Error('Servidor respondeu '+r.status);
+    toast('✅ Backup restaurado! Recarregando a página...','ok');
+    setTimeout(()=>location.reload(),1500);
+  }catch(e){
+    toast('❌ Não consegui restaurar: '+e.message,'err');
+  }
+}
+
 async function rodarDiagnosticoCompleto(){
   const el=document.getElementById('resultadoDiagnostico');
   el.innerHTML=`<div class="alert a-info"><i class="fas fa-spinner fa-spin"></i><span>Rodando diagnóstico, aguenta uns segundos...</span></div>`;
@@ -6143,6 +6308,46 @@ const WORKER_CODE=`export default {
       }
     }
 
+    // ===== BACKUPS: listar e restaurar =====
+    // ✅ O Worker já guarda uma cópia dos dados de cada dia (14 dias),
+    // como uma rede de segurança silenciosa. Essas rotas deixam o admin
+    // VER esses backups e, se precisar, restaurar um deles — útil se
+    // algo der errado e os dados de agora estiverem piores que antes.
+    if (request.method === "GET" && path === "/backups") {
+      try {
+        const lista = await env.DC_KV.list({ prefix: "backup:" });
+        const datas = lista.keys.map(k => k.name.replace("backup:", "")).sort().reverse();
+        return new Response(JSON.stringify({ datas }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+      }
+    }
+
+    if (request.method === "GET" && path.startsWith("/backup/")) {
+      const data = path.split("/").pop();
+      try {
+        const conteudo = await env.DC_KV.get("backup:" + data);
+        if (!conteudo) return new Response(JSON.stringify({ error: "Backup não encontrado pra essa data" }), { status: 404, headers: cors });
+        return new Response(conteudo, { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+      }
+    }
+
+    if (request.method === "POST" && path.startsWith("/restaurar/")) {
+      if (key !== env.WRITE_KEY)
+        return new Response(JSON.stringify({ error: "Chave invalida" }), { status: 401, headers: cors });
+      const data = path.split("/").pop();
+      try {
+        const conteudo = await env.DC_KV.get("backup:" + data);
+        if (!conteudo) return new Response(JSON.stringify({ error: "Backup não encontrado pra essa data" }), { status: 404, headers: cors });
+        await env.DC_KV.put("dados", conteudo);
+        return new Response(JSON.stringify({ ok: true, restauradoDe: data }), { status: 200, headers: { ...cors, "Content-Type": "application/json" } });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+      }
+    }
+
     // ===== DADOS DO SITE ===== (sem nenhuma mudança — igual já estava)
     if (request.method === "GET") {
       const data = await env.DC_KV.get("dados", { cacheTtl: 60 });
@@ -6175,6 +6380,59 @@ const WORKER_CODE=`export default {
   }
 };
 `;
+
+/* ✅ Baixa uma cópia do site EXATAMENTE como ele está rodando agora
+   nesse navegador — pronta pra colar no GitHub. Usa o próprio HTML da
+   página (que já tem todo o código dentro, sendo um site de arquivo
+   único) — não precisa buscar nada em lugar nenhum.
+   
+   ⚠️ IMPORTANTE: antes de gerar o arquivo, limpa a classe de "admin
+   logado" e esvazia as listas que foram preenchidas dinamicamente
+   (cards de cosplayers, eventos, etc). Sem essa limpeza, o arquivo
+   baixado ficaria com o painel admin "destravado" pra qualquer visitante
+   que abrisse o site, e cheio dos dados de agora cravados dentro do
+   arquivo à toa — o normal é o site sempre buscar os dados atuais
+   sozinho, não carregar uma foto congelada de um momento específico. */
+function baixarSiteAtual(){
+  const clone=document.documentElement.cloneNode(true);
+  clone.classList.remove('admin');
+
+  // esvazia todos os contêineres que só existem preenchidos em tempo de
+  // execução — a versão "fonte" do site sempre começa com eles vazios
+  const idsParaEsvaziar=['cosGrid','evList','ideiaList','cenaList','colabList','vitrineList','lojasList','animePhotoList','admDashboard','resultadoDiagnostico','listaBackupsBox','listaErrosCapturados','workerCode'];
+  idsParaEsvaziar.forEach(id=>{
+    const el=clone.querySelector('#'+id);
+    if(el)el.innerHTML='';
+  });
+  // fecha qualquer modal que esteja aberto no momento do download
+  clone.querySelectorAll('.modal.active').forEach(m=>m.classList.remove('active'));
+
+  const htmlCompleto='<!DOCTYPE html>\n'+clone.outerHTML;
+  const blob=new Blob([htmlCompleto],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='index.html';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast('✅ index.html baixado! Segue o tutorial abaixo pra subir no GitHub.','ok');
+}
+
+/* ✅ Baixa a referência do Worker guardada dentro do site como um
+   arquivo .js de verdade — a mesma que aparece em "Ver código do
+   Worker", só que já pronta pra colar no Cloudflare sem precisar
+   copiar/colar manualmente. */
+function baixarWorkerAtual(){
+  const codigo=codigoWorkerAtual();
+  const blob=new Blob([codigo],{type:'text/javascript'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='worker.js';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast('✅ worker.js baixado! Segue o tutorial abaixo pra subir no Cloudflare.','ok');
+}
 
 function copyWorker(){
   navigator.clipboard.writeText(codigoWorkerAtual())
@@ -6235,14 +6493,25 @@ async function cloudPush(auto=false){
   const maiorEventosJaVisto=parseInt(localStorage.getItem('dc_max_eventos')||'0',10);
   const atualEventos=(db.eventos||[]).length;
 
+  // ✅ NOVA CAMADA: mesma quantidade de PESSOAS não significa mesma
+  // quantidade de FOTOS — um envio podia manter todo mundo cadastrado
+  // mas zerar as fotos de todos, sem a trava acima perceber nada de
+  // errado (o número de pessoas continuava igual). Agora conta as fotos
+  // de verdade também.
+  const totalFotosAgora=(db.cosplayers||[]).reduce((n,c)=>n+((c.photos||[]).length),0);
+  const maiorFotosJaVisto=parseInt(localStorage.getItem('dc_max_fotos')||'0',10);
+
   if(atual>maiorJaVisto)localStorage.setItem('dc_max_cosplayers',String(atual));
   if(atualEventos>maiorEventosJaVisto)localStorage.setItem('dc_max_eventos',String(atualEventos));
+  if(totalFotosAgora>maiorFotosJaVisto)localStorage.setItem('dc_max_fotos',String(totalFotosAgora));
 
   const perdeuCosplayers=maiorJaVisto>0&&atual<maiorJaVisto*0.7;
   const perdeuEventos=maiorEventosJaVisto>0&&atualEventos<maiorEventosJaVisto*0.7;
+  const perdeuFotos=maiorFotosJaVisto>=5&&totalFotosAgora<maiorFotosJaVisto*0.5;
 
-  if(perdeuCosplayers||perdeuEventos){
-    console.error(`🛑 BLOQUEADO: envio recusado. Cosplayers: ${atual}/${maiorJaVisto} · Eventos: ${atualEventos}/${maiorEventosJaVisto}. Isso pareceria perda de dados.`);
+  if(perdeuCosplayers||perdeuEventos||perdeuFotos){
+    console.error(`🛑 BLOQUEADO: envio recusado. Cosplayers: ${atual}/${maiorJaVisto} · Eventos: ${atualEventos}/${maiorEventosJaVisto} · Fotos: ${totalFotosAgora}/${maiorFotosJaVisto}. Isso pareceria perda de dados.`);
+    registrarErro('trava-anti-perda',`Envio bloqueado: cosplayers=${atual}/${maiorJaVisto} eventos=${atualEventos}/${maiorEventosJaVisto} fotos=${totalFotosAgora}/${maiorFotosJaVisto}`);
     syncBadge('off','Envio bloqueado (proteção anti-perda)');
     if(!auto){
       cloudStatus(`<div class="alert a-warn" style="margin-top:.8rem"><i class="fas fa-shield-halved"></i><span>⚠️ Envio bloqueado por segurança: os dados daqui estão bem menores que o esperado. Clica em "Puxar agora" pra atualizar antes de tentar de novo.</span></div>`);
@@ -7377,6 +7646,33 @@ function fecharFaixaInstalar(){
   document.getElementById('faixaInstalar').classList.remove('on');
   localStorage.setItem('dc_instalar_dispensado','1');
 }
+
+/* ✅ Verifica de tempos em tempos se existe uma versão MAIS NOVA do
+   site já publicada (comparando o número de versão do arquivo real no
+   servidor com o que está rodando agora nesse navegador). Se tiver,
+   mostra um aviso discreto — a pessoa escolhe atualizar na hora dela,
+   nunca é forçado sem avisar (isso derrubaria o que ela estivesse
+   fazendo no meio, tipo editando o perfil). Isso é o que garante que
+   uma atualização de CÓDIGO chegue pra quem já está com o site aberto,
+   não só pra quem abre de novo. */
+let jaAvisouNovaVersao=false;
+async function checarNovaVersao(){
+  if(jaAvisouNovaVersao)return;
+  try{
+    const r=await fetch(location.pathname+'?checarversao='+Date.now(),{cache:'no-store',signal:timeoutSignal(8000)});
+    if(!r.ok)return;
+    const html=await r.text();
+    const m=html.match(/const SITE_VERSION=['"]([^'"]+)['"]/);
+    if(m&&m[1]&&m[1]!==SITE_VERSION){
+      jaAvisouNovaVersao=true;
+      document.getElementById('faixaNovaVersao').classList.add('on');
+    }
+  }catch(e){/* sem internet ou falha de rede - tenta de novo no próximo ciclo, sem incomodar ninguém */}
+}
+setInterval(checarNovaVersao,5*60*1000); // a cada 5 minutos
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')checarNovaVersao(); // também checa quando a pessoa volta pra aba
+});
 
 window.addEventListener('scroll',()=>{
   const btn=document.getElementById('btnTopo');
