@@ -112,6 +112,28 @@ html.admin .sync-badge{display:flex}
 .tab-badge{display:none;min-width:16px;height:16px;padding:0 4px;background:var(--primary);color:#fff;font-size:10px;font-weight:800;border-radius:20px;align-items:center;justify-content:center;margin-left:.35rem;vertical-align:middle;box-shadow:0 0 0 2px var(--s1)}
 .tab-badge.on{display:inline-flex}
 
+/* ✅ Imagens com tratamento de erro e placeholder */
+img.foto-quebrada{
+  display:block;
+  min-height:200px;
+  background:linear-gradient(135deg,var(--s2),var(--border)) !important;
+  border:1px dashed var(--border);
+}
+img[loading="lazy"] {
+  transition: opacity .3s ease-in-out;
+}
+/* skeleton loading para imagens */
+.foto-skeleton{
+  background:linear-gradient(90deg,var(--s2) 25%,var(--s1) 50%,var(--s2) 75%);
+  background-size:200% 100%;
+  animation:skeleton-loading 1.5s infinite;
+  min-height:200px;
+}
+@keyframes skeleton-loading{
+  0%{background-position:200% 0}
+  100%{background-position:-200% 0}
+}
+
 /* ✅ Botão flutuante de voltar ao topo — só aparece depois de rolar um
    pouco, some sozinho quando está perto do topo de novo */
 #btnTopo{position:fixed;bottom:1.3rem;right:1.3rem;width:46px;height:46px;border-radius:50%;background:var(--primary);color:#fff;border:none;font-size:16px;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer;z-index:90;opacity:0;pointer-events:none;transform:translateY(10px);transition:.25s}
@@ -2722,6 +2744,28 @@ async function reenviarFotosPendentes(){
     const ok=await cloudPush(false);
     if(!ok){pendente=true;agendarSync(1000)}
   }
+  // ✅ Também verifica imagens que já estão na tela mas falharam ao carregar
+  setTimeout(revalidarFotosExistentes,500);
+}
+
+// ✅ Nova função para verificar imagens quebradas na tela e tentar recarregar
+function verificarFotosNaTela(){
+  const imagesQuebradas=document.querySelectorAll('img[data-foto-id]');
+  let houveFalha=false;
+  
+  imagesQuebradas.forEach(img=>{
+    // verifica se a imagem realmente carregou
+    if(!img.complete||img.naturalHeight===0||img.naturalWidth===0){
+      houveFalha=true;
+      // tenta recarregar
+      const src=img.dataset.src||img.src;
+      if(src&&!src.includes('data:')){
+        img.src=src.includes('?')?src+'&_v='+Date.now():src+'?_v='+Date.now();
+      }
+    }
+  });
+  
+  return houveFalha;
 }
 
 function pesoDados(){
@@ -7546,12 +7590,15 @@ function init(){
   // novo: assim que a página carrega, quando a internet volta, e quando
   // a pessoa volta pra aba depois de ter saído.
   setTimeout(reenviarFotosPendentes,3000);
+  setTimeout(revalidarFotosExistentes,5000); // revalida imagens já carregadas
   setInterval(reenviarFotosPendentes,15000);
+  setInterval(revalidarFotosExistentes,30000); // revalida a cada 30s
 
   window.addEventListener('online',()=>{
     if(pendente)agendarSync(200);
     cloudPull(true);
     reenviarFotosPendentes(); // internet voltou → tenta subir o que ficou pendente na hora
+    revalidarFotosExistentes(); // revalida imagens quando internet volta
   });
   window.addEventListener('beforeunload',flushSync);
   document.addEventListener('visibilitychange',()=>{
@@ -7563,6 +7610,62 @@ function init(){
     }
   });
 }
+// ✅ Revalida e recarrega imagens que falharam
+function revalidarFotosExistentes(){
+  document.querySelectorAll('img[data-foto-id]').forEach(img=>{
+    if(!img.complete||img.naturalHeight===0){
+      let src=img.dataset.src||img.src;
+      if(src){
+        // força recarregamento adicionando cache-buster
+        let novoSrc=src.includes('?')?src+'&_t='+Date.now():src+'?_t='+Date.now();
+        img.src=novoSrc;
+      }
+    }
+  });
+  // também trata imagens sem data-foto-id que falharam
+  document.querySelectorAll('img.cosplay-foto:not([data-foto-id])').forEach(img=>{
+    if(!img.complete||img.naturalHeight===0){
+      let src=img.dataset.src||img.src;
+      if(src){
+        let novoSrc=src.includes('?')?src+'&_t='+Date.now():src+'?_t='+Date.now();
+        img.src=novoSrc;
+      }
+    }
+  });
+}
+
+// ✅ Handler global para imagens quebradas — tenta alternativas e mostra placeholder
+function configurarHandlersFotos(){
+  document.addEventListener('error',(e)=>{
+    if(e.target.tagName!=='IMG')return;
+    const img=e.target;
+    const fotoid=img.dataset.fotoId;
+    
+    // tenta de novo com cache-buster
+    if(!img.dataset.tentou){
+      img.dataset.tentou='1';
+      let src=img.dataset.src||img.src;
+      if(src){
+        let novoSrc=src.includes('?')?src+'&_retry='+Date.now():src+'?_retry='+Date.now();
+        img.src=novoSrc;
+        return;
+      }
+    }
+    
+    // se ainda não carregou, mostra placeholder
+    img.style.background='linear-gradient(135deg,var(--s2),var(--border))';
+    img.style.opacity='0.6';
+    img.setAttribute('alt','Foto não disponível');
+    img.classList.add('foto-quebrada');
+  },true);
+  
+  // lazy loading nativo para imagens
+  document.querySelectorAll('img:not([loading])').forEach(img=>{
+    if(img.classList.contains('logo')||img.classList.contains('icon'))return;
+    img.loading='lazy';
+  });
+}
+
 // ✅ Mostra o botão "voltar ao topo" só depois de rolar um pouco pra baixo
 /* ✅ Um intervalo SÓ pra todos os cards da tela (em vez de um timer por
    card, que seria pesado com muita gente cadastrada) — troca o texto de
@@ -7653,7 +7756,11 @@ window.addEventListener('scroll',()=>{
   if(btn)btn.classList.toggle('on',window.scrollY>400);
 },{passive:true});
 
-window.addEventListener('DOMContentLoaded',init);
+window.addEventListener('DOMContentLoaded',()=>{
+  init();
+  configurarHandlersFotos();
+  setTimeout(revalidarFotosExistentes,1000);
+});
 
 // ✅ PWA: registra o service worker pra o site funcionar mesmo offline
 // (dados e fotos já carregados no navegador continuam acessíveis)
