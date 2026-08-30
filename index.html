@@ -1816,7 +1816,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v87';
+const SITE_VERSION='v88';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -6384,8 +6384,12 @@ const WORKER_CODE=`export default {
         return new Response("Corpo vazio", { status: 400, headers: cors });
 
       // trava de seguranca: nao aceita um pacote muito menor que o guardado
+      // ✅ AJUSTADO: 40% estava bloqueando envios legítimos por engano
+      // (qualquer edição normal do dia a dia já podia disparar isso).
+      // Agora só bloqueia queda muito mais extrema, mais compatível com
+      // uso normal do site.
       const atual = await env.DC_KV.get("dados");
-      if (atual && atual.length > 5000 && body.length < atual.length * 0.4)
+      if (atual && atual.length > 5000 && body.length < atual.length * 0.2)
         return new Response("Recusado: pacote suspeito", { status: 409, headers: cors });
 
       await env.DC_KV.put("dados", body);
@@ -6401,59 +6405,6 @@ const WORKER_CODE=`export default {
   }
 };
 `;
-
-/* ✅ Baixa uma cópia do site EXATAMENTE como ele está rodando agora
-   nesse navegador — pronta pra colar no GitHub. Usa o próprio HTML da
-   página (que já tem todo o código dentro, sendo um site de arquivo
-   único) — não precisa buscar nada em lugar nenhum.
-   
-   ⚠️ IMPORTANTE: antes de gerar o arquivo, limpa a classe de "admin
-   logado" e esvazia as listas que foram preenchidas dinamicamente
-   (cards de cosplayers, eventos, etc). Sem essa limpeza, o arquivo
-   baixado ficaria com o painel admin "destravado" pra qualquer visitante
-   que abrisse o site, e cheio dos dados de agora cravados dentro do
-   arquivo à toa — o normal é o site sempre buscar os dados atuais
-   sozinho, não carregar uma foto congelada de um momento específico. */
-function baixarSiteAtual(){
-  const clone=document.documentElement.cloneNode(true);
-  clone.classList.remove('admin');
-
-  // esvazia todos os contêineres que só existem preenchidos em tempo de
-  // execução — a versão "fonte" do site sempre começa com eles vazios
-  const idsParaEsvaziar=['cosGrid','evList','ideiaList','cenaList','colabList','vitrineList','lojasList','animePhotoList','admDashboard','resultadoDiagnostico','listaBackupsBox','listaErrosCapturados','workerCode'];
-  idsParaEsvaziar.forEach(id=>{
-    const el=clone.querySelector('#'+id);
-    if(el)el.innerHTML='';
-  });
-  // fecha qualquer modal que esteja aberto no momento do download
-  clone.querySelectorAll('.modal.active').forEach(m=>m.classList.remove('active'));
-
-  const htmlCompleto='<!DOCTYPE html>\n'+clone.outerHTML;
-  const blob=new Blob([htmlCompleto],{type:'text/html'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='index.html';
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
-  toast('✅ index.html baixado! Segue o tutorial abaixo pra subir no GitHub.','ok');
-}
-
-/* ✅ Baixa a referência do Worker guardada dentro do site como um
-   arquivo .js de verdade — a mesma que aparece em "Ver código do
-   Worker", só que já pronta pra colar no Cloudflare sem precisar
-   copiar/colar manualmente. */
-function baixarWorkerAtual(){
-  const codigo=codigoWorkerAtual();
-  const blob=new Blob([codigo],{type:'text/javascript'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='worker.js';
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
-  toast('✅ worker.js baixado! Segue o tutorial abaixo pra subir no Cloudflare.','ok');
-}
 
 function copyWorker(){
   navigator.clipboard.writeText(codigoWorkerAtual())
@@ -6541,9 +6492,15 @@ async function cloudPush(auto=false){
   if(atualEventos>parseInt(localStorage.getItem('dc_max_eventos')||'0',10))localStorage.setItem('dc_max_eventos',String(atualEventos));
   if(totalFotosAgora>parseInt(localStorage.getItem('dc_max_fotos')||'0',10))localStorage.setItem('dc_max_fotos',String(totalFotosAgora));
 
-  const perdeuCosplayers=maiorJaVisto>0&&atual<maiorJaVisto*0.7;
-  const perdeuEventos=maiorEventosJaVisto>0&&atualEventos<maiorEventosJaVisto*0.7;
-  const perdeuFotos=maiorFotosJaVisto>=5&&totalFotosAgora<maiorFotosJaVisto*0.5;
+  // ✅ AJUSTADO: os limiares anteriores (70% e 50%) estavam bloqueando
+  // envios legítimos por engano — qualquer flutuação normal (tipo
+  // alguém removendo uma foto de propósito, ou um pequeno atraso de
+  // propagação) já disparava o bloqueio. Agora só bloqueia em casos
+  // realmente extremos (queda de mais de 60%), que é o padrão de uma
+  // aba "vazia" tentando sobrescrever tudo — não de uso normal do site.
+  const perdeuCosplayers=maiorJaVisto>0&&atual<maiorJaVisto*0.4;
+  const perdeuEventos=maiorEventosJaVisto>0&&atualEventos<maiorEventosJaVisto*0.4;
+  const perdeuFotos=maiorFotosJaVisto>=5&&totalFotosAgora<maiorFotosJaVisto*0.25;
 
   if(perdeuCosplayers||perdeuEventos||perdeuFotos){
     console.error(`🛑 BLOQUEADO: envio recusado. Cosplayers: ${atual}/${maiorJaVisto} · Eventos: ${atualEventos}/${maiorEventosJaVisto} · Fotos: ${totalFotosAgora}/${maiorFotosJaVisto}. Isso pareceria perda de dados.`);
