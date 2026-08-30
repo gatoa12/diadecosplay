@@ -1816,7 +1816,7 @@ const LIST=['@ofcvictorcorreia','@celipe.cosplay','@felixcos_','@heme.cos','@rog
    é publicada. Aparece no Painel Admin e no console (F12), pra você
    conseguir confirmar NA HORA se o deploy que você fez realmente entrou
    no ar, sem precisar adivinhar ou ficar comparando código. */
-const SITE_VERSION='v88';
+const SITE_VERSION='v90';
 
 /* ✅ CAPTURADOR DE ERROS: guarda automaticamente os últimos erros que
    acontecerem nesse navegador (só localmente, em localStorage — nunca
@@ -6661,16 +6661,15 @@ async function cloudPull(auto=false){
       return true;
     }
 
-    // TRAVA ANTI-PERDA: não aceita nuvem com menos gente ou menos fotos que aqui
-    const fotosLocais=db.cosplayers.reduce((n,c)=>n+((c.photos||[]).length),0);
-    const fotosNuvem=(obj.cosplayers||[]).reduce((n,c)=>n+((c.photos||[]).length),0);
-    if(auto&&(obj.cosplayers.length<db.cosplayers.length||fotosNuvem<fotosLocais)){
-      console.warn('⚠️ Nuvem com menos dados que local — reenviando');
-      pendente=true;
-      agendarSync(300);
-      syncBadge('up','Restaurando dados...');
-      return true;
-    }
+    // ⚠️ REMOVIDO (v90): existia uma trava aqui que recusava aceitar os
+    // dados da nuvem quando ela parecia ter menos fotos que o navegador
+    // local — e em vez de aceitar, tentava REENVIAR o que estava aqui
+    // por cima. Isso criava um "empate técnico" perigoso: a nuvem nunca
+    // era aceita como verdadeira, e o reenvio também podia ser recusado
+    // pela trava do lado do envio — travando tudo num ciclo sem saída.
+    // A proteção contra perda de dados já existe do lado de quem ENVIA
+    // (cloudPush e o próprio Worker) — não precisa de mais uma trava
+    // aqui do lado de quem RECEBE, competindo com a primeira.
 
     const conf=db.config;
     const modalAberto=document.querySelector('.modal.active');
@@ -7640,32 +7639,14 @@ function fecharFaixaInstalar(){
   localStorage.setItem('dc_instalar_dispensado','1');
 }
 
-/* ✅ Verifica de tempos em tempos se existe uma versão MAIS NOVA do
-   site já publicada (comparando o número de versão do arquivo real no
-   servidor com o que está rodando agora nesse navegador). Se tiver,
-   mostra um aviso discreto — a pessoa escolhe atualizar na hora dela,
-   nunca é forçado sem avisar (isso derrubaria o que ela estivesse
-   fazendo no meio, tipo editando o perfil). Isso é o que garante que
-   uma atualização de CÓDIGO chegue pra quem já está com o site aberto,
-   não só pra quem abre de novo. */
-let jaAvisouNovaVersao=false;
-async function checarNovaVersao(){
-  if(jaAvisouNovaVersao)return;
-  try{
-    const r=await fetch(location.pathname+'?checarversao='+Date.now(),{cache:'no-store',signal:timeoutSignal(8000)});
-    if(!r.ok)return;
-    const html=await r.text();
-    const m=html.match(/const SITE_VERSION=['"]([^'"]+)['"]/);
-    if(m&&m[1]&&m[1]!==SITE_VERSION){
-      jaAvisouNovaVersao=true;
-      document.getElementById('faixaNovaVersao').classList.add('on');
-    }
-  }catch(e){/* sem internet ou falha de rede - tenta de novo no próximo ciclo, sem incomodar ninguém */}
-}
-setInterval(checarNovaVersao,5*60*1000); // a cada 5 minutos
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible')checarNovaVersao(); // também checa quando a pessoa volta pra aba
-});
+/* ⚠️ REMOVIDO (v89): essa função ficava checando periodicamente se
+   existia uma versão nova, fazendo um pedido de rede pro MESMO caminho
+   que o Service Worker também gerencia o cache. Suspeito forte de estar
+   causando os erros de sintaxe JavaScript reportados ("Invalid or
+   unexpected token"), por uma disputa entre os dois pelo mesmo recurso
+   em cache. Removido até eu conseguir confirmar e reintroduzir de um
+   jeito mais seguro (ex: comparando só um cabeçalho leve, sem competir
+   com o cache do Service Worker). */
 
 window.addEventListener('scroll',()=>{
   const btn=document.getElementById('btnTopo');
