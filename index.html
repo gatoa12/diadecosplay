@@ -7901,7 +7901,7 @@ if('serviceWorker' in navigator){
   var fetchEventoOriginal = window.fetchEvento;
   window.fetchEvento = async function(){
     await fetchEventoOriginal();
-    var c = (window.db && db.config) || {};
+    var c = { workerUrl: CLOUD_URL, writeKey: CLOUD_KEY }; // ✅ endereço fixo, nunca depende de nada carregar antes
     var urlCampo = document.getElementById('eUrl');
     var descCampo = document.getElementById('eDesc');
     if(!c.workerUrl || !urlCampo || !urlCampo.value.trim() || !descCampo || descCampo.value.trim()) return;
@@ -7917,7 +7917,7 @@ if('serviceWorker' in navigator){
   // 2) Sincronização forçada segura
   // ---------------------------------------------------------------
   window.forcarSincronizacaoSegura = async function(){
-    var c = (window.db && db.config) || {};
+    var c = { workerUrl: CLOUD_URL, writeKey: CLOUD_KEY }; // ✅ endereço fixo, nunca depende de nada carregar antes
     if(!c.workerUrl){ toastOriginal('Conexão não configurada','err'); return; }
 
     toastOriginal('Checando nuvem...');
@@ -8076,7 +8076,7 @@ if('serviceWorker' in navigator){
   // 4) Busca fotos via /importar-evento pra uma lista de eventos
   // ---------------------------------------------------------------
   async function buscarFotosDeEventos(lista){
-    var c = (window.db && db.config) || {};
+    var c = { workerUrl: CLOUD_URL, writeKey: CLOUD_KEY }; // ✅ endereço fixo, nunca depende de nada carregar antes
     if(!c.workerUrl || !lista.length) return;
     for(const ev of lista){
       if(!ev.url) continue;
@@ -8095,7 +8095,7 @@ if('serviceWorker' in navigator){
   // ---------------------------------------------------------------
   var jaRodouAutoAtualizacao = false;
   window.atualizarFotosEventosExistentes = async function(manual){
-    var c = (window.db && db.config) || {};
+    var c = { workerUrl: CLOUD_URL, writeKey: CLOUD_KEY }; // ✅ endereço fixo, nunca depende de nada carregar antes
     if(!c.workerUrl) return;
     const semFoto = (db.eventos||[]).filter(e=>!e.img && e.url);
     if(!semFoto.length){
