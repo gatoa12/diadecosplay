@@ -9328,6 +9328,518 @@ if('serviceWorker' in navigator){
     return resultado;
   };
 
+  // ---------------------------------------------------------------
+  // 17) ENTREGA DE FOTOS — AMPLA, SITE INTEIRO
+  //     Duas camadas novas, cobrindo TODA imagem do site (não só o
+  //     Destaque do dia como antes):
+  //
+  //     A) Retry automático com cache-buster: se qualquer foto do site
+  //        falhar ao carregar (rede instável, CDN lento), tenta de novo
+  //        até 3 vezes antes de desistir — cobre cards de cosplayer,
+  //        eventos, marcas, QR, tudo.
+  //
+  //     B) Confirmação real no upload: depois que uma foto de perfil é
+  //        enviada, o site CONFERE de verdade se ela está acessível na
+  //        nuvem antes de considerar o envio concluído — mesma lógica
+  //        que já usamos pra eventos não sumirem.
+  // ---------------------------------------------------------------
+
+  // --- A) Retry automático em qualquer <img> do site ---
+  var tentativasFoto = new WeakMap();
+  document.addEventListener('error', function(ev){
+    var img = ev.target;
+    if(!img || img.tagName !== 'IMG') return;
+    if(img.closest('#destaqueBanner')) return; // esse já tem sua própria lógica de cascata
+
+    var tentativas = tentativasFoto.get(img) || 0;
+    if(tentativas >= 3){
+      img.style.display = 'none'; // desiste com elegância, sem ícone quebrado feio
+      return;
+    }
+    tentativas++;
+    tentativasFoto.set(img, tentativas);
+
+    var srcBase = img.dataset.srcBase || img.src.split('?')[0];
+    img.dataset.srcBase = srcBase;
+    setTimeout(function(){
+      img.src = srcBase + '?retry=' + Date.now() + '_' + tentativas;
+    }, 600 * tentativas); // espera um pouco mais a cada tentativa
+  }, true); // captura — error não borbulha normalmente, precisa disso
+
+  // --- B) Confirmação real depois do upload de foto de perfil ---
+  if(typeof window.subirFoto === 'function'){
+    var subirFotoOriginal = window.subirFoto;
+    window.subirFoto = async function(dataUrl){
+      var url = await subirFotoOriginal(dataUrl);
+      if(!url || typeof url !== 'string' || !url.startsWith('http')) return url; // não é um link hospedado, segue normal
+
+      // confere de verdade se a foto está acessível (até 3 tentativas, com espera)
+      for(var tentativa=1; tentativa<=3; tentativa++){
+        try{
+          var r = await fetch(url + '?verificacao=' + Date.now(), { cache:'no-store', signal: AbortSignal.timeout(8000) });
+          if(r.ok) return url; // confirmado — foto realmente acessível
+        }catch(e){}
+        await new Promise(function(res){ setTimeout(res, 800*tentativa); });
+      }
+      // depois de 3 tentativas sem confirmar, avisa mas não trava o salvamento
+      // (a foto pode estar OK e só a checagem falhando por rede — não vale travar o usuário)
+      console.warn('Não consegui confirmar que a foto está acessível, mas o link foi gerado:', url);
+      return url;
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 18) CORREÇÃO: selo de "postagem agendada" ficando preso pra
+  //     sempre, mostrando data no PASSADO. Acontece porque c.schedule
+  //     nunca é limpo depois que a postagem já foi ao ar e passou de
+  //     24h — o selo continua marcado mesmo sem nada pendente de fato.
+  // ---------------------------------------------------------------
+
+  // A) Esconde visualmente qualquer selo de agendamento cuja data já
+  //    passou — cobre todo mundo, na hora, sem precisar salvar nada.
+  function esconderSelosAgendamentoVencidos(){
+    document.querySelectorAll('.badge-timer').forEach(function(el){
+      var texto = el.textContent.trim();
+      var m = texto.match(/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+      if(!m) return;
+      var agora = new Date();
+      var data = new Date(agora.getFullYear(), parseInt(m[2],10)-1, parseInt(m[1],10), parseInt(m[3],10), parseInt(m[4],10));
+      if(data < agora){
+        var container = el.closest('.badge-stack') || el;
+        container.style.display = 'none';
+      }
+    });
+  }
+
+  // B) Limpa o dado de verdade (c.schedule) pra quem é admin — assim
+  //    fica corrigido permanentemente, pra todo mundo, não só visual.
+  function limparAgendamentosVencidosDeVerdade(){
+    if(!document.documentElement.classList.contains('admin')) return;
+    var agora = new Date();
+    var mudou = false;
+    (db.cosplayers||[]).forEach(function(c){
+      if(c.schedule && new Date(c.schedule) < agora){
+        delete c.schedule;
+        mudou = true;
+      }
+    });
+    if(mudou){
+      save(false);
+      if(typeof renderCos==='function') renderCos();
+      cloudPush(false);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setInterval(esconderSelosAgendamentoVencidos, 2000);
+    setTimeout(limparAgendamentosVencidosDeVerdade, 4000);
+  });
+  if(document.readyState !== 'loading'){
+    setInterval(esconderSelosAgendamentoVencidos, 2000);
+    setTimeout(limparAgendamentosVencidosDeVerdade, 4000);
+  }
+
+  // ---------------------------------------------------------------
+  // 19) OTIMIZAÇÃO DO CANVAS (Anime Photo) — celulares mais fracos
+  //     A versão original redesenha a cada frame possível (podendo
+  //     passar de 60 quadros por segundo), mesmo nos 80% do tempo em
+  //     que nada muda na tela (só troca durante a transição). Isso
+  //     esquenta e trava celular mais simples à toa.
+  //     Fix: limita a ~24 quadros/s (suficiente pro olho humano numa
+  //     transição lenta de 3s) e PAUSA de vez quando a aba não está
+  //     visível (economiza bateria se a pessoa trocar de app).
+  // ---------------------------------------------------------------
+  if(typeof window.gerarPreviaAnimePhoto === 'function'){
+    window.gerarPreviaAnimePhoto = async function(){
+      if(!window.apFotoSuaTemp||!window.apFotoAnimeTemp){ toastOriginal('Sobe as duas fotos primeiro','err'); return; }
+      var canvas = document.getElementById('apCanvas');
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      var anime = document.getElementById('apAnime').value.trim() || 'Meu personagem favorito';
+
+      document.getElementById('apStatus').textContent = 'Carregando fotos...';
+      var imgSua, imgAnime;
+      try{
+        var imgs = await Promise.all([carregarImg(window.apFotoSuaTemp), carregarImg(window.apFotoAnimeTemp)]);
+        imgSua = imgs[0]; imgAnime = imgs[1];
+      }catch(e){ toastOriginal('Erro ao carregar as fotos','err'); return; }
+
+      window.apAnimando = true;
+      document.getElementById('apBtnBaixar').disabled = false;
+      document.getElementById('apStatus').textContent = '▶️ Prévia rodando — clica em "Baixar vídeo" quando gostar!';
+
+      var duracaoCiclo = 3000;
+      var inicio = performance.now();
+      var FPS_ALVO = 24; // suficiente pra transição suave, bem mais leve que 60fps
+      var intervaloFrame = 1000/FPS_ALVO;
+      var ultimoFrame = 0;
+
+      function desenharFrame(agora){
+        if(!window.apAnimando) return;
+
+        // pausa de verdade se a aba/app não está em foco — economiza bateria
+        if(document.hidden){
+          requestAnimationFrame(desenharFrame);
+          return;
+        }
+
+        if(agora - ultimoFrame < intervaloFrame){
+          requestAnimationFrame(desenharFrame);
+          return;
+        }
+        ultimoFrame = agora;
+
+        var t = (agora-inicio) % (duracaoCiclo*2);
+        var fase = t<duracaoCiclo ? 0 : 1;
+        var progresso = (t%duracaoCiclo)/duracaoCiclo;
+        var transicao = Math.min(1, Math.max(0, (progresso-0.8)/0.2));
+
+        ctx.clearRect(0,0,W,H);
+        desenharCover(ctx, fase===0?imgSua:imgAnime, W, H);
+        if(transicao>0){
+          ctx.globalAlpha = transicao;
+          desenharCover(ctx, fase===0?imgAnime:imgSua, W, H);
+          ctx.globalAlpha = 1;
+        }
+
+        ctx.fillStyle = 'rgba(0,0,0,.55)';
+        ctx.fillRect(0, H-56, W, 56);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🎭 '+anime, W/2, H-20);
+
+        requestAnimationFrame(desenharFrame);
+      }
+      requestAnimationFrame(desenharFrame);
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 20) MODAIS — evitar poluição visual e fechamento acidental no mobile
+  // ---------------------------------------------------------------
+  var estiloModais = document.createElement('style');
+  estiloModais.textContent = `
+    .modal.active{
+      -webkit-overflow-scrolling:touch;
+    }
+    .modal .mbox{
+      max-height:90vh;
+      overflow-y:auto;
+      overscroll-behavior:contain; /* impede que o scroll "vaze" pra página de trás */
+    }
+    .modal .mclose{
+      min-width:44px !important;
+      min-height:44px !important;
+      display:flex !important;
+      align-items:center;
+      justify-content:center;
+      font-size:22px !important;
+    }
+    body.modal-aberto{
+      overflow:hidden !important;
+      position:fixed !important;
+      width:100% !important;
+    }
+    @media (max-width:600px){
+      .modal .mbox{
+        max-height:100vh;
+        border-radius:16px 16px 0 0 !important;
+        margin-top:auto;
+      }
+      .modal.active{
+        align-items:flex-end !important;
+      }
+    }
+  `;
+  document.head.appendChild(estiloModais);
+
+  // trava o scroll do fundo enquanto qualquer modal está aberto (evita
+  // aquele efeito de "pular"/fechar sem querer ao rolar por engano)
+  var scrollYAntesDoModal = 0;
+  var openModalOriginal = window.openModal;
+  window.openModal = function(id){
+    if(!document.body.classList.contains('modal-aberto')){
+      scrollYAntesDoModal = window.scrollY;
+      document.body.classList.add('modal-aberto');
+      document.body.style.top = '-'+scrollYAntesDoModal+'px';
+    }
+    return openModalOriginal(id);
+  };
+  var closeModalOriginal = window.closeModal;
+  window.closeModal = function(id){
+    var resultado = closeModalOriginal(id);
+    // só libera o scroll do fundo se não sobrou nenhum outro modal aberto
+    var aindaTemAberto = Array.prototype.some.call(document.querySelectorAll('.modal'), function(m){ return m.classList.contains('active'); });
+    if(!aindaTemAberto && document.body.classList.contains('modal-aberto')){
+      document.body.classList.remove('modal-aberto');
+      document.body.style.top = '';
+      window.scrollTo(0, scrollYAntesDoModal);
+    }
+    return resultado;
+  };
+
+  // ---------------------------------------------------------------
+  // 21) MENU MOBILE (Bottom Nav) — barra inferior fixa em telas pequenas
+  // ---------------------------------------------------------------
+  var ABAS_PRINCIPAIS_MOBILE = [
+    {tab:'cosplayers', icone:'fa-masks-theater', label:'Cosplayers'},
+    {tab:'eventos', icone:'fa-calendar-days', label:'Eventos'},
+    {tab:'ideias', icone:'fa-lightbulb', label:'Ideias'},
+    {tab:'lojas', icone:'fa-store', label:'Lojas'}
+  ];
+  var ABAS_EXTRAS_MOBILE = [
+    {tab:'animephoto', icone:'fa-torii-gate', label:'Anime Photo'},
+    {tab:'cenas', icone:'fa-clapperboard', label:'Cenas'},
+    {tab:'colabs', icone:'fa-handshake', label:'Colabs'},
+    {tab:'empresas', icone:'fa-tags', label:'Marcas'},
+    {tab:'ajuda', icone:'fa-comment', label:'Ajuda'}
+  ];
+
+  var estiloBottomNav = document.createElement('style');
+  estiloBottomNav.textContent = `
+    #bottomNavMobile{ display:none; }
+    #menuMaisMobile{ display:none; } /* escondido por padrão em qualquer largura de tela */
+    @media (max-width:768px){
+      #tabsWrap{ display:none !important; } /* só o menu principal do site — NÃO o menu interno do Admin */
+      #bottomNavMobile{
+        display:flex !important;
+        position:fixed; left:0; right:0; bottom:0;
+        background:var(--s1);
+        border-top:1px solid var(--border);
+        box-shadow:0 -4px 20px rgba(0,0,0,.35);
+        z-index:500;
+        padding-bottom:env(safe-area-inset-bottom, 0);
+      }
+      #bottomNavMobile .bn-item{
+        flex:1;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:2px;
+        padding:.5rem 0;
+        color:var(--text2);
+        font-size:10px;
+        font-weight:700;
+        cursor:pointer;
+        border:none; background:none;
+      }
+      #bottomNavMobile .bn-item i{ font-size:18px; }
+      #bottomNavMobile .bn-item.active{ color:var(--primary); }
+      body{ padding-bottom:60px; } /* espaço pra barra não cobrir conteúdo */
+      #menuMaisMobile{
+        display:none;
+        position:fixed; left:0; right:0; bottom:60px;
+        background:var(--s1);
+        border-top:1px solid var(--border);
+        border-radius:16px 16px 0 0;
+        box-shadow:0 -8px 24px rgba(0,0,0,.4);
+        z-index:499;
+        padding:.8rem;
+        max-height:50vh;
+        overflow-y:auto;
+      }
+      #menuMaisMobile.aberto{ display:block; }
+      #menuMaisMobile .mm-item{
+        display:flex; align-items:center; gap:.7rem;
+        padding:.7rem .5rem;
+        color:var(--text);
+        font-weight:600;
+        border-bottom:1px solid var(--border);
+        cursor:pointer;
+      }
+      #menuMaisMobile .mm-item:last-child{ border-bottom:none; }
+      #menuMaisMobile .mm-item i{ width:22px; text-align:center; color:var(--primary); }
+    }
+  `;
+  document.head.appendChild(estiloBottomNav);
+
+  function montarBottomNav(){
+    if(document.getElementById('bottomNavMobile')) { atualizarBottomNavAtiva(); return; }
+
+    var barra = document.createElement('div');
+    barra.id = 'bottomNavMobile';
+    barra.innerHTML = ABAS_PRINCIPAIS_MOBILE.map(function(a){
+      return `<button class="bn-item" data-bn-tab="${a.tab}"><i class="fas ${a.icone}"></i><span>${a.label}</span></button>`;
+    }).join('') + `<button class="bn-item" id="bnMaisBtn"><i class="fas fa-ellipsis"></i><span>Mais</span></button>`;
+    document.body.appendChild(barra);
+
+    var menuMais = document.createElement('div');
+    menuMais.id = 'menuMaisMobile';
+    menuMais.innerHTML = ABAS_EXTRAS_MOBILE.map(function(a){
+      return `<div class="mm-item" data-bn-tab="${a.tab}"><i class="fas ${a.icone}"></i> ${a.label}</div>`;
+    }).join('');
+    document.body.appendChild(menuMais);
+
+    barra.querySelectorAll('[data-bn-tab]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var tab = btn.getAttribute('data-bn-tab');
+        if(typeof switchTab==='function') switchTab(tab);
+        menuMais.classList.remove('aberto');
+        window.scrollTo({top:0, behavior:'smooth'});
+        atualizarBottomNavAtiva();
+      });
+    });
+    document.getElementById('bnMaisBtn').addEventListener('click', function(){
+      menuMais.classList.toggle('aberto');
+    });
+    menuMais.querySelectorAll('[data-bn-tab]').forEach(function(item){
+      item.addEventListener('click', function(){
+        var tab = item.getAttribute('data-bn-tab');
+        if(typeof switchTab==='function') switchTab(tab);
+        menuMais.classList.remove('aberto');
+        window.scrollTo({top:0, behavior:'smooth'});
+        atualizarBottomNavAtiva();
+      });
+    });
+
+    atualizarBottomNavAtiva();
+  }
+
+  function atualizarBottomNavAtiva(){
+    var barra = document.getElementById('bottomNavMobile');
+    if(!barra) return;
+    var abaAtiva = document.querySelector('.tab.active');
+    var nomeAtivo = abaAtiva ? abaAtiva.dataset.tab : null;
+    barra.querySelectorAll('.bn-item').forEach(function(el){
+      el.classList.toggle('active', el.getAttribute('data-bn-tab')===nomeAtivo);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(montarBottomNav, 1000);
+    setInterval(atualizarBottomNavAtiva, 1500);
+  });
+  if(document.readyState !== 'loading'){
+    setTimeout(montarBottomNav, 1000);
+    setInterval(atualizarBottomNavAtiva, 1500);
+  }
+
+  // ---------------------------------------------------------------
+  // 22) OG TAGS pra eventos — antes o compartilhamento mandava direto
+  //     pro link externo (Sympla/Ticket360) ou pra home genérica, sem
+  //     prévia bonita. Agora usa uma página de prévia própria do site
+  //     (igual perfil/ideia/cena já tinham), com foto e descrição do
+  //     evento aparecendo no WhatsApp/Instagram.
+  // ---------------------------------------------------------------
+  window.compartilharEvento = function(id){
+    var e = (db.eventos||[]).find(function(x){ return x.id===id; });
+    if(!e) return;
+    var dataFmt = new Date(e.date+'T12:00').toLocaleDateString('pt-BR');
+    var txt = `🎭 ${e.title}\n📅 ${dataFmt}${e.time?' às '+e.time:''}\n📍 ${e.city}\n\n${e.desc||''}`;
+    var urlPrevia = CLOUD_URL + '/evento/' + e.id;
+    if(navigator.share){
+      navigator.share({title:e.title, text:txt, url:urlPrevia}).catch(function(){});
+    }else{
+      navigator.clipboard.writeText(txt+'\n'+urlPrevia).then(function(){
+        toastOriginal('Detalhes do evento copiados!','ok');
+      }).catch(function(){ toastOriginal('Não consegui copiar — tenta de novo'); });
+    }
+  };
+
+  // ---------------------------------------------------------------
+  // 23) BACKUP MANUAL — botão de exportar tudo em arquivo, além do
+  //     backup automático que já roda no Worker. Dá segurança extra
+  //     pra você guardar uma cópia no seu próprio computador quando
+  //     quiser.
+  // ---------------------------------------------------------------
+  window.exportarBackupCompleto = function(){
+    var payload = JSON.stringify(db, null, 2);
+    var blob = new Blob([payload], {type:'application/json'});
+    var link = document.createElement('a');
+    link.download = 'diadecosplay-backup-'+new Date().toISOString().slice(0,10)+'.json';
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    setTimeout(function(){ URL.revokeObjectURL(link.href); }, 3000);
+    toastOriginal('✅ Backup baixado no seu computador','ok');
+  };
+
+  // ---------------------------------------------------------------
+  // 24) PENDÊNCIAS — painel de "o que precisa de atenção agora",
+  //     junta num só lugar coisas que hoje ficam espalhadas em abas
+  //     diferentes do Admin.
+  // ---------------------------------------------------------------
+  function renderPendencias(){
+    var alvo = document.getElementById('painelPendenciasDiaDeCosplay');
+    if(!alvo) return;
+
+    var eventosPendentes = (db.eventos||[]).filter(function(e){ return e.status==='pendente'; });
+    var menores = (db.cosplayers||[]).filter(function(c){ return c.menorDeIdade; });
+    var menoresSemTermo = menores.filter(function(c){ return !(c.responsavel && c.responsavel.pdfTermo); });
+    var eventosSemFoto = (db.eventos||[]).filter(function(e){ return !e.img; });
+
+    var itens = [];
+    if(eventosPendentes.length) itens.push({icone:'⏳', texto:eventosPendentes.length+' evento(s) aguardando aprovação', acao:function(){ if(typeof switchTab==='function'){switchTab('eventos');} closeModal('mAdmin'); }});
+    if(menoresSemTermo.length) itens.push({icone:'🛡️', texto:menoresSemTermo.length+' menor(es) de idade sem termo assinado', acao:function(){ abrirBancoDeMenores(); }});
+    if(eventosSemFoto.length) itens.push({icone:'🖼️', texto:eventosSemFoto.length+' evento(s) sem foto ainda', acao:function(){ atualizarFotosEventosExistentes(true); }});
+
+    if(!itens.length){
+      alvo.innerHTML = `<div style="color:var(--success);font-size:13px">✅ Nada pendente no momento — tudo em dia!</div>`;
+      return;
+    }
+
+    alvo.innerHTML = itens.map(function(it, i){
+      return `<div class="mini-stat" style="cursor:pointer" data-pendencia="${i}">
+        <span style="font-size:20px">${it.icone}</span>
+        <span class="mini-stat-label" style="font-size:12px">${it.texto}</span>
+      </div>`;
+    }).join('');
+
+    itens.forEach(function(it, i){
+      var el = alvo.querySelector('[data-pendencia="'+i+'"]');
+      if(el) el.addEventListener('click', it.acao);
+    });
+  }
+
+  function injetarPainelPendencias(){
+    var stats = document.getElementById('admStats');
+    if(!stats) return;
+    if(document.getElementById('painelPendenciasDiaDeCosplay')) { renderPendencias(); return; }
+
+    var bloco = document.createElement('div');
+    bloco.className = 'grupo-stats';
+    bloco.innerHTML = `
+      <div class="grupo-stats-titulo">📋 Pendências</div>
+      <div id="painelPendenciasDiaDeCosplay" class="grupo-stats-grid"></div>
+    `;
+    stats.parentElement.insertBefore(bloco, stats.nextSibling);
+    renderPendencias();
+  }
+
+  // botão de exportar backup, dentro das Ferramentas Avançadas
+  function injetarBotaoExportarBackup(){
+    var container = document.getElementById('painelExtraDiaDeCosplay');
+    if(!container) return;
+    if(document.getElementById('btnExportarBackup')) return;
+    var alvo = container.querySelector('.ferramentas-corpo') || container;
+    var div = document.createElement('div');
+    div.style.margin = '1rem 0';
+    div.style.padding = '.8rem';
+    div.style.border = '2px dashed #51CF66';
+    div.style.borderRadius = '10px';
+    div.innerHTML = `
+      <div style="font-weight:700;margin-bottom:.5rem">💾 Backup Manual</div>
+      <div style="font-size:12px;color:#999;margin-bottom:.6rem">
+        Baixa uma cópia completa de tudo (cosplayers, eventos, ideias...) num
+        arquivo no seu computador. Extra ao backup automático da nuvem.
+      </div>
+      <button id="btnExportarBackup" class="btn" style="width:100%">
+        <i class="fas fa-download"></i> Baixar Backup Agora
+      </button>
+    `;
+    alvo.appendChild(div);
+    document.getElementById('btnExportarBackup').addEventListener('click', exportarBackupCompleto);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setInterval(injetarPainelPendencias, 1500);
+    setInterval(injetarBotaoExportarBackup, 1500);
+    setInterval(renderPendencias, 4000);
+  });
+  if(document.readyState !== 'loading'){
+    setInterval(injetarPainelPendencias, 1500);
+    setInterval(injetarBotaoExportarBackup, 1500);
+    setInterval(renderPendencias, 4000);
+  }
+
 })();
 </script>
 
